@@ -314,7 +314,7 @@ geotab.addin.rendimiento = function () {
                 <td style="text-align:right;">${formatDuration(t.stopDuration)}</td>
                 <td style="color:var(--c-blue); font-weight:600; text-align:right;">${t.fuelUsed > 0 ? t.fuelUsed.toFixed(2) + " L" : "—"}</td>
                 <td style="text-align:center;">
-                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : "—"}</span>
+                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : "0.0 km/L"}</span>
                 </td>
                 <td style="text-align:right;">${t.workDistance.toFixed(1)} km</td>
                 <td style="text-align:right;">${formatDuration(t.workDrivingDuration)}</td>
@@ -366,7 +366,7 @@ geotab.addin.rendimiento = function () {
             const tripStop = new Date(trip.stop).getTime();
             const driverId = (trip.driver && trip.driver.id) ? trip.driver.id : null;
             const driverName = driverMap[driverId] || driverId || "Sin Conductor";
-            
+
             let tripFuel = 0;
             if (fuelByDevice[devId]) {
                 const matchingFuel = fuelByDevice[devId].filter(f => {
@@ -467,15 +467,28 @@ geotab.addin.rendimiento = function () {
             tbody.appendChild(tr);
         });
     };
- 
+
     // ─── Render Daily Table ───────────────────────────────────────────────────
-    const renderDailyTable = (dailyData, sortedDates) => {
+    const renderDailyTable = () => {
         const tbody = document.getElementById("daily-tbody");
         const emptyEl = document.getElementById("daily-empty");
         const badgeDaily = document.getElementById("badge-daily");
 
         if (!tbody) return;
         tbody.innerHTML = "";
+        
+        // Compute daily values from filteredTrips
+        const tripsByDay = {};
+        (filteredTrips || []).forEach(t => {
+            if (!t.start) return;
+            const dateObj = new Date(t.start);
+            const dStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth()+1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
+            if (!tripsByDay[dStr]) tripsByDay[dStr] = { dist: 0, fuel: 0 };
+            tripsByDay[dStr].dist += (parseFloat(t.distance) || 0);
+            tripsByDay[dStr].fuel += (parseFloat(t.fuelUsed) || 0);
+        });
+
+        const sortedDates = Object.keys(tripsByDay).sort();
         
         if (badgeDaily) badgeDaily.textContent = `${sortedDates.length} días`;
 
@@ -485,16 +498,14 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
-        // Calculate overall average exactly like the "Rendimiento Promedio" card
-        const totalDist = (filteredTrips || []).reduce((s, t) => s + (parseFloat(t.distance) || 0), 0);
-        const totalFuel = (filteredRecords || []).reduce((s, r) => s + (parseFloat(r.fuelUsed) || 0), 0);
-        const overallEff = totalFuel > 0 ? totalDist / totalFuel : 0;
-        const effClass = getEffClass(overallEff);
-
         // Sort descending so most recent is on top
         const reversedDates = [...sortedDates].reverse();
 
         reversedDates.forEach(dateStr => {
+            const day = tripsByDay[dateStr];
+            const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
+            const effClass = getEffClass(eff);
+
             const tr = document.createElement("tr");
             tr.className = "perf-row";
             tr.innerHTML = `
@@ -504,7 +515,7 @@ geotab.addin.rendimiento = function () {
                     </div>
                 </td>
                 <td style="text-align:center;">
-                    <span class="eff-badge ${effClass}">${overallEff > 0 ? overallEff.toFixed(2) + " km/L" : "—"}</span>
+                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : "0.0 km/L"}</span>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -602,12 +613,12 @@ geotab.addin.rendimiento = function () {
 
         // For each device, sort and calculate deltas
         Object.keys(odoByDev).forEach(devId => {
-            const arr = odoByDev[devId].sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+            const arr = odoByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
             for (let i = 1; i < arr.length; i++) {
-                const deltaMts = arr[i].data - arr[i-1].data;
+                const deltaMts = arr[i].data - arr[i - 1].data;
                 if (deltaMts > 0) {
                     const tzDate = new Date(arr[i].dateTime);
-                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth()+1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
+                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth() + 1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
                     if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
                     dailyData[dStr].dist += (deltaMts / 1000);
                 }
@@ -615,12 +626,12 @@ geotab.addin.rendimiento = function () {
         });
 
         Object.keys(fuelByDev).forEach(devId => {
-            const arr = fuelByDev[devId].sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+            const arr = fuelByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
             for (let i = 1; i < arr.length; i++) {
-                const deltaL = arr[i].data - arr[i-1].data;
+                const deltaL = arr[i].data - arr[i - 1].data;
                 if (deltaL > 0) {
                     const tzDate = new Date(arr[i].dateTime);
-                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth()+1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
+                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth() + 1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
                     if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
                     dailyData[dStr].fuel += deltaL;
                 }
@@ -628,7 +639,7 @@ geotab.addin.rendimiento = function () {
         });
 
         const sortedDates = Object.keys(dailyData).sort();
-        
+
         // Render the daily table using the computed daily data
         renderDailyTable(dailyData, sortedDates);
 
@@ -750,23 +761,23 @@ geotab.addin.rendimiento = function () {
     const populateUnitFilter = (devices) => {
         const select = document.getElementById("unit-select");
         if (!select) return;
-        
+
         // Save current selection if possible
         const currentVal = select.value;
-        
+
         // Clear and add "All"
         select.innerHTML = '<option value="all">Todas las Unidades</option>';
-        
+
         // Sort devices by name
         const sortedDevices = [...devices].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-        
+
         sortedDevices.forEach(d => {
             const opt = document.createElement("option");
             opt.value = d.id;
             opt.textContent = d.name || d.id;
             select.appendChild(opt);
         });
-        
+
         // Restore selection if it still exists
         if ([...select.options].some(o => o.value === currentVal)) {
             select.value = currentVal;
@@ -835,9 +846,9 @@ geotab.addin.rendimiento = function () {
                 typeName: "Trip",
                 search: commonSearch
             }],
-            ["Get", { 
-                typeName: "FuelUsed", 
-                search: commonSearch 
+            ["Get", {
+                typeName: "FuelUsed",
+                search: commonSearch
             }],
             ["Get", { typeName: "Device" }],
             ["Get", { typeName: "User", search: { isDriver: true } }]
@@ -853,8 +864,8 @@ geotab.addin.rendimiento = function () {
             deviceMap = {};
             devices.forEach(function (d) { deviceMap[d.id] = d.name; });
             const driverMap = {};
-            drivers.forEach(function (dr) { 
-                driverMap[dr.id] = (dr.firstName && dr.lastName) ? (dr.firstName + " " + dr.lastName) : dr.name; 
+            drivers.forEach(function (dr) {
+                driverMap[dr.id] = (dr.firstName && dr.lastName) ? (dr.firstName + " " + dr.lastName) : dr.name;
             });
 
             populateUnitFilter(devices);
@@ -1045,5 +1056,3 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
-
-
