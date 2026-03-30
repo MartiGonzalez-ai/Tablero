@@ -468,7 +468,47 @@ geotab.addin.rendimiento = function () {
         });
     };
  
+    // ─── Render Daily Table ───────────────────────────────────────────────────
+    const renderDailyTable = (dailyData, sortedDates) => {
+        const tbody = document.getElementById("daily-tbody");
+        const emptyEl = document.getElementById("daily-empty");
+        const badgeDaily = document.getElementById("badge-daily");
 
+        if (!tbody) return;
+        tbody.innerHTML = "";
+        
+        if (badgeDaily) badgeDaily.textContent = `${sortedDates.length} días`;
+
+        if (sortedDates.length === 0) {
+            if (emptyEl) emptyEl.style.display = "flex";
+            return;
+        }
+        if (emptyEl) emptyEl.style.display = "none";
+
+        // Sort descending so most recent is on top
+        const reversedDates = [...sortedDates].reverse();
+
+        reversedDates.forEach(dateStr => {
+            const day = dailyData[dateStr];
+            const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
+            const effClass = getEffClass(eff);
+            const tr = document.createElement("tr");
+            tr.className = "perf-row";
+            tr.innerHTML = `
+                <td>
+                    <div class="date-cell">
+                        <span class="date-main" style="font-weight:600; color:var(--color-primary);">${dateStr}</span>
+                    </div>
+                </td>
+                <td style="text-align:right; font-weight:600;">${day.dist.toFixed(1)} km</td>
+                <td style="text-align:right; font-weight:600; color:var(--c-blue);">${day.fuel.toFixed(2)} L</td>
+                <td style="text-align:center;">
+                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(2) + " km/L" : "—"}</span>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    };
 
     // ─── Reset UI ─────────────────────────────────────────────────────────────
     const resetUI = () => {
@@ -491,6 +531,15 @@ geotab.addin.rendimiento = function () {
 
         const emptyEl = document.getElementById("table-empty");
         if (emptyEl) emptyEl.style.display = "none";
+
+        const dailyTbody = document.getElementById("daily-tbody");
+        if (dailyTbody) dailyTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="4"><div class="td-skel"></div></td></tr>').join("");
+
+        const badgeDaily = document.getElementById("badge-daily");
+        if (badgeDaily) badgeDaily.textContent = "—";
+
+        const dailyEmptyEl = document.getElementById("daily-empty");
+        if (dailyEmptyEl) dailyEmptyEl.style.display = "none";
 
         const rawThead = document.getElementById("raw-thead");
         const rawTbody = document.getElementById("raw-tbody");
@@ -578,6 +627,10 @@ geotab.addin.rendimiento = function () {
         });
 
         const sortedDates = Object.keys(dailyData).sort();
+        
+        // Render the daily table using the computed daily data
+        renderDailyTable(dailyData, sortedDates);
+
         const trendSeries = sortedDates.map(date => {
             const day = dailyData[date];
             const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
