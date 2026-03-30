@@ -166,7 +166,7 @@ geotab.addin.rendimiento = function () {
 
     // ─── Render summary KPIs ─────────────────────────────────────────────────
     const renderSummary = (records, trips) => {
-        const totalDist = (records || []).reduce((s, r) => s + (r.distKm || 0), 0);
+        const totalDist = (trips || []).reduce((s, t) => s + (t.distance || 0), 0);
         const totalFuel = (records || []).reduce((s, r) => s + (r.fuelUsed || 0), 0);
         const avgKmPerL = totalFuel > 0 ? totalDist / totalFuel : 0;
         const costPerKm = totalDist > 0 ? (totalFuel * 24.5) / totalDist : 0;
