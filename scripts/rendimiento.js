@@ -535,29 +535,8 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
-        const deviceOdo = {};
         sortedDates.forEach(dateStr => {
-            Object.keys(odoByDev).forEach(devId => {
-                const arr = odoByDev[devId];
-                let lastReadingForDay = null;
-                for (let r of arr) {
-                    const tzDate = new Date(r.dateTime);
-                    const rStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth() + 1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
-                    if (rStr === dateStr) {
-                        lastReadingForDay = r;
-                    } else if (rStr > dateStr) {
-                        break; 
-                    }
-                }
-                if (lastReadingForDay) {
-                    deviceOdo[devId] = lastReadingForDay.data;
-                }
-            });
-            
-            let totalFleetOdoMeters = 0;
-            Object.values(deviceOdo).forEach(odo => { totalFleetOdoMeters += odo; });
-            
-            dailyData[dateStr].acumulado = (totalFleetOdoMeters / 1000);
+            dailyData[dateStr].acumulado = 0; // Default, will update async
         });
 
         // Sort descending so most recent is on top
@@ -577,14 +556,67 @@ geotab.addin.rendimiento = function () {
                     </div>
                 </td>
                 <td style="text-align:right; font-weight:600;">${day.dist.toFixed(1)} km</td>
-                <td style="text-align:right; font-weight:600; color:var(--text-color);">${day.acumulado.toFixed(1)} km</td>
+                <td style="text-align:right; font-weight:600; color:var(--text-color);" id="odo-${dateStr}">
+                    <span style="opacity:0.5;">Cargando...</span>
+                </td>
                 <td style="text-align:right; font-weight:600; color:var(--c-blue);">${day.fuel.toFixed(2)} L</td>
                 <td style="text-align:center;">
-                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : "0.0 km/L"}</span>
+                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : ((day.dist >= 0 || day.fuel >= 0) ? "0.0 km/L" : "—")}</span>
                 </td>
             `;
             tbody.appendChild(tr);
         });
+
+        // Asynchronously fetch the interpolated Odometer at 23:59:59 of each day for accurate fleet tracking
+        if (typeof api !== "undefined") {
+            const devicesToQuery = selectedUnitId !== "all" ? [selectedUnitId] : (typeof deviceMap !== "undefined" ? Object.keys(deviceMap) : []);
+            const calls = [];
+            const callMap = [];
+
+            sortedDates.forEach(dateStr => {
+                const tzEnd = new Date(dateStr + "T23:59:59").toISOString();
+                devicesToQuery.forEach(devId => {
+                    calls.push(["Get", {
+                        typeName: "StatusData",
+                        search: {
+                            diagnosticSearch: { id: "DiagnosticOdometerId" },
+                            deviceSearch: { id: devId },
+                            fromDate: tzEnd,
+                            toDate: tzEnd
+                        }
+                    }]);
+                    callMap.push({ dateStr, devId });
+                });
+            });
+
+            if (calls.length > 0 && calls.length <= 15000) {
+                api.multiCall(calls, function(results) {
+                    const dailyOdoSum = {};
+                    results.forEach((res, i) => {
+                        const cellInfo = callMap[i];
+                        if (res && res.length > 0) {
+                            if (!dailyOdoSum[cellInfo.dateStr]) dailyOdoSum[cellInfo.dateStr] = 0;
+                            dailyOdoSum[cellInfo.dateStr] += res[0].data;
+                        }
+                    });
+
+                    sortedDates.forEach(dateStr => {
+                        const el = document.getElementById("odo-" + dateStr);
+                        if (el) {
+                            const val = dailyOdoSum[dateStr];
+                            if (val) {
+                                dailyData[dateStr].acumulado = val / 1000;
+                                el.textContent = (val / 1000).toFixed(1) + " km";
+                            } else {
+                                el.textContent = "—";
+                            }
+                        }
+                    });
+                }, function(e) {
+                    console.error("Error fetching exact odometers:", e);
+                });
+            }
+        }
 
         return { dailyData, sortedDates };
     };
@@ -1078,4 +1110,5 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
+
 
