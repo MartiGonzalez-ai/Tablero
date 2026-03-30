@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard · Análisis de Desperdicio y Degradación de Combustible</title>
+    <!-- Tailwind via CDN + basic layer -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome 6 (free) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js 3 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        /* pequeños ajustes para que los gráficos no se desborden */
+        .chart-container { position: relative; height: 200px; width: 100%; }
+        .scatter-container { position: relative; height: 160px; width: 100%; }
+        .degradation-chart-container { height: 140px; }
+        /* para el heatmap de la tabla usamos clases condicionales desde el html estático */
+        .badge-red { background-color: #fee2e2; color: #b91c1c; font-weight: 500; }
+        .badge-orange { background-color: #ffedd5; color: #9a3412; font-weight: 500; }
+        .badge-green { background-color: #dcfce7; color: #166534; font-weight: 500; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans antialiased">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- Cabecera con título y selector de mes simulado -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">⛽ Análisis de Desperdicio y Degradación</h1>
+                <p class="text-sm text-slate-500 mt-0.5">Enfoque: eficiencia real · ralentí · tráfico · operador</p>
+            </div>
+            <div class="mt-3 sm:mt-0 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2 text-sm">
+                <i class="fa-regular fa-calendar text-slate-400"></i>
+                <span class="font-medium">Junio 2025</span>
+                <span class="text-slate-300 mx-1">|</span>
+                <span class="text-slate-600">datos simulados</span>
+            </div>
+        </div>
+
+        <!-- HEADER: CIFRAS GLOBALES (3 cards) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+            <!-- Gasto total mensual -->
+            <div class="bg-white rounded-xl shadow-md border border-slate-100 p-5 flex items-center">
+                <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xl mr-4">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Gasto total mensual</p>
+                    <p class="text-2xl font-bold text-slate-800">$ 43.280</p>
+                    <p class="text-xs text-slate-400 mt-0.5">vs mes ant. <span class="text-amber-600 font-medium">+2.4%</span></p>
+                </div>
+            </div>
+            <!-- % ahorro/pérdida vs mes anterior (lo mostramos como variación de eficiencia) -->
+            <div class="bg-white rounded-xl shadow-md border border-slate-100 p-5 flex items-center">
+                <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-xl mr-4">
+                    <i class="fas fa-leaf"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Ahorro / Pérdida (vs mes ant.)</p>
+                    <p class="text-2xl font-bold text-slate-800">-1.8%</p>
+                    <p class="text-xs text-slate-400 mt-0.5">eficiencia combinada</p>
+                </div>
+            </div>
+            <!-- Costo total acumulado de ralentí (idle) -->
+            <div class="bg-white rounded-xl shadow-md border border-slate-100 p-5 flex items-center">
+                <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 text-xl mr-4">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Costo acumulado ralentí</p>
+                    <p class="text-2xl font-bold text-slate-800">$ 6.452</p>
+                    <p class="text-xs text-slate-400 mt-0.5">últimos 30 días · 14.9% del total</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUES DE MÉTRICAS (4 tarjetas: eficiencia, desperdicio, tendencias, operador) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
+            <!-- Bloque 1: Eficiencia y Desempeño -->
+            <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold text-slate-700 text-sm uppercase tracking-wide">Eficiencia <span class="text-xs font-normal text-slate-400 ml-1">#1</span></h3>
+                    <i class="fas fa-gauge-high text-indigo-500"></i>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-xl font-bold text-slate-800">8.2</span>
+                    <span class="text-sm text-slate-500">/ objetivo 9.0 km/L</span>
+                </div>
+                <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 mb-3">
+                    <div class="bg-indigo-500 h-1.5 rounded-full" style="width: 91%"></div>
+                </div>
+                <div class="flex justify-between text-xs">
+                    <span class="text-slate-500"><i class="fa-regular fa-circle-check text-indigo-400 mr-1"></i> degradación:</span>
+                    <span class="font-mono font-medium text-slate-700">-0.12 km/L c/10k km</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-1">curva de degradación abajo ⤵</p>
+            </div>
+            <!-- Bloque 2: Desperdicio (ralentí y tráfico) -->
+            <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold text-slate-700 text-sm uppercase tracking-wide">Desperdicio</h3>
+                    <i class="fa-regular fa-hourglass-half text-amber-600"></i>
+                </div>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div><span class="text-lg font-bold text-slate-800">$1.620</span> <span class="text-xs text-slate-500">/idle mes</span></div>
+                    <div class="text-xs bg-amber-50 px-2 py-1 rounded-full">tráfico 14%</div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-3">
+                    <div>
+                        <p class="text-xs text-slate-500">eficiencia en movimiento</p>
+                        <p class="text-base font-semibold text-slate-800">92% <span class="text-xs text-slate-400">(8% idle)</span></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">comb. en tráfico</p>
+                        <p class="text-base font-semibold text-slate-800">11.2 L <span class="text-xs text-slate-400">/100km</span></p>
+                    </div>
+                </div>
+            </div>
+            <!-- Bloque 3: Tendencias históricas -->
+            <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold text-slate-700 text-sm uppercase tracking-wide">Tendencias</h3>
+                    <i class="fa-solid fa-chart-line text-sky-600"></i>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xl font-bold text-slate-800">-2.3%</span>
+                    <span class="text-xs bg-slate-100 px-2 py-1 rounded">MoM</span>
+                </div>
+                <div class="mt-2 flex justify-between">
+                    <span class="text-xs text-slate-500">correlación carga/consumo</span>
+                    <span class="text-sm font-semibold text-slate-700">0.92</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">⬇️ variación por precio: +1.1% real</p>
+            </div>
+            <!-- Bloque 4: Factor humano (operador) -->
+            <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold text-slate-700 text-sm uppercase tracking-wide">Operador</h3>
+                    <i class="fa-solid fa-users-gear text-emerald-600"></i>
+                </div>
+                <div class="grid grid-cols-2 gap-1">
+                    <div>
+                        <p class="text-xs text-slate-500">eventos agresivos</p>
+                        <p class="text-lg font-bold text-slate-800">43</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">uso crucero</p>
+                        <p class="text-lg font-bold text-slate-800">58%</p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between mt-1">
+                    <span class="text-xs text-slate-500">excesos green band</span>
+                    <span class="text-sm font-medium text-amber-700">12 h</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN PRINCIPAL: GRÁFICO DE ÁREAS + WIDGETS DERECHA (Degradación y ranking) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-7">
+            <!-- MAIN CHART: Historial de consumo y porción tráfico/ralentí (área combinada) -->
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-4 border border-slate-100">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="font-semibold text-slate-800 text-base"><i class="fa-solid fa-chart-area text-blue-500 mr-2"></i>Consumo total y porción tráfico + ralentí</h2>
+                    <span class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600">últimos 10 días</span>
+                </div>
+                <div class="chart-container" style="height:220px">
+                    <canvas id="areaChart"></canvas>
+                </div>
+                <div class="flex justify-center gap-6 mt-2 text-xs">
+                    <div class="flex items-center gap-1"><span class="inline-block w-3 h-3 bg-blue-500 rounded"></span> Consumo base (crucero)</div>
+                    <div class="flex items-center gap-1"><span class="inline-block w-3 h-3 bg-amber-400 rounded"></span> Tráfico + ralentí</div>
+                    <div class="flex items-center gap-1"><span class="inline-block w-3 h-3 border-2 border-slate-400"></span> Total (línea)</div>
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA: curva de degradación + ranking sedientas -->
+            <div class="space-y-5">
+                <!-- Curva de Degradación por Kilometraje (scatter) -->
+                <div class="bg-white rounded-xl shadow-md p-4 border border-slate-100">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-semibold text-slate-700 text-sm"><i class="fa-solid fa-chart-scatter text-indigo-500 mr-1"></i>Curva degradación (km/L vs odómetro)</h3>
+                        <i class="fa-regular fa-question-circle text-slate-300 text-sm"></i>
+                    </div>
+                    <div class="scatter-container degradation-chart-container" style="height:150px">
+                        <canvas id="scatterChart"></canvas>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">cada punto es una unidad · tendencia negativa</p>
+                </div>
+                <!-- Ranking de Unidades "Sedientas" (Top 5) -->
+                <div class="bg-white rounded-xl shadow-md p-4 border border-slate-100">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="fa-solid fa-ranking-star text-rose-500"></i>
+                        <h3 class="font-semibold text-slate-700 text-sm">Ranking unidades sedientas</h3>
+                        <span class="text-xs bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full">peor desviación</span>
+                    </div>
+                    <ul class="space-y-2">
+                        <li class="flex items-center justify-between text-sm"><span class="font-mono">ABC-234</span> <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">-12.3%</span></li>
+                        <li class="flex items-center justify-between text-sm"><span class="font-mono">XYZ-789</span> <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">-9.8%</span></li>
+                        <li class="flex items-center justify-between text-sm"><span class="font-mono">JKL-456</span> <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-medium">-7.2%</span></li>
+                        <li class="flex items-center justify-between text-sm"><span class="font-mono">MNO-321</span> <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-medium">-6.1%</span></li>
+                        <li class="flex items-center justify-between text-sm"><span class="font-mono">PQR-654</span> <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-medium">-4.8%</span></li>
+                    </ul>
+                    <p class="text-[10px] text-slate-400 mt-2">vs promedio histórico individual</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM: TABLA CON HEATMAP (placas / rendimiento) -->
+        <div class="bg-white rounded-xl shadow-md border border-slate-100 p-4">
+            <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-table fa-fw text-slate-400"></i>
+                    <h2 class="font-semibold text-slate-800">Detalle por unidad · Heatmap de rendimiento (últimos 30 días)</h2>
+                </div>
+                <div class="flex gap-3 text-xs">
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-red-200 rounded"></span> caída >5%</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-orange-200 rounded"></span> caída 0% a 5%</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-green-200 rounded"></span> mejora/estable</span>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-slate-50 text-slate-500 text-xs">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-medium">Placa (económico)</th>
+                            <th class="px-4 py-3 text-left font-medium">Rend. actual (km/L)</th>
+                            <th class="px-4 py-3 text-left font-medium">Rend. histórico</th>
+                            <th class="px-4 py-3 text-left font-medium">Desviación %</th>
+                            <th class="px-4 py-3 text-left font-medium">Indicador</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <!-- filas con heatmap (según desviación) -->
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="px-4 py-3 font-mono font-medium">ABC-234</td>
+                            <td class="px-4 py-3">7.2</td>
+                            <td class="px-4 py-3">8.2</td>
+                            <td class="px-4 py-3"><span class="badge-red px-3 py-1 rounded-full text-xs">-12.3%</span></td>
+                            <td class="px-4 py-3"><i class="fa-regular fa-face-frown text-red-500"></i></td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 font-mono font-medium">XYZ-789</td>
+                            <td class="px-4 py-3">6.8</td>
+                            <td class="px-4 py-3">7.5</td>
+                            <td class="px-4 py-3"><span class="badge-red px-3 py-1 rounded-full text-xs">-9.3%</span></td>
+                            <td class="px-4 py-3"><i class="fa-regular fa-face-frown text-red-500"></i></td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 font-mono font-medium">JKL-456</td>
+                            <td class="px-4 py-3">8.5</td>
+                            <td class="px-4 py-3">9.1</td>
+                            <td class="px-4 py-3"><span class="badge-orange px-3 py-1 rounded-full text-xs">-6.6%</span></td>
+                            <td class="px-4 py-3"><i class="fa-regular fa-face-meh text-orange-400"></i></td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 font-mono font-medium">MNO-321</td>
+                            <td class="px-4 py-3">9.3</td>
+                            <td class="px-4 py-3">9.8</td>
+                            <td class="px-4 py-3"><span class="badge-orange px-3 py-1 rounded-full text-xs">-5.1%</span></td>
+                            <td class="px-4 py-3"><i class="fa-regular fa-face-meh text-orange-400"></i></td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 font-mono font-medium">PQR-654</td>
+                            <td class="px-4 py-3">8.9</td>
+                            <td class="px-4 py-3">9.3</td>
+                            <td class="px-4 py-3"><span class="badge-orange px-3 py-1 rounded-full text-xs">-4.3%</span></td>
+                            <td class="px-4 py-3"><i class="fa-regular fa-face-smile text-amber-400"></i></td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 font-mono font-medium">STU-987</td>
+                            <td class="px-4 py-3">10.2</td>
+                            <td class="px-4 py-3">9.9</td>
+                            <td class="px-4 py-3"><span class="badge-green px-3 py-1 rounded-full text-xs">+3.0%</span></td>
+                            <td class="px-4 py-3"><i class="fa-regular fa-face-smile text-green-500"></i></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-xs text-slate-400 mt-3 flex items-center gap-1"><i class="fa-regular fa-lightbulb"></i> En rojo, unidades con caída superior al 5% respecto a su promedio histórico.</div>
+        </div>
+
+        <!-- Pie de nota (simulación) -->
+        <div class="text-xs text-center text-slate-400 mt-6 border-t border-slate-200 pt-4">
+            Datos simulados para demostración · Dashboard de eficiencia de combustible con enfoque en desperdicio y degradación.
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Gráfico de ÁREAS COMBINADAS (consumo total + porción tráfico/ralentí)
+            const ctxArea = document.getElementById('areaChart').getContext('2d');
+            const labels = ['Día 1', 'Día 2', 'Día 3', 'Día 4', 'Día 5', 'Día 6', 'Día 7', 'Día 8', 'Día 9', 'Día 10'];
+            
+            // data simulada: base (crucero) y tráfico+ralentí
+            const baseData = [105, 112, 108, 118, 122, 119, 127, 133, 125, 130];      // litros
+            const idleTrafficData = [22, 27, 24, 31, 29, 34, 37, 32, 27, 30];          // litros (desperdicio)
+
+            new Chart(ctxArea, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Consumo base (crucero)',
+                            data: baseData,
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                            borderColor: 'rgb(37, 99, 235)',
+                            borderWidth: 1,
+                            fill: true,
+                            tension: 0.2,
+                            pointRadius: 2,
+                            stack: 'combined',
+                            order: 2
+                        },
+                        {
+                            label: 'Tráfico + ralentí',
+                            data: idleTrafficData,
+                            backgroundColor: 'rgba(251, 191, 36, 0.7)',
+                            borderColor: 'rgb(217, 119, 6)',
+                            borderWidth: 1,
+                            fill: true,
+                            tension: 0.2,
+                            pointRadius: 2,
+                            stack: 'combined',
+                            order: 2
+                        },
+                        {
+                            label: 'Total consumo',
+                            data: baseData.map((val, idx) => val + idleTrafficData[idx]),
+                            borderColor: 'rgb(30, 41, 59)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.2,
+                            type: 'line',
+                            order: 1,
+                            borderDash: [4,4]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#e2e8f0' }, title: { display: true, text: 'Litros' } }
+                    },
+                    elements: { line: { borderJoinStyle: 'round' } },
+                    interaction: { mode: 'index' }
+                }
+            });
+
+            // Gráfico de dispersión: Curva de degradación (rendimiento vs odómetro)
+            const ctxScatter = document.getElementById('scatterChart').getContext('2d');
+            // generamos puntos simulados: odómetro (km) en miles, rendimiento decreciente
+            const scatterData = [
+                { x: 15, y: 9.2 },  // 15k km
+                { x: 32, y: 8.9 },
+                { x: 48, y: 8.7 },
+                { x: 67, y: 8.3 },
+                { x: 81, y: 8.1 },
+                { x: 95, y: 7.8 },
+                { x: 112, y: 7.6 },
+                { x: 128, y: 7.3 },
+                { x: 145, y: 7.0 },
+                { x: 160, y: 6.8 }
+            ];
+
+            new Chart(ctxScatter, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Rendimiento (km/L)',
+                        data: scatterData,
+                        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                        borderColor: 'rgb(79, 70, 229)',
+                        borderWidth: 1,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (ctx) => `${ctx.raw.x}k km · ${ctx.raw.y} km/L` } }
+                    },
+                    scales: {
+                        x: { 
+                            title: { display: false, text: 'Odómetro (miles km)' },
+                            grid: { color: '#e9eef3' },
+                            ticks: { callback: (val) => val + 'k' }
+                        },
+                        y: { 
+                            title: { display: false, text: 'km/L' },
+                            min: 6,
+                            max: 10,
+                            grid: { color: '#e9eef3' }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+
+    <!-- pequeño ajuste para que los canvas se vean bien en móvil -->
+    <style>
+        @media (max-width: 500px) {
+            .chart-container { height: 180px; }
+            .scatter-container { height: 140px; }
+        }
+    </style>
+</body>
+</html>
