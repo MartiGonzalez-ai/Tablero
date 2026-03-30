@@ -631,6 +631,13 @@ geotab.addin.rendimiento = function () {
             ...commonOptions,
             series: [{ name: 'Rendimiento Promedio (km/L)', data: trendSeries }],
             chart: { type: 'area', height: 260, fontFamily, toolbar: { show: false }, zoom: { enabled: false } },
+            dataLabels: {
+                enabled: true,
+                formatter: val => val.toFixed(1),
+                offsetY: -5,
+                style: { colors: [cCyan] },
+                background: { enabled: true, foreColor: '#fff', borderRadius: 4, borderWidth: 0 }
+            },
             stroke: { curve: 'smooth', width: 3 },
             fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05, stops: [20, 100] } },
             colors: [cCyan],
