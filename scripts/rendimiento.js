@@ -527,14 +527,52 @@ geotab.addin.rendimiento = function () {
         };
 
         // 1. Tendencia de Rendimiento Flota Diaria (km/L)
-        // Group allTrips by Day (use allTrips as it's the more detailed source with dates)
+        // Group rawStatusData by Day to get real daily distance and fuel from StatusData
         const dailyData = {};
-        allTrips.forEach(t => {
-            if (!t.start) return;
-            const dStr = t.start.slice(0, 10);
-            if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
-            dailyData[dStr].dist += (t.distance || 0);
-            dailyData[dStr].fuel += (t.fuelUsed || 0);
+        const rawFuel = rawStatusData.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticDeviceTotalFuelId");
+        const rawOdo = rawStatusData.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticOdometerId");
+
+        const odoByDev = {};
+        rawOdo.forEach(r => {
+            const devId = r.device && r.device.id;
+            if (!devId) return;
+            if (selectedUnitId !== "all" && devId !== selectedUnitId) return;
+            if (!odoByDev[devId]) odoByDev[devId] = [];
+            odoByDev[devId].push(r);
+        });
+
+        const fuelByDev = {};
+        rawFuel.forEach(r => {
+            const devId = r.device && r.device.id;
+            if (!devId) return;
+            if (selectedUnitId !== "all" && devId !== selectedUnitId) return;
+            if (!fuelByDev[devId]) fuelByDev[devId] = [];
+            fuelByDev[devId].push(r);
+        });
+
+        // For each device, sort and calculate deltas
+        Object.keys(odoByDev).forEach(devId => {
+            const arr = odoByDev[devId].sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+            for (let i = 1; i < arr.length; i++) {
+                const deltaMts = arr[i].data - arr[i-1].data;
+                if (deltaMts > 0) {
+                    const dStr = arr[i].dateTime.slice(0, 10);
+                    if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
+                    dailyData[dStr].dist += (deltaMts / 1000);
+                }
+            }
+        });
+
+        Object.keys(fuelByDev).forEach(devId => {
+            const arr = fuelByDev[devId].sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+            for (let i = 1; i < arr.length; i++) {
+                const deltaL = arr[i].data - arr[i-1].data;
+                if (deltaL > 0) {
+                    const dStr = arr[i].dateTime.slice(0, 10);
+                    if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
+                    dailyData[dStr].fuel += deltaL;
+                }
+            }
         });
 
         const sortedDates = Object.keys(dailyData).sort();
