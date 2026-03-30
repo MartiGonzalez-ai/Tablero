@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tablero de administración de carga</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #60a5fa;
+            --secondary: #0f172a;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --surface-hover: #f1f5f9;
+            --text: #0f172a;
+            --text-light: #475569;
+            --text-dim: #64748b;
+            --border: #e2e8f0;
+            --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            --gradient: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            --radius-sm: 10px;
+            --radius: 16px;
+            --radius-lg: 20px;
+            --transition-ease: all 0.2s ease-in-out;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 24px;
+            line-height: 1.5;
+        }
+
+        .dashboard {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Header mejorado */
+        .header {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 24px 32px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        .brand-text {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-sub {
+            color: var(--text-light);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 32px;
+        }
+
+        .header-stat {
+            text-align: right;
+        }
+
+        .header-stat-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .header-stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* KPIs mejorados */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .kpi-card {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            transition: var(--transition-ease);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-light);
+        }
+
+        .kpi-card::before {
+            display: none;
+        }
+
+        .kpi-card:hover .kpi-icon {
+            transform: scale(1.1) rotate(-10deg);
+            background: var(--primary);
+            color: white;
+        }
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .kpi-info-icon {
+            color: var(--text-dim);
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            transition: var(--transition-ease);
+        }
+
+        .kpi-info-icon:hover {
+            color: var(--primary);
+        }
+
+        .kpi-icon {
+            flex-shrink: 0;
+            width: 56px;
+            height: 56px;
+            background: rgba(37, 99, 235, 0.1);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            transition: var(--transition-ease);
+        }
+
+        .kpi-icon svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .kpi-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .kpi-details {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex-grow: 1;
+        }
+
+        .kpi-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .kpi-value {
+            font-size: 40px;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.1;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .kpi-unit {
+            font-size: 16px;
+            color: var(--text-light);
+        }
+
+        .kpi-label {
+            font-size: 14px;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .kpi-trend {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .trend-up { color: var(--success); }
+        .trend-down { color: var(--danger); }
+
+        /* Grid principal */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* Paneles */
+        .panel {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .panel-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .panel-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .panel-btn:hover {
+            background: var(--surface-hover);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Gráficos */
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+
+        /* Tabla mejorada */
+        .table-container {
+            background: transparent;
+            padding: 0;
+            box-shadow: none;
+            border: none;
+            margin-bottom: 32px;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .table-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .table-filters {
+            display: flex;
+            gap: 12px;
+        }
+
+        .filter-input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 12px;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 0 16px 12px 16px;
+            background: transparent;
+            color: var(--text-light);
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: none;
+        }
+
+        .data-table td {
+            padding: 16px;
+            font-size: 14px;
+            background: var(--surface);
+            vertical-align: middle;
+        }
+
+        .data-table tbody tr {
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition-ease);
+        }
+
+        .data-table tbody tr:hover {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: var(--shadow);
+        }
+        .data-table tbody td:first-child {
+            border-top-left-radius: var(--radius);
+            border-bottom-left-radius: var(--radius);
+        }
+        .data-table tbody td:last-child {
+            border-top-right-radius: var(--radius);
+            border-bottom-right-radius: var(--radius);
+        }
+
+        /* Barras de progreso */
+        .progress-bar {
+            width: 100px;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+
+        /* Mini grid de estadísticas */
+        .stats-mini-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .stat-mini {
+            background: var(--surface-hover);
+            padding: 16px;
+            border-radius: var(--radius-sm);
+        }
+
+        .stat-mini-label {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .stat-mini-value {
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .header { flex-direction: column; gap: 16px; }
+            .header-stats { width: 100%; justify-content: space-around; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header mejorado -->
+        <header class="header">
+            <div class="brand">
+                <div class="brand-icon">Z</div>
+                <div>
+                    <div class="brand-text">Panel de Energía de GPS</div>
+                    <div class="brand-sub">Tablero de monitoreo de energía solar</div>
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">Última actualización</div>
+                    <div class="header-stat-value" id="current-time"></div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Unidades activas</div>
+                    <div class="header-stat-value">37/42</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Rendimiento red</div>
+                    <div class="header-stat-value" style="color: var(--success)">98.3%</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- KPIs mejorados -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon"><i data-lucide="sun"></i></div>
+                <div class="kpi-details">
+                    <div class="kpi-header">
+                        <div class="kpi-label">Generación solar total</div>
+                        <i data-lucide="info" class="kpi-info-icon"></i>
+                    </div>
+                    <div class="kpi-value">2,847 <span class="kpi-unit">kW</span></div>
+                    <div class="kpi-footer">
+                        <div class="kpi-trend">
+                            <span class="trend-up">▲ 284 kW</span>
+                            <span>vs. ayer</span>
+                        </div>
+                        <span class="kpi-badge badge-success">+12.5%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon"><i data-lucide="battery-charging"></i></div>
+                <div class="kpi-details">
+                    <div class="kpi-header">
+                        <div class="kpi-label">Capacidad flota promedio</div>
+                        <i data-lucide="info" class="kpi-info-icon"></i>
+                    </div>
+                    <div class="kpi-value">78<span class="kpi-unit">%</span></div>
+                    <div class="kpi-footer">
+                        <div class="kpi-trend">
+                            <span>12 en carga óptima</span>
+                        </div>
+                        <span class="kpi-badge badge-warning">Media</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon"><i data-lucide="alert-triangle"></i></div>
+                <div class="kpi-details">
+                    <div class="kpi-header">
+                        <div class="kpi-label">Alertas activas</div>
+                        <i data-lucide="info" class="kpi-info-icon"></i>
+                    </div>
+                    <div class="kpi-value">3</div>
+                    <div class="kpi-footer">
+                        <div class="kpi-trend">
+                            <span>2 requieren atención inmediata</span>
+                        </div>
+                        <span class="kpi-badge badge-danger">Crítico</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon"><i data-lucide="clock"></i></div>
+                <div class="kpi-details">
+                    <div class="kpi-header">
+                        <div class="kpi-label">Ocaso solar</div>
+                        <i data-lucide="info" class="kpi-info-icon"></i>
+                    </div>
+                    <div class="kpi-value">18:42</div>
+                    <div class="kpi-footer">
+                        <div class="kpi-trend">
+                            <span>3h 24m de luz restante</span>
+                        </div>
+                        <span class="kpi-badge badge-info">Próximo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla mejorada -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3 class="table-title">Estado detallado de unidades</h3>
+                <div class="table-filters">
+                    <input type="text" placeholder="Buscar unidad..." class="filter-input">
+                    <select class="filter-input">
+                        <option>Todos los estados</option>
+                        <option>Saludable</option>
+                        <option>Advertencia</option>
+                        <option>Crítico</option>
+                    </select>
+                </div>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Vehículo</th>
+                        <th>Estado</th>
+                        <th>Batería</th>
+                        <th>Carga actual</th>
+                        <th>Regeneración</th>
+                        <th>Tiempo restante</th>
+                        <th>Temperatura</th>
+                        <th>Último mantenimiento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>GPS-V1-102</strong></td>
+                        <td><span class="badge badge-success">Saludable</span></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span>82%</span>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 82%; background: var(--success);"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="color: var(--success);">+620 mA</td>
+                        <td>Alta</td>
+                        <td>1h 12m</td>
+                        <td>42°C</td>
+                        <td>15/03/2024</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GPS-V1-205</strong></td>
+                        <td><span class="badge badge-warning">Advertencia</span></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span>45%</span>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 45%; background: var(--warning);"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="color: var(--warning);">+85 mA</td>
+                        <td>Baja</td>
+                        <td>7h 45m</td>
+                        <td>38°C</td>
+                        <td>10/03/2024</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GPS-V1-098</strong></td>
+                        <td><span class="badge badge-danger">Crítico</span></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span>15%</span>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 15%; background: var(--danger);"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="color: var(--danger);">0 mA</td>
+                        <td>Nula</td>
+                        <td>--</td>
+                        <td>45°C</td>
+                        <td>05/03/2024</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GPS-V1-156</strong></td>
+                        <td><span class="badge badge-success">Saludable</span></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span>94%</span>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 94%; background: var(--success);"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="color: var(--success);">+890 mA</td>
+                        <td>Máxima</td>
+                        <td>0h 30m</td>
+                        <td>40°C</td>
+                        <td>12/03/2024</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GPS-V1-178</strong></td>
+                        <td><span class="badge badge-info">Mantenimiento</span></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span>0%</span>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 0%; background: var(--info);"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>--</td>
+                        <td>--</td>
+                        <td>--</td>
+                        <td>--</td>
+                        <td>18/03/2024</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Grid principal con gráficos -->
+        <div class="main-grid">
+            <!-- Gráfico de generación -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">Generación solar - Últimas 24h</h3>
+                    <div class="panel-actions">
+                        <button class="panel-btn">Hora</button>
+                        <button class="panel-btn">Día</button>
+                        <button class="panel-btn">Semana</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="generationChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Distribución de flota -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">Distribución de flota</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="fleetChart"></canvas>
+                </div>
+                <div class="stats-mini-grid">
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Óptimo (>80%)</div>
+                        <div class="stat-mini-value" style="color: var(--success);">25</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Bajo (20-50%)</div>
+                        <div class="stat-mini-value" style="color: var(--warning);">10</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Crítico (<20%)</div>
+                        <div class="stat-mini-value" style="color: var(--danger);">2</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Mantenimiento</div>
+                        <div class="stat-mini-value" style="color: var(--info);">5</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Segundo grid de gráficos -->
+        <div class="main-grid" style="margin-top: 24px;">
+            <!-- Eficiencia por hora -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">Eficiencia de carga por hora</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="efficiencyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Predicción -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">Predicción próximas 24h</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="predictionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Se mueve el script de Lucide aquí para asegurar que el DOM esté cargado antes de su ejecución y se usa el CDN recomendado -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        // Actualizar reloj
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('current-time').innerText = now.toLocaleString('es-ES', { 
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Configuración global de Chart.js
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#475569';
+
+        // Gráfico de generación
+        new Chart(document.getElementById('generationChart'), {
+            type: 'line',
+            data: {
+                labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
+                datasets: [{
+                    label: 'Generación (kW)',
+                    data: [50, 30, 120, 580, 1240, 1450, 780, 120],
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#2563eb',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: '#e2e8f0' },
+                        border: { display: false }
+                    },
+                    x: { 
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        // Gráfico de distribución (doughnut)
+        new Chart(document.getElementById('fleetChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Óptimo (>80%)', 'Bajo (20-50%)', 'Crítico (<20%)', 'Mantenimiento'],
+                datasets: [{
+                    data: [25, 10, 2, 5],
+                    backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#3b82f6'],
+                    borderWidth: 0,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { 
+                            boxWidth: 12,
+                            padding: 20,
+                            font: { size: 12 }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Gráfico de eficiencia
+        new Chart(document.getElementById('efficiencyChart'), {
+            type: 'bar',
+            data: {
+                labels: ['06h', '08h', '10h', '12h', '14h', '16h', '18h'],
+                datasets: [{
+                    label: 'Eficiencia (%)',
+                    data: [45, 68, 85, 96, 98, 88, 62],
+                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: '#e2e8f0' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // Gráfico de predicción
+        new Chart(document.getElementById('predictionChart'), {
+            type: 'line',
+            data: {
+                labels: ['+3h', '+6h', '+9h', '+12h', '+15h', '+18h', '+21h', '+24h'],
+                datasets: [{
+                    label: 'Predicción generación (kW)',
+                    data: [650, 420, 280, 120, 380, 820, 1100, 980],
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    borderDash: [5, 5]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: '#e2e8f0' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // Inicializar iconos de Lucide
+        lucide.createIcons();
+    </script>
+</body>
+</html>

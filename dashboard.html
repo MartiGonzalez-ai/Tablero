@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="Dashboard de Llenados Detectados - Geotab FillUp">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Llenados Detectados</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/vendor.css">
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+
+<body>
+    <div id="app-dashboard">
+
+        <!-- ═══════════ HEADER ═══════════ -->
+        <header class="top-nav glass-panel">
+            <div class="nav-brand">
+                <i data-lucide="fuel" width="30" height="30" stroke="var(--color-primary)" stroke-width="2"></i>
+                <div>
+                    <h1>Llenados Detectados</h1>
+                </div>
+            </div>
+
+            <div class="nav-controls">
+                <!-- Date Range Buttons -->
+                <div class="date-range-group" id="date-range-group">
+                    <button class="btn-range active" data-days="7" id="btn-7d">7 días</button>
+                    <button class="btn-range" data-days="15" id="btn-15d">15 días</button>
+                    <button class="btn-range" data-days="30" id="btn-30d">30 días</button>
+                    <button class="btn-range btn-range--custom" id="btn-custom">
+                        <i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i>
+                        Personalizado
+                    </button>
+                </div>
+
+                <!-- Custom Date Popover -->
+                <div class="date-popover glass-panel" id="date-popover">
+                    <div class="date-popover-header">Rango de Fechas</div>
+                    <div class="date-popover-fields">
+                        <div class="date-field">
+                            <label for="date-from">Desde</label>
+                            <input type="date" id="date-from" class="date-input">
+                        </div>
+                        <div class="date-field">
+                            <label for="date-to">Hasta</label>
+                            <input type="date" id="date-to" class="date-input">
+                        </div>
+                    </div>
+                    <div class="date-popover-footer">
+                        <button class="btn-popover-cancel" id="btn-date-cancel">Cancelar</button>
+                        <button class="btn-popover-apply" id="btn-date-apply">
+                            <i data-lucide="check" width="13" height="13" stroke-width="2.5"></i>
+                            Aplicar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Refresh -->
+                <button id="btn-refresh" class="btn-refresh" title="Refrescar datos">
+                    <i data-lucide="refresh-cw" width="18" height="18" stroke-width="2.5"></i>
+                    <span>Refrescar</span>
+                </button>
+
+                <span class="last-updated" id="last-updated-time">Actualizado: --:--</span>
+            </div>
+        </header>
+
+        <!-- ═══════════ SUMMARY KPI STRIP ═══════════ -->
+        <section class="summary-strip">
+
+            <!-- Total Llenados -->
+            <div class="stat-card" data-color="cyan">
+                <div class="stat-icon stat-icon--cyan">
+                    <i data-lucide="fuel" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Total Llenados</div>
+                    <div class="stat-value skeleton" id="stat-total">—</div>
+                    <div class="stat-sub" id="stat-total-badge">— días</div>
+                </div>
+            </div>
+
+            <!-- Total Litros -->
+            <div class="stat-card" data-color="green">
+                <div class="stat-icon stat-icon--green">
+                    <i data-lucide="droplet" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Total Litros</div>
+                    <div class="stat-value skeleton" id="stat-litros">—</div>
+                    <div class="stat-sub">litros cargados</div>
+                </div>
+            </div>
+
+            <!-- Promedio por llenado -->
+            <div class="stat-card" data-color="blue">
+                <div class="stat-icon stat-icon--blue">
+                    <i data-lucide="bar-chart-2" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Promedio / Llenado</div>
+                    <div class="stat-value skeleton" id="stat-promedio">—</div>
+                    <div class="stat-sub">litros en promedio</div>
+                </div>
+            </div>
+
+            <!-- Unidades con llenado -->
+            <div class="stat-card" data-color="purple">
+                <div class="stat-icon stat-icon--purple">
+                    <i data-lucide="truck" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Unidades</div>
+                    <div class="stat-value skeleton" id="stat-unidades">—</div>
+                    <div class="stat-sub">con llenados detectados</div>
+                </div>
+            </div>
+
+            <!-- Último llenado -->
+            <div class="stat-card" data-color="orange">
+                <div class="stat-icon stat-icon--orange">
+                    <i data-lucide="clock" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Último Llenado</div>
+                    <div class="stat-value stat-value--sm skeleton" id="stat-ultimo-fecha">—</div>
+                    <div class="stat-sub skeleton" id="stat-ultimo-unidad">—</div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ═══════════ CHARTS SECTION ═══════════ -->
+        <section class="charts-section">
+            <div class="chart-row">
+                <!-- Monthly Volume -->
+                <div class="chart-card glass-panel col-span-2">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="bar-chart" width="16" height="16" stroke-width="2"></i>
+                            <span>Litros Totales por Mes</span>
+                        </div>
+                    </div>
+                    <div id="chart-monthly" class="chart-container"></div>
+                </div>
+                <!-- Day of Week Volume -->
+                <div class="chart-card glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="calendar" width="16" height="16" stroke-width="2"></i>
+                            <span>Actividad por Día</span>
+                        </div>
+                    </div>
+                    <div id="chart-dow" class="chart-container"></div>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <!-- Volume Histogram -->
+                <div class="chart-card glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="activity" width="16" height="16" stroke-width="2"></i>
+                            <span>Rangos de Llenado (Litros)</span>
+                        </div>
+                    </div>
+                    <div id="chart-histogram" class="chart-container"></div>
+                </div>
+                <!-- Heatmap -->
+                <div class="chart-card glass-panel col-span-2">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="grid" width="16" height="16" stroke-width="2"></i>
+                            <span>Mapa de Calor: Cargas por Hora y Día</span>
+                        </div>
+                    </div>
+                    <div id="chart-heatmap" class="chart-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ MAIN CONTENT ═══════════ -->
+        <main class="main-content">
+
+            <!-- Left: Ranking de unidades -->
+            <section class="panel glass-panel ranking-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="trending-up" width="16" height="16" stroke-width="2"></i>
+                        <span>Ranking por Unidad</span>
+                    </div>
+                    <span class="panel-badge skeleton" id="badge-ranking">—</span>
+                </div>
+                <ul class="ranking-list" id="ranking-list">
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                </ul>
+            </section>
+
+            <!-- Right: Tabla de eventos -->
+            <section class="panel glass-panel table-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="table" width="16" height="16" stroke-width="2"></i>
+                        <span>Detalle de Llenados</span>
+                    </div>
+                    <div class="table-controls">
+                        <input type="text" id="search-input" class="search-input" placeholder="Buscar unidad...">
+                        <span class="panel-badge" id="badge-table">—</span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="fillup-table" id="fillup-table">
+                        <thead>
+                            <tr>
+                                <th class="col-unit">Unidad</th>
+                                <th class="col-driver">Conductor</th>
+                                <th class="col-date">Fecha y Hora</th>
+                                <th class="col-vol">Litros</th>
+                                <th class="col-odo">Odómetro</th>
+                                <th class="col-map">Mapa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fillup-tbody">
+                            <tr class="tr-skeleton">
+                                <td colspan="6">
+                                    <div class="td-skel"></div>
+                                </td>
+                            </tr>
+                            <tr class="tr-skeleton">
+                                <td colspan="6">
+                                    <div class="td-skel"></div>
+                                </td>
+                            </tr>
+                            <tr class="tr-skeleton">
+                                <td colspan="6">
+                                    <div class="td-skel"></div>
+                                </td>
+                            </tr>
+                            <tr class="tr-skeleton">
+                                <td colspan="6">
+                                    <div class="td-skel"></div>
+                                </td>
+                            </tr>
+                            <tr class="tr-skeleton">
+                                <td colspan="6">
+                                    <div class="td-skel"></div>
+                                </td>
+                            </tr>
+                            <tr class="tr-skeleton">
+                                <td colspan="6">
+                                    <div class="td-skel"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="table-empty" id="table-empty" style="display:none;">
+                        <i data-lucide="search" width="40" height="40" stroke-width="1.5"></i>
+                        <p>No se encontraron llenados en el periodo seleccionado.</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- ═══════════ RAW DATA TABLE ═══════════ -->
+        <section class="raw-data-panel panel glass-panel">
+            <div class="panel-header">
+                <div class="panel-title-group">
+                    <i data-lucide="list" width="16" height="16" stroke-width="2"></i>
+                    <span>Datos Completos (Crudos)</span>
+                </div>
+            </div>
+            <div class="table-wrapper raw-table-wrapper">
+                <table class="fillup-table raw-table" id="raw-table">
+                    <thead id="raw-thead">
+                        <tr>
+                            <th>Cargando...</th>
+                        </tr>
+                    </thead>
+                    <tbody id="raw-tbody">
+                        <tr class="tr-skeleton">
+                            <td>
+                                <div class="td-skel"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Map Modal -->
+        <div class="modal-overlay" id="map-modal">
+            <div class="modal-content glass-panel" style="width:90%; max-width:800px;">
+                <div class="modal-header">
+                    <h3>Ubicación del Llenado</h3>
+                    <button class="btn-close" onclick="window.closeMapModal()">
+                        <i data-lucide="x" width="20" height="20"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding:0;">
+                    <iframe id="map-iframe" width="100%" height="450" frameborder="0" style="border:0;"
+                        allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Global Error Toast -->
+        <div class="error-toast" id="error-toast" style="display:none;">
+            <i data-lucide="alert-circle" width="16" height="16" stroke-width="2"></i>
+            <span id="error-toast-msg">Error al cargar datos.</span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="scripts/vendor.js"></script>
+    <script src="scripts/main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="Dashboard de Rendimiento de Flota - Geotab">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Rendimiento de Flota</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/vendor.css">
+    <link rel="stylesheet" href="styles/Rendimiento.css">
+</head>
+
+<body>
+    <div id="app-rendimiento">
+
+        <!-- ═══════════ HEADER ═══════════ -->
+        <header class="top-nav glass-panel">
+            <div class="nav-brand">
+                <i data-lucide="gauge" width="30" height="30" stroke="var(--color-primary)" stroke-width="2"></i>
+                <div>
+                    <h1>Rendimiento de Flota</h1>
+                </div>
+            </div>
+
+            <div class="nav-controls">
+                <!-- Date Range Buttons -->
+                <div class="date-range-group" id="date-range-group">
+                    <button class="btn-range active" data-days="7" id="btn-7d">7 días</button>
+                    <button class="btn-range" data-days="15" id="btn-15d">15 días</button>
+                    <button class="btn-range" data-days="30" id="btn-30d">30 días</button>
+                    <button class="btn-range btn-range--custom" id="btn-custom">
+                        <i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i>
+                        Personalizado
+                    </button>
+                </div>
+
+                <!-- Custom Date Popover -->
+                <div class="date-popover glass-panel" id="date-popover">
+                    <div class="date-popover-header">Rango de Fechas</div>
+                    <div class="date-popover-fields">
+                        <div class="date-field">
+                            <label for="date-from">Desde</label>
+                            <input type="date" id="date-from" class="date-input">
+                        </div>
+                        <div class="date-field">
+                            <label for="date-to">Hasta</label>
+                            <input type="date" id="date-to" class="date-input">
+                        </div>
+                    </div>
+                    <div class="date-popover-footer">
+                        <button class="btn-popover-cancel" id="btn-date-cancel">Cancelar</button>
+                        <button class="btn-popover-apply" id="btn-date-apply">
+                            <i data-lucide="check" width="13" height="13" stroke-width="2.5"></i>
+                            Aplicar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Unit Filter -->
+                <div class="unit-filter-group" id="unit-filter-group">
+                    <i data-lucide="truck" width="14" height="14" stroke-width="2.5"></i>
+                    <select id="unit-select" class="unit-select">
+                        <option value="all">Todas las Unidades</option>
+                    </select>
+                </div>
+
+                <!-- Refresh -->
+                <button id="btn-refresh" class="btn-refresh" title="Refrescar datos">
+                    <i data-lucide="refresh-cw" width="18" height="18" stroke-width="2.5"></i>
+                    <span>Refrescar</span>
+                </button>
+
+                <span class="last-updated" id="last-updated-time">Actualizado: --:--</span>
+            </div>
+        </header>
+
+        <!-- ═══════════ SUMMARY KPI STRIP ═══════════ -->
+        <section class="summary-strip">
+
+            <!-- Rendimiento Promedio -->
+            <div class="stat-card" data-color="green">
+                <div class="stat-icon stat-icon--green">
+                    <i data-lucide="gauge" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Rendimiento Promedio</div>
+                    <div class="stat-value skeleton" id="stat-rendimiento">—</div>
+                    <div class="stat-sub" id="stat-total-badge">— días</div>
+                </div>
+            </div>
+
+            <!-- Distancia Total -->
+            <div class="stat-card" data-color="cyan">
+                <div class="stat-icon stat-icon--cyan">
+                    <i data-lucide="route" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Distancia Total</div>
+                    <div class="stat-value skeleton" id="stat-distancia">—</div>
+                    <div class="stat-sub">kilómetros recorridos</div>
+                </div>
+            </div>
+
+            <!-- Combustible Total -->
+            <div class="stat-card" data-color="blue">
+                <div class="stat-icon stat-icon--blue">
+                    <i data-lucide="droplet" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Combustible Total</div>
+                    <div class="stat-value skeleton" id="stat-combustible">—</div>
+                    <div class="stat-sub">litros consumidos</div>
+                </div>
+            </div>
+
+            <!-- Costo Estimado / km -->
+            <div class="stat-card" data-color="purple">
+                <div class="stat-icon stat-icon--purple">
+                    <i data-lucide="dollar-sign" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Costo / km</div>
+                    <div class="stat-value stat-value--sm skeleton" id="stat-costo">—</div>
+                    <div class="stat-sub">estimado por kilómetro</div>
+                </div>
+            </div>
+
+            <!-- Unidades Monitoreadas -->
+            <div class="stat-card" data-color="orange">
+                <div class="stat-icon stat-icon--orange">
+                    <i data-lucide="truck" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Unidades</div>
+                    <div class="stat-value skeleton" id="stat-unidades">—</div>
+                    <div class="stat-sub">monitoreadas</div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ═══════════ CHARTS SECTION ═══════════ -->
+        <section class="charts-section">
+            <div class="chart-row">
+                <!-- Rendimiento por Unidad -->
+                <div class="chart-card glass-panel col-span-2">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="bar-chart" width="16" height="16" stroke-width="2"></i>
+                            <span>Rendimiento por Unidad (km/L)</span>
+                        </div>
+                    </div>
+                    <div id="chart-eff-unit" class="chart-container"></div>
+                </div>
+                <!-- Distribución de Eficiencia -->
+                <div class="chart-card glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="pie-chart" width="16" height="16" stroke-width="2"></i>
+                            <span>Distribución de Eficiencia</span>
+                        </div>
+                    </div>
+                    <div id="chart-distribution" class="chart-container"></div>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <!-- Tendencia de Rendimiento -->
+                <div class="chart-card glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="trending-up" width="16" height="16" stroke-width="2"></i>
+                            <span>Tendencia de Rendimiento</span>
+                        </div>
+                    </div>
+                    <div id="chart-trend" class="chart-container"></div>
+                </div>
+                <!-- Consumo vs Distancia -->
+                <div class="chart-card glass-panel col-span-2">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="scatter-chart" width="16" height="16" stroke-width="2"></i>
+                            <span>Consumo vs Distancia por Unidad</span>
+                        </div>
+                    </div>
+                    <div id="chart-scatter" class="chart-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ MAIN CONTENT ═══════════ -->
+        <main class="main-content">
+
+            <!-- Left: Ranking de unidades por rendimiento -->
+            <section class="panel glass-panel ranking-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="award" width="16" height="16" stroke-width="2"></i>
+                        <span>Mejor Rendimiento</span>
+                    </div>
+                    <span class="panel-badge skeleton" id="badge-ranking">—</span>
+                </div>
+                <ul class="ranking-list" id="ranking-list">
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                </ul>
+            </section>
+
+            <!-- Right: Tabla de rendimiento -->
+            <section class="panel glass-panel table-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="table" width="16" height="16" stroke-width="2"></i>
+                        <span>Detalle de Rendimiento</span>
+                    </div>
+                    <div class="table-controls">
+                        <input type="text" id="search-input" class="search-input" placeholder="Buscar unidad...">
+                        <span class="panel-badge" id="badge-table">—</span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="perf-table" id="perf-table">
+                        <thead>
+                            <tr>
+                                <th>Unidad</th>
+                                <th>Periodo</th>
+                                <th>Distancia</th>
+                                <th>Combustible</th>
+                                <th>Rendimiento</th>
+                                <th>Odómetro</th>
+                            </tr>
+                        </thead>
+                        <tbody id="perf-tbody">
+                            <tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="table-empty" id="table-empty" style="display:none;">
+                        <i data-lucide="search" width="40" height="40" stroke-width="1.5"></i>
+                        <p>No se encontraron registros de rendimiento en el periodo seleccionado.</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- ═══════════ TRIPS PERFORMANCE TABLE ═══════════ -->
+        <section class="trips-panel">
+            <div class="panel glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="map-pin" width="16" height="16" stroke-width="2"></i>
+                        <span>Detalle de Viajes (Rendimiento por Trayecto)</span>
+                    </div>
+                    <div class="table-controls">
+                        <input type="text" id="trips-search-input" class="search-input" placeholder="Buscar viaje...">
+                        <span class="panel-badge" id="badge-trips">—</span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="perf-table" id="trips-table">
+                        <thead>
+                            <tr>
+                                <th>Unidad</th>
+                                <th>Conductor</th>
+                                <th>Inicio</th>
+                                <th>Fin</th>
+                                <th>Distancia</th>
+                                <th>Vel. Máx.</th>
+                                <th>Vel. Prom.</th>
+                                <th>Dur. Conducción</th>
+                                <th>Dur. Parada</th>
+                                <th>Combustible</th>
+                                <th>Rendimiento</th>
+                                <th>Dist. Trabajo</th>
+                                <th>Dur. Trabajo</th>
+                                <th>Dist. Fuera Horario</th>
+                                <th>Dur. Fuera Horario</th>
+                                <th>Punto de Parada</th>
+                                <th>Estado</th>
+                                <th>Parada Trabajo</th>
+                                <th>Parada Fuera Horario</th>
+                                <th>Inicio Próx. Viaje</th>
+                                <th>ID Viaje</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trips-tbody">
+                            <tr class="tr-skeleton"><td colspan="21"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="21"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="21"><div class="td-skel"></div></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="table-empty" id="trips-empty" style="display:none;">
+                        <i data-lucide="map" width="40" height="40" stroke-width="1.5"></i>
+                        <p>No se encontraron registros de viajes en el periodo seleccionado.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ FUEL CONSUMPTION SUMMARY TABLE ═══════════ -->
+        <section class="fuel-summary-panel">
+            <div class="panel glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="droplet" width="16" height="16" stroke-width="2"></i>
+                        <span>Resumen de Consumo de Combustible por Unidad (Basado en StatusData)</span>
+                    </div>
+                    <span class="panel-badge" id="badge-fuel-summary">—</span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="perf-table" id="fuel-summary-table">
+                        <thead>
+                            <tr>
+                                <th>Unidad</th>
+                                <th style="text-align:right;">Combustible Inicial (Máx)</th>
+                                <th style="text-align:right;">Combustible Final (Mín)</th>
+                                <th style="text-align:right;">Consumo Total (L)</th>
+                                <th>Periodo Analizado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fuel-summary-tbody">
+                            <tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ RAW STATUSDATA TABLE ═══════════ -->
+        <section class="raw-data-panel">
+            <div class="panel glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="database" width="16" height="16" stroke-width="2"></i>
+                        <span>Datos Crudos — StatusData API</span>
+                    </div>
+                    <span class="panel-badge" id="badge-raw">—</span>
+                </div>
+                <div class="raw-table-wrapper table-wrapper">
+                    <table class="perf-table raw-table" id="raw-table">
+                        <thead id="raw-thead">
+                            <tr><th>Cargando...</th></tr>
+                        </thead>
+                        <tbody id="raw-tbody">
+                            <tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Global Error Toast -->
+        <div class="error-toast" id="error-toast" style="display:none;">
+            <i data-lucide="alert-circle" width="16" height="16" stroke-width="2"></i>
+            <span id="error-toast-msg">Error al cargar datos.</span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="scripts/vendor.js"></script>
+    <script src="scripts/rendimiento.js"></script>
+</body>
+
+</html>

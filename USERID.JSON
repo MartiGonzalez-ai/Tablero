@@ -1,0 +1,8 @@
+{
+    "method": "Authenticate",
+    "params": {
+        "database": "enerkom",
+        "userName": "mgonzalez@enerkom.com.mx",
+        "password": "T@tis13579"
+    }
+}

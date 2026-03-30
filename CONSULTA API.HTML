@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geotab API Explorer - Zenith</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Login Layout */
+        #login-section {
+            width: 100%;
+            max-width: 400px;
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #login-section h2 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        /* App Layout (Bento Grid Style) */
+        #app-section {
+            display: none;
+            width: 100%;
+            max-width: 1400px;
+            height: 90vh;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+        }
+
+        .header-panel {
+            grid-column: 1 / -1;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .controls-panel {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .data-panel {
+            padding: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Inputs & Buttons */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-main);
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--accent);
+        }
+
+        button {
+            padding: 12px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s, transform 0.1s;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Table Styles */
+        .table-container {
+            flex-grow: 1;
+            overflow: auto;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--glass-border);
+            white-space: nowrap;
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.4);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .status-msg {
+            font-size: 0.9rem;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .error {
+            color: var(--danger);
+        }
+
+        .success {
+            color: #10b981;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="login-section" class="glass-panel">
+        <h2>Geotab Explorer</h2>
+        <div class="input-group">
+            <label>Servidor (ej. my.geotab.com)</label>
+            <input type="text" id="server" value="my.geotab.com">
+        </div>
+        <div class="input-group">
+            <label>Base de Datos</label>
+            <input type="text" id="database" placeholder="Nombre de la BD">
+        </div>
+        <div class="input-group">
+            <label>Usuario / Email</label>
+            <input type="text" id="username" placeholder="usuario@empresa.com">
+        </div>
+        <div class="input-group">
+            <label>Contraseña</label>
+            <input type="password" id="password" placeholder="••••••••">
+        </div>
+        <button onclick="authenticate()">Conectar a Geotab</button>
+        <div id="login-status" class="status-msg"></div>
+    </div>
+
+    <div id="app-section">
+        <div class="glass-panel header-panel">
+            <div>
+                <h3 style="margin-bottom: 5px;">Explorador de Datos Zenith</h3>
+                <span id="user-info" style="font-size: 0.85rem; color: var(--text-muted);"></span>
+            </div>
+            <button class="btn-danger" onclick="logout()" style="padding: 8px 16px;">Desconectar</button>
+        </div>
+
+        <div class="glass-panel controls-panel">
+            <div class="input-group">
+                <label>Entidad (Tabla) a Consultar</label>
+                <input list="entities-list" id="entity-name" placeholder="Ej. Device, User...">
+                <datalist id="entities-list">
+                    <!-- ── Dispositivos y Vehículos ── -->
+                    <option value="Device">Dispositivos (Vehículos)</option>
+                    <option value="CustomDevice">Dispositivos Personalizados</option>
+                    <option value="DeviceStatusInfo">Estado Actual del Dispositivo</option>
+                    <option value="DeviceShare">Compartición de Dispositivo</option>
+                    <option value="IoxAddOn">Add-Ons IOX</option>
+                    <option value="Controller">Controladores ECU</option>
+
+                    <!-- ── Usuarios y Seguridad ── -->
+                    <option value="User">Usuarios</option>
+                    <option value="Group">Grupos</option>
+                    <option value="SecurityClearance">Permisos de Seguridad</option>
+                    <option value="Credential">Credenciales</option>
+                    <option value="Audit">Auditoría (Historial de Acciones)</option>
+                    <option value="ApiAccount">Cuentas de API</option>
+                    <option value="ApiUser">Usuarios de API</option>
+
+                    <!-- ── Rastreo y GPS ── -->
+                    <option value="LogRecord">Historial de Rastreo (GPS)</option>
+                    <option value="Trip">Viajes</option>
+                    <option value="Route">Rutas</option>
+                    <option value="RoutePlan">Planes de Ruta</option>
+                    <option value="RoutePlanItem">Elementos de Plan de Ruta</option>
+
+                    <!-- ── Diagnóstico y Motor ── -->
+                    <option value="Diagnostic">Diagnósticos</option>
+                    <option value="StatusData">Datos de Estado (Motor, Odómetro)</option>
+                    <option value="FaultData">Códigos de Falla (DTC)</option>
+                    <option value="FailureMode">Modos de Fallo</option>
+                    <option value="FlashCode">Códigos Flash</option>
+                    <option value="DebugData">Datos de Depuración</option>
+                    <option value="BinaryPayload">Datos Binarios (Payload)</option>
+                    <option value="CustomData">Datos Personalizados</option>
+                    <option value="AnnotationLog">Registro de Anotaciones</option>
+
+                    <!-- ── Combustible y Energía ── -->
+                    <option value="FuelUsed">Combustible Utilizado</option>
+                    <option value="FillUp">Llenados de Combustible</option>
+                    <option value="FuelTransaction">Transacciones de Combustible</option>
+                    <option value="FuelTaxDetail">Detalles Impuesto Combustible (IFTA)</option>
+                    <option value="FuelAndEnergyUsed">Combustible y Energía Usada</option>
+                    <option value="ChargeEvent">Eventos de Carga (EV)</option>
+
+                    <!-- ── Reglas y Excepciones ── -->
+                    <option value="Rule">Reglas</option>
+                    <option value="Condition">Condiciones de Reglas</option>
+                    <option value="ExceptionEvent">Eventos de Excepción</option>
+
+                    <!-- ── Zonas y Geocercas ── -->
+                    <option value="Zone">Zonas (Geocercas)</option>
+                    <option value="ZoneType">Tipos de Zona</option>
+
+                    <!-- ── ELD / HOS (Horas de Servicio) ── -->
+                    <option value="DutyStatusLog">Registro de Estado de Servicio (HOS)</option>
+                    <option value="DutyStatusAvailability">Disponibilidad HOS</option>
+                    <option value="DutyStatusViolation">Violaciones HOS</option>
+                    <option value="DVIRLog">Inspección de Vehículo (DVIR)</option>
+                    <option value="DriverChange">Cambios de Conductor</option>
+
+                    <!-- ── Emisiones ── -->
+                    <option value="EmissionComplianceEvent">Eventos Cumplimiento Emisiones</option>
+                    <option value="EmissionVehicleEnrollment">Inscripción Vehículo Emisiones</option>
+
+                    <!-- ── Notificaciones ── -->
+                    <option value="DistributionList">Listas de Distribución</option>
+                    <option value="Notification">Notificaciones</option>
+                    <option value="NotificationTemplate">Plantillas de Notificación</option>
+
+                    <!-- ── Media y Archivos ── -->
+                    <option value="MediaFile">Archivos Multimedia</option>
+                    <option value="TextMessage">Mensajes de Texto</option>
+
+                    <!-- ── Add-In Data ── -->
+                    <option value="AddInData">Datos de Add-In</option>
+
+                    <!-- ── Mantenimiento ── -->
+                    <option value="MaintenanceSchedule">Programación de Mantenimiento</option>
+                    <option value="MaintenanceNotificationRule">Reglas Notificación Mantenimiento</option>
+
+                    <!-- ── Datos de Terceros ── -->
+                    <option value="ThirdPartyDataRecord">Registros Datos Terceros</option>
+                    <option value="ThirdPartyStatusRecord">Registros Estado Terceros</option>
+                    <option value="ThirdPartyAccelerationRecord">Registros Aceleración Terceros</option>
+
+                    <!-- ── Curvas y Rendimiento ── -->
+                    <option value="GoCurve">Curvas de Aceleración (Go)</option>
+
+                    <!-- ── Dispositivos por Modelo ── -->
+                    <option value="Go9">Dispositivo GO9</option>
+                    <option value="Go9B">Dispositivo GO9B</option>
+                    <option value="Go8">Dispositivo GO8</option>
+                    <option value="Go7">Dispositivo GO7</option>
+                    <option value="Go6">Dispositivo GO6</option>
+                    <option value="Go5">Dispositivo GO5</option>
+                </datalist>
+            </div>
+            <div class="input-group">
+                <label>Límite de Resultados</label>
+                <input type="number" id="limit" value="50" min="1" max="10000">
+            </div>
+
+            <!-- --- Filtros adicionales --- -->
+            <div style="border-top: 1px solid var(--glass-border); margin-top: 5px; padding-top: 15px; display: flex; flex-direction: column; gap: 15px;">
+                <div class="input-group">
+                    <label>Filtrar por Unidad</label>
+                    <select id="unit-filter">
+                        <option value="">-- Todas las Unidades --</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Fecha Inicial</label>
+                    <input type="datetime-local" id="from-date">
+                </div>
+                <div class="input-group">
+                    <label>Fecha Final</label>
+                    <input type="datetime-local" id="to-date">
+                </div>
+                <button class="btn-danger" onclick="clearFilters()" style="padding: 8px; font-size: 0.8rem;">Limpiar Filtros</button>
+            </div>
+            <!-- -------------------------- -->
+            <button onclick="fetchEntityData()">Consultar Datos</button>
+            <div id="query-status" class="status-msg"></div>
+        </div>
+
+        <div class="glass-panel data-panel">
+            <div class="table-container">
+                <table id="data-table">
+                    <thead id="table-head"></thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let apiCredentials = null;
+        let apiServer = '';
+
+        // Función central para hacer peticiones JSON-RPC a Geotab
+        async function geotabCall(method, params) {
+            const url = `https://${apiServer}/apiv1`;
+            const payload = {
+                method: method,
+                params: params
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (data.error) {
+                throw new Error(data.error.message || "Error desconocido en la API");
+            }
+            return data.result;
+        }
+
+        // Proceso de Autenticación
+        async function authenticate() {
+            const server = document.getElementById('server').value.trim();
+            const database = document.getElementById('database').value.trim();
+            const userName = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const statusDiv = document.getElementById('login-status');
+
+            if (!server || !database || !userName || !password) {
+                statusDiv.innerHTML = '<span class="error">Por favor completa todos los campos.</span>';
+                return;
+            }
+
+            apiServer = server;
+            statusDiv.innerHTML = '<span style="color: var(--text-muted)">Autenticando...</span>';
+
+            try {
+                const credentials = await geotabCall('Authenticate', {
+                    database: database,
+                    userName: userName,
+                    password: password
+                });
+
+                // Guardamos las credenciales para futuras consultas
+                apiCredentials = credentials.credentials;
+
+                // Transición de UI
+                document.getElementById('login-section').style.display = 'none';
+                const appSection = document.getElementById('app-section');
+                appSection.style.display = 'grid';
+
+                document.getElementById('user-info').innerText = `Conectado como: ${apiCredentials.userName} | BD: ${apiCredentials.database}`;
+
+                // Cargar lista de dispositivos para el filtro
+                populateDeviceDropdown();
+
+                // Forzar un reflow para asegurar que el grid se renderice bien
+                window.dispatchEvent(new Event('resize'));
+
+            } catch (error) {
+                statusDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        // Proceso para consultar datos de la entidad seleccionada
+        async function fetchEntityData() {
+            const entityName = document.getElementById('entity-name').value.trim();
+            const limit = parseInt(document.getElementById('limit').value) || 50;
+            const statusDiv = document.getElementById('query-status');
+            const thead = document.getElementById('table-head');
+            const tbody = document.getElementById('table-body');
+
+            if (!entityName) {
+                statusDiv.innerHTML = '<span class="error">Selecciona o escribe una entidad.</span>';
+                return;
+            }
+
+            statusDiv.innerHTML = '<span style="color: var(--text-muted)">Consultando datos...</span>';
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            try {
+                const results = await geotabCall('Get', {
+                    typeName: entityName,
+                    credentials: apiCredentials,
+                    search: getSearchObject(entityName),
+                    resultsLimit: limit
+                });
+
+                if (!results || results.length === 0) {
+                    statusDiv.innerHTML = '<span class="success">Consulta exitosa (0 resultados).</span>';
+                    return;
+                }
+
+                statusDiv.innerHTML = `<span class="success">Mostrando ${results.length} registros.</span>`;
+                renderTable(results);
+
+            } catch (error) {
+                statusDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        // Función para renderizar dinámicamente JSON a HTML Table
+        function renderTable(dataArray) {
+            const thead = document.getElementById('table-head');
+            const tbody = document.getElementById('table-body');
+
+            // 1. Obtener todas las columnas (keys) únicas de todos los objetos en el array
+            const allKeys = new Set();
+            dataArray.forEach(obj => {
+                Object.keys(obj).forEach(key => allKeys.add(key));
+            });
+            const columns = Array.from(allKeys);
+
+            // 2. Construir el Header
+            const trHead = document.createElement('tr');
+            columns.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+
+            // 3. Construir las filas
+            dataArray.forEach(rowObj => {
+                const tr = document.createElement('tr');
+                columns.forEach(col => {
+                    const td = document.createElement('td');
+                    let cellValue = rowObj[col];
+
+                    // Manejo de objetos anidados (como id, device, diagnostic, etc.)
+                    if (cellValue === null || cellValue === undefined) {
+                        td.textContent = 'null';
+                        td.style.color = 'var(--text-muted)';
+                    } else if (typeof cellValue === 'object') {
+                        td.textContent = JSON.stringify(cellValue);
+                    } else {
+                        td.textContent = cellValue;
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Cerrar sesión y recargar UI
+        function logout() {
+            apiCredentials = null;
+            document.getElementById('password').value = '';
+            document.getElementById('login-status').innerHTML = '';
+            document.getElementById('table-head').innerHTML = '';
+            document.getElementById('table-body').innerHTML = '';
+            document.getElementById('query-status').innerHTML = '';
+            clearFilters();
+
+            document.getElementById('app-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'flex';
+        }
+
+        // --- Nuevas funciones de Filtrado ---
+
+        async function populateDeviceDropdown() {
+            const select = document.getElementById('unit-filter');
+            try {
+                const devices = await geotabCall('Get', {
+                    typeName: 'Device',
+                    credentials: apiCredentials
+                });
+
+                // Limpiar (manteniendo la primera opción)
+                select.innerHTML = '<option value="">-- Todas las Unidades --</option>';
+
+                // Ordenar por nombre
+                devices.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+                devices.forEach(dev => {
+                    const opt = document.createElement('option');
+                    opt.value = dev.id;
+                    opt.textContent = dev.name || dev.id;
+                    select.appendChild(opt);
+                });
+            } catch (error) {
+                console.error("Error cargando dispositivos:", error);
+            }
+        }
+
+        function getSearchObject(entityName) {
+            const unitId = document.getElementById('unit-filter').value;
+            const fromDate = document.getElementById('from-date').value;
+            const toDate = document.getElementById('to-date').value;
+
+            const search = {};
+
+            if (unitId) {
+                // La mayoría de las entidades usan deviceSearch o simplemente device
+                // Para simplificar el explorador, probamos con deviceSearch que es el estándar
+                search.deviceSearch = { id: unitId };
+            }
+
+            if (fromDate) {
+                search.fromDate = new Date(fromDate).toISOString();
+            }
+
+            if (toDate) {
+                search.toDate = new Date(toDate).toISOString();
+            }
+
+            // Si el objeto está vacío, retornamos undefined para que la API no falle
+            return Object.keys(search).length > 0 ? search : undefined;
+        }
+
+        function clearFilters() {
+            document.getElementById('unit-filter').value = '';
+            document.getElementById('from-date').value = '';
+            document.getElementById('to-date').value = '';
+        }
+    </script>
+</body>
+
+</html>
