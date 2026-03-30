@@ -469,40 +469,47 @@ geotab.addin.rendimiento = function () {
     };
 
     // ─── Render Daily Table ───────────────────────────────────────────────────
-    const renderDailyTable = () => {
+    // FIX: Accepts dailyData and sortedDates computed from rawStatusData deltas
+    // so that each day shows real fuel consumption instead of always 0.
+    const renderDailyTable = (dailyData, sortedDates) => {
         const tbody = document.getElementById("daily-tbody");
         const emptyEl = document.getElementById("daily-empty");
         const badgeDaily = document.getElementById("badge-daily");
 
         if (!tbody) return;
         tbody.innerHTML = "";
-        
-        // Compute daily values from filteredTrips
-        const tripsByDay = {};
-        (filteredTrips || []).forEach(t => {
-            if (!t.start) return;
-            const dateObj = new Date(t.start);
-            const dStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth()+1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
-            if (!tripsByDay[dStr]) tripsByDay[dStr] = { dist: 0, fuel: 0 };
-            tripsByDay[dStr].dist += (parseFloat(t.distance) || 0);
-            tripsByDay[dStr].fuel += (parseFloat(t.fuelUsed) || 0);
-        });
 
-        const sortedDates = Object.keys(tripsByDay).sort();
-        
-        if (badgeDaily) badgeDaily.textContent = `${sortedDates.length} días`;
+        // If no external data is passed, fall back to filteredTrips (may show 0s)
+        let dataToUse = dailyData;
+        let datesToUse = sortedDates;
 
-        if (sortedDates.length === 0) {
+        if (!dataToUse || !datesToUse) {
+            const tripsByDay = {};
+            (filteredTrips || []).forEach(t => {
+                if (!t.start) return;
+                const dateObj = new Date(t.start);
+                const dStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
+                if (!tripsByDay[dStr]) tripsByDay[dStr] = { dist: 0, fuel: 0 };
+                tripsByDay[dStr].dist += (parseFloat(t.distance) || 0);
+                tripsByDay[dStr].fuel += (parseFloat(t.fuelUsed) || 0);
+            });
+            dataToUse = tripsByDay;
+            datesToUse = Object.keys(tripsByDay).sort();
+        }
+
+        if (badgeDaily) badgeDaily.textContent = `${datesToUse.length} días`;
+
+        if (datesToUse.length === 0) {
             if (emptyEl) emptyEl.style.display = "flex";
             return;
         }
         if (emptyEl) emptyEl.style.display = "none";
 
         // Sort descending so most recent is on top
-        const reversedDates = [...sortedDates].reverse();
+        const reversedDates = [...datesToUse].reverse();
 
         reversedDates.forEach(dateStr => {
-            const day = tripsByDay[dateStr];
+            const day = dataToUse[dateStr];
             const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
             const effClass = getEffClass(eff);
 
@@ -515,7 +522,7 @@ geotab.addin.rendimiento = function () {
                     </div>
                 </td>
                 <td style="text-align:center;">
-                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : "0.0 km/L"}</span>
+                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : "—"}</span>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -587,8 +594,9 @@ geotab.addin.rendimiento = function () {
             tooltip: { theme: 'light' }
         };
 
-        // 1. Tendencia de Rendimiento Flota Diaria (km/L)
-        // Group rawStatusData by Day to get real daily distance and fuel from StatusData
+        // ── Build dailyData from rawStatusData deltas (fuel + odometer) ──────
+        // This is the correct source for daily efficiency: cumulative sensor
+        // readings converted to per-day deltas, filtered by the selected unit.
         const dailyData = {};
         const rawFuel = rawStatusData.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticDeviceTotalFuelId");
         const rawOdo = rawStatusData.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticOdometerId");
@@ -611,7 +619,7 @@ geotab.addin.rendimiento = function () {
             fuelByDev[devId].push(r);
         });
 
-        // For each device, sort and calculate deltas
+        // For each device accumulate daily distance deltas from odometer readings
         Object.keys(odoByDev).forEach(devId => {
             const arr = odoByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
             for (let i = 1; i < arr.length; i++) {
@@ -625,6 +633,7 @@ geotab.addin.rendimiento = function () {
             }
         });
 
+        // For each device accumulate daily fuel deltas from fuel readings
         Object.keys(fuelByDev).forEach(devId => {
             const arr = fuelByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
             for (let i = 1; i < arr.length; i++) {
@@ -640,9 +649,12 @@ geotab.addin.rendimiento = function () {
 
         const sortedDates = Object.keys(dailyData).sort();
 
-        // Render the daily table using the computed daily data
+        // ── Render Daily Table with real daily data ───────────────────────────
+        // Pass dailyData and sortedDates so renderDailyTable uses the correct
+        // sensor-delta values instead of tripping FuelUsed (which is often 0).
         renderDailyTable(dailyData, sortedDates);
 
+        // 1. Tendencia de Rendimiento Flota Diaria (km/L) — area chart
         const trendSeries = sortedDates.map(date => {
             const day = dailyData[date];
             const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
@@ -696,9 +708,7 @@ geotab.addin.rendimiento = function () {
         chartTrend = new ApexCharts(document.querySelector("#chart-trend"), optTrend);
         chartTrend.render();
 
-
-
-        // 4. Consumo vs Distancia (scatter)
+        // 3. Consumo vs Distancia (scatter)
         const scatterData = records.filter(d => d.fuelUsed > 0 && d.distKm > 0).map(d => ({
             x: parseFloat(d.distKm.toFixed(1)), y: parseFloat(d.fuelUsed.toFixed(1))
         }));
@@ -906,7 +916,7 @@ geotab.addin.rendimiento = function () {
             renderSummary(allRecords, allTrips);
             renderRanking(allRecords);
             renderTable(filteredRecords);
-            renderCharts(filteredRecords);
+            renderCharts(filteredRecords);   // <-- this now also calls renderDailyTable with correct data
             renderTripsTable(filteredTrips);
             renderRawTable(rawStatusData, deviceMap);
 
