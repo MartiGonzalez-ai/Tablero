@@ -477,18 +477,44 @@ geotab.addin.rendimiento = function () {
         if (!tbody) return;
         tbody.innerHTML = "";
         
-        // Compute daily values from filteredTrips
-        const tripsByDay = {};
+        // 1. Distance from Trips
+        const dailyData = {};
         (filteredTrips || []).forEach(t => {
             if (!t.start) return;
             const dateObj = new Date(t.start);
             const dStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth()+1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
-            if (!tripsByDay[dStr]) tripsByDay[dStr] = { dist: 0, fuel: 0 };
-            tripsByDay[dStr].dist += (parseFloat(t.distance) || 0);
-            tripsByDay[dStr].fuel += (parseFloat(t.fuelUsed) || 0);
+            if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
+            dailyData[dStr].dist += (parseFloat(t.distance) || 0);
         });
 
-        const sortedDates = Object.keys(tripsByDay).sort();
+        // 2. Fuel from StatusData (Datos Crudos)
+        let fuelDataToProcess = rawStatusData;
+        if (selectedUnitId !== "all") {
+            fuelDataToProcess = rawStatusData.filter(d => d.device && d.device.id === selectedUnitId);
+        }
+        const fuelData = fuelDataToProcess.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticDeviceTotalFuelId");
+        
+        const fuelByDev = {};
+        fuelData.forEach(d => {
+            const devId = d.device.id;
+            if(!fuelByDev[devId]) fuelByDev[devId] = [];
+            fuelByDev[devId].push(d);
+        });
+
+        Object.keys(fuelByDev).forEach(devId => {
+            const arr = fuelByDev[devId].sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+            for (let i = 1; i < arr.length; i++) {
+                const deltaL = arr[i].data - arr[i-1].data;
+                if (deltaL > 0) { // Only positive increments in total fuel
+                    const tzDate = new Date(arr[i].dateTime);
+                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth()+1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
+                    if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
+                    dailyData[dStr].fuel += deltaL;
+                }
+            }
+        });
+
+        const sortedDates = Object.keys(dailyData).sort();
         
         if (badgeDaily) badgeDaily.textContent = `${sortedDates.length} días`;
 
@@ -502,7 +528,7 @@ geotab.addin.rendimiento = function () {
         const reversedDates = [...sortedDates].reverse();
 
         reversedDates.forEach(dateStr => {
-            const day = tripsByDay[dateStr];
+            const day = dailyData[dateStr];
             const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
             const effClass = getEffClass(eff);
 
@@ -1058,5 +1084,4 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
-
 
