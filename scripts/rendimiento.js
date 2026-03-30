@@ -500,8 +500,6 @@ geotab.addin.rendimiento = function () {
                         <span class="date-main" style="font-weight:600; color:var(--color-primary);">${dateStr}</span>
                     </div>
                 </td>
-                <td style="text-align:right; font-weight:600;">${day.dist.toFixed(1)} km</td>
-                <td style="text-align:right; font-weight:600; color:var(--c-blue);">${day.fuel.toFixed(2)} L</td>
                 <td style="text-align:center;">
                     <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(2) + " km/L" : "—"}</span>
                 </td>
@@ -533,7 +531,7 @@ geotab.addin.rendimiento = function () {
         if (emptyEl) emptyEl.style.display = "none";
 
         const dailyTbody = document.getElementById("daily-tbody");
-        if (dailyTbody) dailyTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="4"><div class="td-skel"></div></td></tr>').join("");
+        if (dailyTbody) dailyTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="2"><div class="td-skel"></div></td></tr>').join("");
 
         const badgeDaily = document.getElementById("badge-daily");
         if (badgeDaily) badgeDaily.textContent = "—";
