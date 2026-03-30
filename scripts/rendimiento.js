@@ -169,19 +169,16 @@ geotab.addin.rendimiento = function () {
         const totalDist = (trips || []).reduce((s, t) => s + (parseFloat(t.distance) || 0), 0);
         const totalFuel = (records || []).reduce((s, r) => s + (parseFloat(r.fuelUsed) || 0), 0);
         const avgKmPerL = totalFuel > 0 ? totalDist / totalFuel : 0;
-        const costPerKm = totalDist > 0 ? (totalFuel * 24.5) / totalDist : 0;
         const unidades = records.length;
 
         const elRendimiento = document.getElementById("stat-rendimiento");
         const elDistancia = document.getElementById("stat-distancia");
         const elCombustible = document.getElementById("stat-combustible");
-        const elCosto = document.getElementById("stat-costo");
         const elUnidades = document.getElementById("stat-unidades");
 
         if (elRendimiento) { elRendimiento.classList.remove("skeleton"); animateCount(elRendimiento, avgKmPerL, 1, " km/L"); }
         if (elDistancia) { elDistancia.classList.remove("skeleton"); animateCount(elDistancia, Math.round(totalDist), 0, ""); }
         if (elCombustible) { elCombustible.classList.remove("skeleton"); animateCount(elCombustible, Math.round(totalFuel), 0, ""); }
-        if (elCosto) { elCosto.classList.remove("skeleton"); elCosto.textContent = "$" + costPerKm.toFixed(2); }
         if (elUnidades) { elUnidades.classList.remove("skeleton"); animateCount(elUnidades, unidades, 0, ""); }
 
         const totalBadge = document.getElementById("stat-total-badge");
@@ -529,26 +526,49 @@ geotab.addin.rendimiento = function () {
             tooltip: { theme: 'light' }
         };
 
-        // 1. Rendimiento por Unidad (horizontal bar)
-        const sortedByEff = [...records].filter(d => d.kmPerL > 0).sort((a, b) => b.kmPerL - a.kmPerL).slice(0, 15);
-        const optEffByUnit = {
+        // 1. Tendencia de Rendimiento Flota Diaria (km/L)
+        // Group allTrips by Day (use allTrips as it's the more detailed source with dates)
+        const dailyData = {};
+        allTrips.forEach(t => {
+            if (!t.start) return;
+            const dStr = t.start.slice(0, 10);
+            if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
+            dailyData[dStr].dist += (t.distance || 0);
+            dailyData[dStr].fuel += (t.fuelUsed || 0);
+        });
+
+        const sortedDates = Object.keys(dailyData).sort();
+        const trendSeries = sortedDates.map(date => {
+            const day = dailyData[date];
+            const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
+            return { x: date, y: parseFloat(eff.toFixed(2)) };
+        });
+
+        const optTrendDaily = {
             ...commonOptions,
-            series: [{ name: 'km/L', data: sortedByEff.map(d => parseFloat(d.kmPerL.toFixed(1))) }],
-            chart: { type: 'bar', height: 260, fontFamily, toolbar: { show: false } },
-            colors: sortedByEff.map(d => d.kmPerL >= 12 ? cGreen : d.kmPerL >= 8 ? cCyan : d.kmPerL >= 5 ? cOrange : cRed),
-            plotOptions: { bar: { horizontal: true, borderRadius: 4, distributed: true } },
-            dataLabels: {
-                enabled: true, textAnchor: 'start', offsetX: 5,
-                formatter: val => val + " km/L",
-                style: { colors: [textMuted], fontSize: '10px', fontWeight: 600 }
+            series: [{ name: 'Rendimiento Promedio (km/L)', data: trendSeries }],
+            chart: { type: 'area', height: 260, fontFamily, toolbar: { show: false }, zoom: { enabled: false } },
+            stroke: { curve: 'smooth', width: 3 },
+            fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05, stops: [20, 100] } },
+            colors: [cCyan],
+            xaxis: {
+                type: 'datetime',
+                labels: { style: { colors: textMuted }, format: 'dd MMM' },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
             },
-            xaxis: { categories: sortedByEff.map(d => d.deviceName), labels: { style: { colors: textMuted } } },
-            yaxis: { labels: { style: { colors: textMuted, fontSize: '11px' } } },
-            legend: { show: false },
-            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
+            yaxis: {
+                labels: {
+                    style: { colors: textMuted },
+                    formatter: val => val.toFixed(1) + " km/L"
+                }
+            },
+            grid: { borderColor: '#f1f1f1' },
+            markers: { size: 4, colors: [cCyan], strokeWidth: 2, hover: { size: 6 } },
+            noData: { text: "Cargando datos de tendencia...", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
         };
         if (chartEffByUnit) chartEffByUnit.destroy();
-        chartEffByUnit = new ApexCharts(document.querySelector("#chart-eff-unit"), optEffByUnit);
+        chartEffByUnit = new ApexCharts(document.querySelector("#chart-eff-unit"), optTrendDaily);
         chartEffByUnit.render();
 
         // 2. Distancia vs Combustible agrupado (bar chart)
