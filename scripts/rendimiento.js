@@ -485,13 +485,16 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
+        // Calculate overall average exactly like the "Rendimiento Promedio" card
+        const totalDist = (filteredTrips || []).reduce((s, t) => s + (parseFloat(t.distance) || 0), 0);
+        const totalFuel = (filteredRecords || []).reduce((s, r) => s + (parseFloat(r.fuelUsed) || 0), 0);
+        const overallEff = totalFuel > 0 ? totalDist / totalFuel : 0;
+        const effClass = getEffClass(overallEff);
+
         // Sort descending so most recent is on top
         const reversedDates = [...sortedDates].reverse();
 
         reversedDates.forEach(dateStr => {
-            const day = dailyData[dateStr];
-            const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
-            const effClass = getEffClass(eff);
             const tr = document.createElement("tr");
             tr.className = "perf-row";
             tr.innerHTML = `
@@ -501,7 +504,7 @@ geotab.addin.rendimiento = function () {
                     </div>
                 </td>
                 <td style="text-align:center;">
-                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(2) + " km/L" : "—"}</span>
+                    <span class="eff-badge ${effClass}">${overallEff > 0 ? overallEff.toFixed(2) + " km/L" : "—"}</span>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -1042,3 +1045,5 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
+
+
