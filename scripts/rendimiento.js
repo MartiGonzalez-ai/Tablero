@@ -244,12 +244,11 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
-        const sorted = [...records].sort((a, b) => b.kmPerL - a.kmPerL);
+        const sorted = [...records].sort((a, b) => b.fuelUsed - a.fuelUsed);
 
         sorted.forEach(r => {
             const tr = document.createElement("tr");
             tr.className = "perf-row";
-            const effClass = getEffClass(r.kmPerL);
             tr.innerHTML = `
                 <td>
                     <div class="unit-chip">
@@ -257,18 +256,13 @@ geotab.addin.rendimiento = function () {
                         <span>${r.deviceName}</span>
                     </div>
                 </td>
+                <td style="text-align:right; font-weight:700; color:var(--c-blue);">${r.fuelUsed > 0 ? r.fuelUsed.toFixed(2) + " L" : "0.00 L"}</td>
                 <td>
                     <div class="date-cell">
                         <span class="date-main">${formatDateShort(r.dateStart)}</span>
                         <span class="date-time">→ ${formatDateShort(r.dateEnd)}</span>
                     </div>
                 </td>
-                <td>${r.distKm.toFixed(1)} km</td>
-                <td>${r.fuelUsed > 0 ? r.fuelUsed.toFixed(1) + " L" : "—"}</td>
-                <td>
-                    <span class="eff-badge ${effClass}">${r.kmPerL > 0 ? r.kmPerL.toFixed(1) + " km/L" : "—"}</span>
-                </td>
-                <td>${formatOdometer(r.odoEnd)}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -562,7 +556,7 @@ geotab.addin.rendimiento = function () {
         if (badgeRanking) { badgeRanking.textContent = "—"; badgeRanking.classList.add("skeleton"); }
 
         const tbody = document.getElementById("perf-tbody");
-        if (tbody) tbody.innerHTML = Array(5).fill('<tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>').join("");
+        if (tbody) tbody.innerHTML = Array(5).fill('<tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>').join("");
 
         const badgeTable = document.getElementById("badge-table");
         if (badgeTable) badgeTable.textContent = "—";
