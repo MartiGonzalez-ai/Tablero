@@ -501,6 +501,17 @@ geotab.addin.rendimiento = function () {
             fuelByDev[devId].push(d);
         });
 
+        const odoData = fuelDataToProcess.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticOdometerId");
+        const odoByDev = {};
+        odoData.forEach(d => {
+            const devId = d.device.id;
+            if (!odoByDev[devId]) odoByDev[devId] = [];
+            odoByDev[devId].push(d);
+        });
+        Object.keys(odoByDev).forEach(devId => {
+            odoByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+        });
+
         Object.keys(fuelByDev).forEach(devId => {
             const arr = fuelByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
             for (let i = 1; i < arr.length; i++) {
@@ -524,10 +535,29 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
-        let accumulatedDist = 0;
+        const deviceOdo = {};
         sortedDates.forEach(dateStr => {
-            accumulatedDist += dailyData[dateStr].dist;
-            dailyData[dateStr].acumulado = accumulatedDist;
+            Object.keys(odoByDev).forEach(devId => {
+                const arr = odoByDev[devId];
+                let lastReadingForDay = null;
+                for (let r of arr) {
+                    const tzDate = new Date(r.dateTime);
+                    const rStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth() + 1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
+                    if (rStr === dateStr) {
+                        lastReadingForDay = r;
+                    } else if (rStr > dateStr) {
+                        break; 
+                    }
+                }
+                if (lastReadingForDay) {
+                    deviceOdo[devId] = lastReadingForDay.data;
+                }
+            });
+            
+            let totalFleetOdoMeters = 0;
+            Object.values(deviceOdo).forEach(odo => { totalFleetOdoMeters += odo; });
+            
+            dailyData[dateStr].acumulado = (totalFleetOdoMeters / 1000);
         });
 
         // Sort descending so most recent is on top
@@ -1048,3 +1078,4 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
+
