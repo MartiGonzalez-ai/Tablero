@@ -476,13 +476,13 @@ geotab.addin.rendimiento = function () {
 
         if (!tbody) return;
         tbody.innerHTML = "";
-        
+
         // 1. Distance from Trips
         const dailyData = {};
         (filteredTrips || []).forEach(t => {
             if (!t.start) return;
             const dateObj = new Date(t.start);
-            const dStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth()+1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
+            const dStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
             if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
             dailyData[dStr].dist += (parseFloat(t.distance) || 0);
         });
@@ -493,21 +493,21 @@ geotab.addin.rendimiento = function () {
             fuelDataToProcess = rawStatusData.filter(d => d.device && d.device.id === selectedUnitId);
         }
         const fuelData = fuelDataToProcess.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticDeviceTotalFuelId");
-        
+
         const fuelByDev = {};
         fuelData.forEach(d => {
             const devId = d.device.id;
-            if(!fuelByDev[devId]) fuelByDev[devId] = [];
+            if (!fuelByDev[devId]) fuelByDev[devId] = [];
             fuelByDev[devId].push(d);
         });
 
         Object.keys(fuelByDev).forEach(devId => {
-            const arr = fuelByDev[devId].sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+            const arr = fuelByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
             for (let i = 1; i < arr.length; i++) {
-                const deltaL = arr[i].data - arr[i-1].data;
+                const deltaL = arr[i].data - arr[i - 1].data;
                 if (deltaL > 0) { // Only positive increments in total fuel
                     const tzDate = new Date(arr[i].dateTime);
-                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth()+1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
+                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth() + 1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
                     if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
                     dailyData[dStr].fuel += deltaL;
                 }
@@ -515,7 +515,7 @@ geotab.addin.rendimiento = function () {
         });
 
         const sortedDates = Object.keys(dailyData).sort();
-        
+
         if (badgeDaily) badgeDaily.textContent = `${sortedDates.length} días`;
 
         if (sortedDates.length === 0) {
@@ -548,6 +548,8 @@ geotab.addin.rendimiento = function () {
             `;
             tbody.appendChild(tr);
         });
+
+        return { dailyData, sortedDates };
     };
 
     // ─── Reset UI ─────────────────────────────────────────────────────────────
@@ -616,65 +618,13 @@ geotab.addin.rendimiento = function () {
         };
 
         // 1. Tendencia de Rendimiento Flota Diaria (km/L)
-        // Group rawStatusData by Day to get real daily distance and fuel from StatusData
-        const dailyData = {};
-        const rawFuel = rawStatusData.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticDeviceTotalFuelId");
-        const rawOdo = rawStatusData.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticOdometerId");
-
-        const odoByDev = {};
-        rawOdo.forEach(r => {
-            const devId = r.device && r.device.id;
-            if (!devId) return;
-            if (selectedUnitId !== "all" && devId !== selectedUnitId) return;
-            if (!odoByDev[devId]) odoByDev[devId] = [];
-            odoByDev[devId].push(r);
-        });
-
-        const fuelByDev = {};
-        rawFuel.forEach(r => {
-            const devId = r.device && r.device.id;
-            if (!devId) return;
-            if (selectedUnitId !== "all" && devId !== selectedUnitId) return;
-            if (!fuelByDev[devId]) fuelByDev[devId] = [];
-            fuelByDev[devId].push(r);
-        });
-
-        // For each device, sort and calculate deltas
-        Object.keys(odoByDev).forEach(devId => {
-            const arr = odoByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-            for (let i = 1; i < arr.length; i++) {
-                const deltaMts = arr[i].data - arr[i - 1].data;
-                if (deltaMts > 0) {
-                    const tzDate = new Date(arr[i].dateTime);
-                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth() + 1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
-                    if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
-                    dailyData[dStr].dist += (deltaMts / 1000);
-                }
-            }
-        });
-
-        Object.keys(fuelByDev).forEach(devId => {
-            const arr = fuelByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-            for (let i = 1; i < arr.length; i++) {
-                const deltaL = arr[i].data - arr[i - 1].data;
-                if (deltaL > 0) {
-                    const tzDate = new Date(arr[i].dateTime);
-                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth() + 1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
-                    if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
-                    dailyData[dStr].fuel += deltaL;
-                }
-            }
-        });
-
-        const sortedDates = Object.keys(dailyData).sort();
-
-        // Render the daily table using the computed daily data
-        renderDailyTable(dailyData, sortedDates);
+        // Ensure chart and table exactly match by getting calculated points directly from the UI generator
+        const { dailyData, sortedDates } = renderDailyTable();
 
         const trendSeries = sortedDates.map(date => {
             const day = dailyData[date];
             const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
-            return { x: date, y: parseFloat(eff.toFixed(2)) };
+            return { x: date, y: parseFloat(eff.toFixed(1)) };
         });
 
         const optTrendDaily = {
@@ -1084,4 +1034,3 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
-
