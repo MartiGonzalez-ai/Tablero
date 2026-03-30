@@ -13,7 +13,7 @@ geotab.addin.rendimiento = function () {
     let deviceMap = {};        // Global device map
 
     // Chart instances
-    let chartEffByUnit, chartTrend, chartDistribution, chartScatter;
+    let chartEffByUnit, chartTrend, chartScatter;
 
     // DOM refs
     let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput;
@@ -166,8 +166,8 @@ geotab.addin.rendimiento = function () {
 
     // ─── Render summary KPIs ─────────────────────────────────────────────────
     const renderSummary = (records, trips) => {
-        const totalDist = (trips || []).reduce((s, t) => s + (t.distance || 0), 0);
-        const totalFuel = (records || []).reduce((s, r) => s + (r.fuelUsed || 0), 0);
+        const totalDist = (trips || []).reduce((s, t) => s + (parseFloat(t.distance) || 0), 0);
+        const totalFuel = (records || []).reduce((s, r) => s + (parseFloat(r.fuelUsed) || 0), 0);
         const avgKmPerL = totalFuel > 0 ? totalDist / totalFuel : 0;
         const costPerKm = totalDist > 0 ? (totalFuel * 24.5) / totalDist : 0;
         const unidades = records.length;
@@ -571,28 +571,7 @@ geotab.addin.rendimiento = function () {
         chartTrend = new ApexCharts(document.querySelector("#chart-trend"), optTrend);
         chartTrend.render();
 
-        // 3. Distribución de Eficiencia (donut)
-        const effCounts = { Excelente: 0, Bueno: 0, Regular: 0, Bajo: 0 };
-        records.forEach(d => {
-            if (d.kmPerL <= 0) return;
-            if (d.kmPerL >= 12) effCounts.Excelente++;
-            else if (d.kmPerL >= 8) effCounts.Bueno++;
-            else if (d.kmPerL >= 5) effCounts.Regular++;
-            else effCounts.Bajo++;
-        });
-        const optDist = {
-            ...commonOptions,
-            series: Object.values(effCounts),
-            chart: { type: 'donut', height: 260, fontFamily },
-            labels: Object.keys(effCounts),
-            colors: [cGreen, cCyan, cOrange, cRed],
-            plotOptions: { pie: { donut: { size: '60%', labels: { show: true, total: { show: true, label: 'Unidades', formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0) } } } } },
-            legend: { position: 'bottom', fontSize: '11px', fontWeight: 600 },
-            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        if (chartDistribution) chartDistribution.destroy();
-        chartDistribution = new ApexCharts(document.querySelector("#chart-distribution"), optDist);
-        chartDistribution.render();
+
 
         // 4. Consumo vs Distancia (scatter)
         const scatterData = records.filter(d => d.fuelUsed > 0 && d.distKm > 0).map(d => ({
