@@ -231,6 +231,40 @@
 
         </main>
 
+        <!-- ═══════════ DAILY PERFORMANCE TABLE ═══════════ -->
+        <section class="daily-panel" style="padding: 0 2rem 2rem;">
+            <div class="panel glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="calendar-days" width="16" height="16" stroke-width="2"></i>
+                        <span>Rendimiento Diario</span>
+                    </div>
+                    <span class="panel-badge" id="badge-daily">—</span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="perf-table" id="daily-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th style="text-align:right;">Distancia Total (km)</th>
+                                <th style="text-align:right;">Consumo Total (L)</th>
+                                <th style="text-align:center;">Rendimiento (km/L)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daily-tbody">
+                            <tr class="tr-skeleton"><td colspan="4"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="4"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="4"><div class="td-skel"></div></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="table-empty" id="daily-empty" style="display:none;">
+                        <i data-lucide="calendar-x" width="40" height="40" stroke-width="1.5"></i>
+                        <p>No se encontraron registros diarios en el periodo seleccionado.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- ═══════════ TRIPS PERFORMANCE TABLE ═══════════ -->
         <section class="trips-panel">
             <div class="panel glass-panel">
