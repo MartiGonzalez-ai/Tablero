@@ -556,7 +556,8 @@ geotab.addin.rendimiento = function () {
             for (let i = 1; i < arr.length; i++) {
                 const deltaMts = arr[i].data - arr[i-1].data;
                 if (deltaMts > 0) {
-                    const dStr = arr[i].dateTime.slice(0, 10);
+                    const tzDate = new Date(arr[i].dateTime);
+                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth()+1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
                     if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
                     dailyData[dStr].dist += (deltaMts / 1000);
                 }
@@ -568,7 +569,8 @@ geotab.addin.rendimiento = function () {
             for (let i = 1; i < arr.length; i++) {
                 const deltaL = arr[i].data - arr[i-1].data;
                 if (deltaL > 0) {
-                    const dStr = arr[i].dateTime.slice(0, 10);
+                    const tzDate = new Date(arr[i].dateTime);
+                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth()+1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
                     if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
                     dailyData[dStr].fuel += deltaL;
                 }
@@ -805,11 +807,13 @@ geotab.addin.rendimiento = function () {
 
             // Enrich StatusData with device names
             fuelData.forEach(function (s) {
+                if (!s.diagnostic) s.diagnostic = { id: "DiagnosticDeviceTotalFuelId" };
                 if (s.device && s.device.id && deviceMap[s.device.id]) {
                     s.device.name = deviceMap[s.device.id];
                 }
             });
             odoData.forEach(function (s) {
+                if (!s.diagnostic) s.diagnostic = { id: "DiagnosticOdometerId" };
                 if (s.device && s.device.id && deviceMap[s.device.id]) {
                     s.device.name = deviceMap[s.device.id];
                 }
