@@ -524,6 +524,12 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
+        let accumulatedDist = 0;
+        sortedDates.forEach(dateStr => {
+            accumulatedDist += dailyData[dateStr].dist;
+            dailyData[dateStr].acumulado = accumulatedDist;
+        });
+
         // Sort descending so most recent is on top
         const reversedDates = [...sortedDates].reverse();
 
@@ -541,6 +547,7 @@ geotab.addin.rendimiento = function () {
                     </div>
                 </td>
                 <td style="text-align:right; font-weight:600;">${day.dist.toFixed(1)} km</td>
+                <td style="text-align:right; font-weight:600; color:var(--text-color);">${day.acumulado.toFixed(1)} km</td>
                 <td style="text-align:right; font-weight:600; color:var(--c-blue);">${day.fuel.toFixed(2)} L</td>
                 <td style="text-align:center;">
                     <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : "0.0 km/L"}</span>
@@ -575,7 +582,7 @@ geotab.addin.rendimiento = function () {
         if (emptyEl) emptyEl.style.display = "none";
 
         const dailyTbody = document.getElementById("daily-tbody");
-        if (dailyTbody) dailyTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="4"><div class="td-skel"></div></td></tr>').join("");
+        if (dailyTbody) dailyTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>').join("");
 
         const badgeDaily = document.getElementById("badge-daily");
         if (badgeDaily) badgeDaily.textContent = "—";
