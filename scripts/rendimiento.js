@@ -477,8 +477,21 @@ geotab.addin.rendimiento = function () {
         if (!tbody) return;
         tbody.innerHTML = "";
 
-        // 1. Distance from Trips
+        // Initialize dailyData with all dates in the selected range
         const dailyData = {};
+        const range = window.getDateRange ? window.getDateRange() : { fromDate: new Date().toISOString(), toDate: new Date().toISOString() };
+        
+        const startD = new Date(range.fromDate);
+        const endD = new Date(range.toDate);
+        startD.setHours(12, 0, 0, 0); // avoid tz boundary issues
+        endD.setHours(12, 0, 0, 0);
+
+        for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
+            const dStr = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
+            dailyData[dStr] = { dist: 0, fuel: 0 };
+        }
+
+        // 1. Distance from Trips
         (filteredTrips || []).forEach(t => {
             if (!t.start) return;
             const dateObj = new Date(t.start);
@@ -604,7 +617,7 @@ geotab.addin.rendimiento = function () {
                         const el = document.getElementById("odo-" + dateStr);
                         if (el) {
                             const val = dailyOdoSum[dateStr];
-                            if (val) {
+                            if (val !== undefined && val !== null) {
                                 dailyData[dateStr].acumulado = val / 1000;
                                 el.textContent = (val / 1000).toFixed(1) + " km";
                             } else {
@@ -1110,5 +1123,3 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
-
-
