@@ -13,7 +13,7 @@ geotab.addin.rendimiento = function () {
     let deviceMap = {};        // Global device map
 
     // Chart instances
-    let chartEffByUnit, chartTrend, chartScatter;
+    let chartEffByUnit, chartScatter;
 
     // DOM refs
     let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
@@ -845,25 +845,7 @@ geotab.addin.rendimiento = function () {
         chartEffByUnit = new ApexCharts(document.querySelector("#chart-eff-unit"), optTrendDaily);
         chartEffByUnit.render();
 
-        // 2. Distancia vs Combustible agrupado (bar chart)
-        const withFuel = records.filter(d => d.kmPerL > 0);
-        const optTrend = {
-            ...commonOptions,
-            series: [
-                { name: 'Distancia (km)', data: withFuel.map(d => parseFloat(d.distKm.toFixed(1))) },
-                { name: 'Combustible (L)', data: withFuel.map(d => parseFloat(d.fuelUsed.toFixed(1))) }
-            ],
-            chart: { type: 'bar', height: 260, fontFamily, toolbar: { show: false } },
-            colors: [cCyan, cOrange],
-            plotOptions: { bar: { borderRadius: 3, columnWidth: '55%' } },
-            xaxis: { categories: withFuel.map(d => d.deviceName), labels: { style: { colors: textMuted, fontSize: '10px' }, rotate: -45 } },
-            yaxis: { labels: { style: { colors: textMuted } } },
-            legend: { position: 'top', fontSize: '11px' },
-            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        if (chartTrend) chartTrend.destroy();
-        chartTrend = new ApexCharts(document.querySelector("#chart-trend"), optTrend);
-        chartTrend.render();
+
 
 
 
@@ -1253,5 +1235,3 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
-
-
