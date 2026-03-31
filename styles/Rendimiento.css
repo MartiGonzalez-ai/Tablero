@@ -29,7 +29,7 @@
 
     --c-purple: #813896;
     --c-purple-bg: #f2ebf4;
-    --c-purple-glow: rgba(129, 56, 150, 0.1);
+    --c-purple-glow: rgba(129, 56, 150, 0);
 
     --c-green: #3b753c;
     --c-green-bg: #ebf1ec;
@@ -40,8 +40,7 @@
     --c-cyan-glow: rgba(0, 177, 225, 0);
 
     --c-teal: #0d9488;
-    --c-teal-bg: #f0fdfa;
-    --c-teal-glow: rgba(13, 148, 136, 0.1);
+    --c-teal-bg: #e6f5f3;
 
     /* Layout */
     --nav-height: 72px;
@@ -509,10 +508,6 @@ body {
     grid-column: span 3;
 }
 
-.chart-row.grid-4 {
-    grid-template-columns: repeat(4, 1fr);
-}
-
 .chart-container {
     padding: 1rem;
     height: 300px;
@@ -527,16 +522,6 @@ body {
     .chart-card.col-span-2,
     .chart-card.col-span-3 {
         grid-column: span 1;
-    }
-
-    .chart-row.grid-4 {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 1400px) and (min-width: 1025px) {
-    .chart-row.grid-4 {
-        grid-template-columns: repeat(2, 1fr);
     }
 }
 
