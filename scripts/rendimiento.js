@@ -16,8 +16,9 @@ geotab.addin.rendimiento = function () {
     let chartEffByUnit, chartTrend, chartScatter;
 
     // DOM refs
-    let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput;
+    let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
     let allTrips = [], filteredTrips = [];
+    let filteredOdoTrips = [];
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const getDateRange = () => {
@@ -338,6 +339,58 @@ geotab.addin.rendimiento = function () {
         });
     };
 
+    // ─── Render Accumulated Odometer per Trip Table ──────────────────────────
+    const renderOdoTripsTable = (trips) => {
+        const tbody = document.getElementById("odo-trips-tbody");
+        const emptyEl = document.getElementById("odo-trips-empty");
+        const badgeOdoTrips = document.getElementById("badge-odo-trips");
+
+        if (!tbody) return;
+        tbody.innerHTML = "";
+        if (badgeOdoTrips) badgeOdoTrips.textContent = `${trips.length} viajes`;
+
+        if (trips.length === 0) {
+            if (emptyEl) emptyEl.style.display = "flex";
+            return;
+        }
+        if (emptyEl) emptyEl.style.display = "none";
+
+        // Sort trips by date (newest first)
+        const sorted = [...trips].sort((a, b) => new Date(b.start) - new Date(a.start));
+
+        sorted.forEach(t => {
+            const tr = document.createElement("tr");
+            tr.className = "perf-row";
+
+            tr.innerHTML = `
+                <td>
+                    <div class="unit-chip">
+                        <div class="unit-dot" style="background: var(--color-primary);"></div>
+                        <span>${t.deviceName}</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="date-cell">
+                        <span class="date-main">${formatDateShort(t.start)}</span>
+                        <span class="date-time">${formatTimeShort(t.start)}</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="date-cell">
+                        <span class="date-main">${formatDateShort(t.stop)}</span>
+                        <span class="date-time">${formatTimeShort(t.stop)}</span>
+                    </div>
+                </td>
+                <td style="font-weight:600; text-align:right;">${t.distance.toFixed(1)} km</td>
+                <td style="font-weight:700; text-align:right; color:var(--color-primary);">${formatOdometer(t.stopOdometer)}</td>
+                <td>
+                    ${t.isCurrent ? '<span class="eff-badge eff-average" style="background:#e6f7fb; color:#00b1e1; border-color:#00b1e1;">En curso</span>' : '<span style="color:var(--color-text-muted); font-size:0.7rem;">Finalizado</span>'}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    };
+
     // ─── Process Trips and FuelUsed ──────────────────────────────────────────
     const processTripsData = (trips, fuelStatusData, deviceMap, driverMap) => {
         const fuelByDevice = {};
@@ -411,7 +464,8 @@ geotab.addin.rendimiento = function () {
                 afterHoursStopDuration: trip.afterHoursStopDuration,
                 nextTripStart: trip.nextTripStart,
                 stopPoint: trip.stopPoint ? `${trip.stopPoint.y.toFixed(5)}, ${trip.stopPoint.x.toFixed(5)}` : "—",
-                isCurrent: trip.isCurrent
+                isCurrent: trip.isCurrent,
+                stopOdometer: trip.stopOdometer || 0
             };
         });
     };
@@ -723,8 +777,15 @@ geotab.addin.rendimiento = function () {
         const badgeFuelSummary = document.getElementById("badge-fuel-summary");
         if (badgeFuelSummary) badgeFuelSummary.textContent = "—";
 
+        const odoTripsTbody = document.getElementById("odo-trips-tbody");
+        if (odoTripsTbody) odoTripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>').join("");
+
+        const badgeOdoTrips = document.getElementById("badge-odo-trips");
+        if (badgeOdoTrips) badgeOdoTrips.textContent = "—";
+
         if (searchInput) searchInput.value = "";
         if (tripsSearchInput) tripsSearchInput.value = "";
+        if (odoTripsSearchInput) odoTripsSearchInput.value = "";
     };
 
     // ─── Render Charts ────────────────────────────────────────────────────────
@@ -866,6 +927,19 @@ geotab.addin.rendimiento = function () {
         renderTripsTable(filteredTrips);
     };
 
+    const applyOdoTripsSearch = (query) => {
+        let trips = [...allTrips];
+        if (selectedUnitId !== "all") {
+            trips = trips.filter(t => t.deviceId === selectedUnitId);
+        }
+        if (query && query.trim() !== "") {
+            const q = query.trim().toLowerCase();
+            trips = trips.filter(t => t.deviceName.toLowerCase().includes(q));
+        }
+        filteredOdoTrips = trips;
+        renderOdoTripsTable(filteredOdoTrips);
+    };
+
     const populateUnitFilter = (devices) => {
         const select = document.getElementById("unit-select");
         if (!select) return;
@@ -913,6 +987,9 @@ geotab.addin.rendimiento = function () {
 
         if (tripsSearchInput && tripsSearchInput.value) applyTripsSearch(tripsSearchInput.value);
         else renderTripsTable(filteredTrips);
+
+        if (odoTripsSearchInput && odoTripsSearchInput.value) applyOdoTripsSearch(odoTripsSearchInput.value);
+        else renderOdoTripsTable(filteredTrips);
 
         // Update Summary (KPIs) with filtered records and trips
         renderSummary(filteredRecords, filteredTrips);
@@ -1017,6 +1094,7 @@ geotab.addin.rendimiento = function () {
             renderTable(filteredRecords);
             renderCharts(filteredRecords);
             renderTripsTable(filteredTrips);
+            renderOdoTripsTable(filteredTrips);
             renderRawTable(rawStatusData, deviceMap);
             renderOdoRawTable(rawStatusData, deviceMap);
 
@@ -1059,6 +1137,7 @@ geotab.addin.rendimiento = function () {
             errorToastMsg = document.getElementById("error-toast-msg");
             searchInput = document.getElementById("search-input");
             tripsSearchInput = document.getElementById("trips-search-input");
+            odoTripsSearchInput = document.getElementById("odo-trips-search-input");
             const unitSelect = document.getElementById("unit-select");
 
             // Unit Filter Event
@@ -1150,6 +1229,14 @@ geotab.addin.rendimiento = function () {
                 tripsSearchInput.addEventListener("input", function () {
                     clearTimeout(tripsSearchTimer);
                     tripsSearchTimer = setTimeout(function () { applyTripsSearch(tripsSearchInput.value); }, 250);
+                });
+            }
+
+            if (odoTripsSearchInput) {
+                var odoTripsSearchTimer = null;
+                odoTripsSearchInput.addEventListener("input", function () {
+                    clearTimeout(odoTripsSearchTimer);
+                    odoTripsSearchTimer = setTimeout(function () { applyOdoTripsSearch(odoTripsSearchInput.value); }, 250);
                 });
             }
 
