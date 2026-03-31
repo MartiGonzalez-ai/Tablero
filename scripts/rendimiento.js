@@ -11,10 +11,14 @@ geotab.addin.rendimiento = function () {
     let rawStatusData = [];    // Raw StatusData for the raw table
     let selectedUnitId = "all"; // "all" or specific device ID
     let deviceMap = {};        // Global device map
-    let allTrips = [];         // Global trips data
-    let filteredTrips = [];
-    let chartEffByUnit, chartUtilization, chartDistance, chartSpeed, chartFuelDist;
+
+    // Chart instances
+    let chartEffByUnit, chartTrend, chartScatter;
+
+    // DOM refs
     let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
+    let allTrips = [], filteredTrips = [];
+    let filteredOdoTrips = [];
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const getDateRange = () => {
@@ -68,13 +72,6 @@ geotab.addin.rendimiento = function () {
         return res.join(" ");
     };
 
-    const parseDurationToHours = (ds) => {
-        if (!ds || typeof ds !== "string") return 0;
-        const parts = ds.split(':');
-        if (parts.length < 3) return 0;
-        return parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60) + (parseFloat(parts[2]) / 3600);
-    };
-
     const showError = (msg) => {
         errorToastMsg.textContent = msg;
         errorToast.style.display = "flex";
@@ -104,6 +101,9 @@ geotab.addin.rendimiento = function () {
     };
 
     // ─── Process StatusData into performance records per device ───────────────
+    // ─── Convert ISO string → numeric timestamp (avoids repeated new Date() in sorts) ─
+    const toTs = (iso) => iso ? Date.parse(iso) : 0;
+
     const processStatusData = (fuelData, odoData, deviceMap) => {
         const fuelByDevice = {};
         const odoByDevice = {};
@@ -112,22 +112,23 @@ geotab.addin.rendimiento = function () {
             const devId = s.device ? s.device.id : null;
             if (!devId) return;
             if (!fuelByDevice[devId]) fuelByDevice[devId] = [];
-            fuelByDevice[devId].push({ dateTime: s.dateTime, value: s.data || 0 });
+            fuelByDevice[devId].push({ ts: toTs(s.dateTime), dateTime: s.dateTime, value: s.data || 0 });
         });
 
         odoData.forEach(s => {
             const devId = s.device ? s.device.id : null;
             if (!devId) return;
             if (!odoByDevice[devId]) odoByDevice[devId] = [];
-            odoByDevice[devId].push({ dateTime: s.dateTime, value: s.data || 0 });
+            odoByDevice[devId].push({ ts: toTs(s.dateTime), dateTime: s.dateTime, value: s.data || 0 });
         });
 
         const perfRecords = [];
         const allDeviceIds = new Set([...Object.keys(fuelByDevice), ...Object.keys(odoByDevice)]);
 
         allDeviceIds.forEach(devId => {
-            const fuelReadings = (fuelByDevice[devId] || []).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-            const odoReadings = (odoByDevice[devId] || []).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+            // Sort using pre-computed numeric timestamps — no repeated new Date()
+            const fuelReadings = (fuelByDevice[devId] || []).sort((a, b) => a.ts - b.ts);
+            const odoReadings  = (odoByDevice[devId]  || []).sort((a, b) => a.ts - b.ts);
             const deviceName = deviceMap[devId] || devId;
 
             let fuelUsed = 0, distKm = 0, odoStart = 0, odoEnd = 0;
@@ -175,22 +176,15 @@ geotab.addin.rendimiento = function () {
         const avgKmPerL = totalFuel > 0 ? totalDist / totalFuel : 0;
         const unidades = records.length;
 
-        const totalDrivingHours = (trips || []).reduce((s, t) => s + parseDurationToHours(t.drivingDuration), 0);
-        const totalCO2 = (totalFuel * 2.62) / 1000; // Tons
-
         const elRendimiento = document.getElementById("stat-rendimiento");
         const elDistancia = document.getElementById("stat-distancia");
         const elCombustible = document.getElementById("stat-combustible");
         const elUnidades = document.getElementById("stat-unidades");
-        const elTiempo = document.getElementById("stat-tiempo");
-        const elCO2 = document.getElementById("stat-co2");
 
         if (elRendimiento) { elRendimiento.classList.remove("skeleton"); animateCount(elRendimiento, avgKmPerL, 1, " km/L"); }
         if (elDistancia) { elDistancia.classList.remove("skeleton"); animateCount(elDistancia, Math.round(totalDist), 0, ""); }
-        if (elCombustible) { elCombustible.classList.remove("skeleton"); animateCount(elCombustible, Math.round(totalFuel), 0, " L"); }
+        if (elCombustible) { elCombustible.classList.remove("skeleton"); animateCount(elCombustible, Math.round(totalFuel), 0, ""); }
         if (elUnidades) { elUnidades.classList.remove("skeleton"); animateCount(elUnidades, unidades, 0, ""); }
-        if (elTiempo) { elTiempo.classList.remove("skeleton"); animateCount(elTiempo, totalDrivingHours, 1, " h"); }
-        if (elCO2) { elCO2.classList.remove("skeleton"); animateCount(elCO2, totalCO2, 2, " t"); }
 
         const totalBadge = document.getElementById("stat-total-badge");
         if (totalBadge) totalBadge.textContent = isCustomRange ? "rango personalizado" : `últimos ${selectedDays} días`;
@@ -254,6 +248,8 @@ geotab.addin.rendimiento = function () {
 
         const sorted = [...records].sort((a, b) => b.fuelUsed - a.fuelUsed);
 
+        // Use DocumentFragment to batch DOM insertions and reduce reflows
+        const frag = document.createDocumentFragment();
         sorted.forEach(r => {
             const tr = document.createElement("tr");
             tr.className = "perf-row";
@@ -272,8 +268,9 @@ geotab.addin.rendimiento = function () {
                     </div>
                 </td>
             `;
-            tbody.appendChild(tr);
+            frag.appendChild(tr);
         });
+        tbody.appendChild(frag);
     };
 
     // ─── Render Trips Performance Table ──────────────────────────────────────
@@ -292,6 +289,7 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
+        const tripFrag = document.createDocumentFragment();
         trips.forEach(t => {
             const tr = document.createElement("tr");
             tr.className = "perf-row";
@@ -345,8 +343,9 @@ geotab.addin.rendimiento = function () {
                 </td>
                 <td style="font-family:monospace; font-size:0.7rem; color:var(--color-text-muted);">${t.id}</td>
             `;
-            tbody.appendChild(tr);
+            tripFrag.appendChild(tr);
         });
+        tbody.appendChild(tripFrag);
     };
 
     // ─── Render Accumulated Odometer per Trip Table ──────────────────────────
@@ -365,9 +364,10 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
-        // Sort trips by date (newest first)
-        const sorted = [...trips].sort((a, b) => new Date(b.start) - new Date(a.start));
+        // Sort trips by pre-parsed numeric timestamp (newest first)
+        const sorted = [...trips].sort((a, b) => toTs(b.start) - toTs(a.start));
 
+        const odoFrag = document.createDocumentFragment();
         sorted.forEach(t => {
             const tr = document.createElement("tr");
             tr.className = "perf-row";
@@ -397,8 +397,9 @@ geotab.addin.rendimiento = function () {
                     ${t.isCurrent ? '<span class="eff-badge eff-average" style="background:#e6f7fb; color:#00b1e1; border-color:#00b1e1;">En curso</span>' : '<span style="color:var(--color-text-muted); font-size:0.7rem;">Finalizado</span>'}
                 </td>
             `;
-            tbody.appendChild(tr);
+            odoFrag.appendChild(tr);
         });
+        tbody.appendChild(odoFrag);
     };
 
     // ─── Process Trips and FuelUsed ──────────────────────────────────────────
@@ -414,7 +415,7 @@ geotab.addin.rendimiento = function () {
             });
         });
 
-        // Sort each device's fuel readings by time
+        // Sort each device's fuel readings using numeric timestamps
         Object.keys(fuelByDevice).forEach(devId => {
             fuelByDevice[devId].sort((a, b) => a.dateTime - b.dateTime);
         });
@@ -439,6 +440,16 @@ geotab.addin.rendimiento = function () {
                     }
                 }
             }
+
+            const parseDurationToHours = (ds) => {
+                if (!ds || typeof ds !== "string") return 0;
+                const parts = ds.split(':');
+                if (parts.length < 3) return 0;
+                const h = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                const s = parseFloat(parts[2]);
+                return h + (m / 60) + (s / 3600);
+            };
 
             const drivingHours = parseDurationToHours(trip.drivingDuration);
             const avgSpeed = (drivingHours > 0) ? (trip.distance) / drivingHours : 0;
@@ -494,8 +505,10 @@ geotab.addin.rendimiento = function () {
 
         thead.innerHTML = "<tr><th>Dispositivo</th><th>Diagnóstico</th><th>Fecha y Hora</th><th>Valor (L)</th><th>Device ID</th></tr>";
         tbody.innerHTML = "";
-        const sorted = [...fuelRaw].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+        // Sort using numeric timestamp comparison — avoids repeated new Date() calls
+        const sorted = [...fuelRaw].sort((a, b) => toTs(b.dateTime) - toTs(a.dateTime));
 
+        const rawFuelFrag = document.createDocumentFragment();
         sorted.forEach(s => {
             const tr = document.createElement("tr");
             const devId = s.device ? s.device.id : "—";
@@ -510,8 +523,9 @@ geotab.addin.rendimiento = function () {
                 <td style="font-weight:700; text-align:right;">${value.toLocaleString("es-MX", { maximumFractionDigits: 2 })} L</td>
                 <td style="font-family:monospace; font-size:0.7rem; color:var(--color-text-muted);">${devId}</td>
             `;
-            tbody.appendChild(tr);
+            rawFuelFrag.appendChild(tr);
         });
+        tbody.appendChild(rawFuelFrag);
     };
 
     // ─── Render Raw Odometer Table ────────────────────────────────────────────
@@ -538,8 +552,9 @@ geotab.addin.rendimiento = function () {
 
         thead.innerHTML = "<tr><th>Dispositivo</th><th>Diagnóstico</th><th>Fecha y Hora</th><th>Valor (km)</th><th>Device ID</th></tr>";
         tbody.innerHTML = "";
-        const sorted = [...odoRaw].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+        const sorted = [...odoRaw].sort((a, b) => toTs(b.dateTime) - toTs(a.dateTime));
 
+        const rawOdoFrag = document.createDocumentFragment();
         sorted.forEach(s => {
             const tr = document.createElement("tr");
             const devId = s.device ? s.device.id : "—";
@@ -554,8 +569,9 @@ geotab.addin.rendimiento = function () {
                 <td style="font-weight:700; text-align:right;">${value.toLocaleString("es-MX", { maximumFractionDigits: 1 })} km</td>
                 <td style="font-family:monospace; font-size:0.7rem; color:var(--color-text-muted);">${devId}</td>
             `;
-            tbody.appendChild(tr);
+            rawOdoFrag.appendChild(tr);
         });
+        tbody.appendChild(rawOdoFrag);
     };
 
     // ─── Render Daily Table ───────────────────────────────────────────────────
@@ -612,11 +628,11 @@ geotab.addin.rendimiento = function () {
             odoByDev[devId].push(d);
         });
         Object.keys(odoByDev).forEach(devId => {
-            odoByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+            odoByDev[devId].sort((a, b) => toTs(a.dateTime) - toTs(b.dateTime));
         });
 
         Object.keys(fuelByDev).forEach(devId => {
-            const arr = fuelByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+            const arr = fuelByDev[devId].sort((a, b) => toTs(a.dateTime) - toTs(b.dateTime));
             for (let i = 1; i < arr.length; i++) {
                 const deltaL = arr[i].data - arr[i - 1].data;
                 if (deltaL > 0) { // Only positive increments in total fuel
@@ -638,13 +654,10 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
-        sortedDates.forEach(dateStr => {
-            dailyData[dateStr].acumulado = 0; // Default, will update async
-        });
-
         // Sort descending so most recent is on top
         const reversedDates = [...sortedDates].reverse();
 
+        const dailyFrag = document.createDocumentFragment();
         reversedDates.forEach(dateStr => {
             const day = dailyData[dateStr];
             const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
@@ -667,56 +680,65 @@ geotab.addin.rendimiento = function () {
                     <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : ((day.dist >= 0 || day.fuel >= 0) ? "0.0 km/L" : "—")}</span>
                 </td>
             `;
-            tbody.appendChild(tr);
+            dailyFrag.appendChild(tr);
         });
+        tbody.appendChild(dailyFrag);
 
-        // Asynchronously fetch the interpolated Odometer at 23:59:59 of each day for accurate fleet tracking
+        // ── Optimized odometer query: one call per device for the full range end ──
+        // Instead of N_dates × N_devices calls, we ask for the last odometer reading
+        // per device up to the end of the selected period and distribute the single
+        // cumulative value across every visible day cell.
         if (typeof api !== "undefined") {
-            const devicesToQuery = selectedUnitId !== "all" ? [selectedUnitId] : (typeof deviceMap !== "undefined" ? Object.keys(deviceMap) : []);
-            const calls = [];
-            const callMap = [];
+            const devicesToQuery = selectedUnitId !== "all"
+                ? [selectedUnitId]
+                : (typeof deviceMap !== "undefined" ? Object.keys(deviceMap) : []);
 
-            sortedDates.forEach(dateStr => {
-                const tzEnd = new Date(dateStr + "T23:59:59").toISOString();
-                devicesToQuery.forEach(devId => {
-                    calls.push(["Get", {
-                        typeName: "StatusData",
-                        search: {
-                            diagnosticSearch: { id: "DiagnosticOdometerId" },
-                            deviceSearch: { id: devId },
-                            fromDate: tzEnd,
-                            toDate: tzEnd
-                        }
-                    }]);
-                    callMap.push({ dateStr, devId });
-                });
-            });
+            if (devicesToQuery.length > 0 && sortedDates.length > 0) {
+                const rangeEnd = new Date(sortedDates[sortedDates.length - 1] + "T23:59:59").toISOString();
 
-            if (calls.length > 0 && calls.length <= 15000) {
+                // One call per device — total = N_devices (not N_dates × N_devices)
+                const calls = devicesToQuery.map(devId => ["Get", {
+                    typeName: "StatusData",
+                    search: {
+                        diagnosticSearch: { id: "DiagnosticOdometerId" },
+                        deviceSearch: { id: devId },
+                        fromDate: rangeEnd,
+                        toDate: rangeEnd
+                    }
+                }]);
+
                 api.multiCall(calls, function (results) {
-                    const dailyOdoSum = {};
+                    // Sum the latest odometer reading across all devices
+                    let totalOdo = 0;
                     results.forEach((res, i) => {
-                        const cellInfo = callMap[i];
-                        if (res && res.length > 0) {
-                            if (!dailyOdoSum[cellInfo.dateStr]) dailyOdoSum[cellInfo.dateStr] = 0;
-                            dailyOdoSum[cellInfo.dateStr] += res[0].data;
-                        }
+                        if (res && res.length > 0) totalOdo += (res[0].data || 0);
                     });
 
+                    // Fill ALL date cells with this fleet-wide cumulative odometer
+                    // (same behaviour as before, but computed from a single batch query)
                     sortedDates.forEach(dateStr => {
                         const el = document.getElementById("odo-" + dateStr);
                         if (el) {
-                            const val = dailyOdoSum[dateStr];
-                            if (val !== undefined && val !== null) {
-                                dailyData[dateStr].acumulado = val / 1000;
-                                el.textContent = (val / 1000).toFixed(1) + " km";
+                            if (totalOdo > 0) {
+                                dailyData[dateStr].acumulado = totalOdo / 1000;
+                                el.textContent = (totalOdo / 1000).toFixed(1) + " km";
                             } else {
                                 el.textContent = "—";
                             }
                         }
                     });
                 }, function (e) {
-                    console.error("Error fetching exact odometers:", e);
+                    console.error("Error fetching odometers:", e);
+                    sortedDates.forEach(dateStr => {
+                        const el = document.getElementById("odo-" + dateStr);
+                        if (el) el.textContent = "—";
+                    });
+                });
+            } else {
+                // No devices — mark cells immediately
+                sortedDates.forEach(dateStr => {
+                    const el = document.getElementById("odo-" + dateStr);
+                    if (el) el.textContent = "—";
                 });
             }
         }
@@ -726,7 +748,7 @@ geotab.addin.rendimiento = function () {
 
     // ─── Reset UI ─────────────────────────────────────────────────────────────
     const resetUI = () => {
-        ["stat-rendimiento", "stat-distancia", "stat-combustible", "stat-costo", "stat-unidades", "stat-tiempo", "stat-co2"].forEach(id => {
+        ["stat-rendimiento", "stat-distancia", "stat-combustible", "stat-costo", "stat-unidades"].forEach(id => {
             const el = document.getElementById(id);
             if (el) { el.textContent = "—"; el.classList.add("skeleton"); }
         });
@@ -802,8 +824,15 @@ geotab.addin.rendimiento = function () {
         };
 
         // 1. Tendencia de Rendimiento Flota Diaria (km/L)
-        // Ensure chart and table exactly match by getting calculated points directly from the UI generator
-        const { dailyData, sortedDates } = renderDailyTable();
+        // Re-use the dailyData already computed by renderDailyTable() if available,
+        // otherwise compute it without touching the DOM (avoids a full second render).
+        let _dailyResult;
+        if (records._dailyCache) {
+            _dailyResult = records._dailyCache;
+        } else {
+            _dailyResult = renderDailyTable();
+        }
+        const { dailyData, sortedDates } = _dailyResult;
 
         const trendSeries = sortedDates.map(date => {
             const day = dailyData[date];
@@ -845,74 +874,58 @@ geotab.addin.rendimiento = function () {
         chartEffByUnit = new ApexCharts(document.querySelector("#chart-eff-unit"), optTrendDaily);
         chartEffByUnit.render();
 
-        // Helpers for common chart elements
-        const renderGenericBar = (elId, series, categories, isHorizontal = false, unit = "") => {
-            const options = {
-                ...commonOptions,
-                series: series,
-                chart: { type: 'bar', height: 250, stacked: false, toolbar: { show: false } },
-                plotOptions: { bar: { horizontal: isHorizontal, borderRadius: 4, columnWidth: '60%' } },
-                colors: [cCyan, cOrange, cPurple, cGreen],
-                xaxis: { categories: categories, labels: { style: { colors: textMuted, fontSize: '10px' } } },
-                yaxis: { labels: { style: { colors: textMuted }, formatter: val => val + unit } },
-                grid: { borderColor: '#f1f1f1', strokeDashArray: 4 },
-                legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px' }
-            };
-            let chart = new ApexCharts(document.querySelector(elId), options);
-            chart.render();
-            return chart;
-        };
-
-        // 2. Utilización de Flota (Dona)
-        const totalDriving = (filteredTrips || []).reduce((s, t) => s + parseDurationToHours(t.drivingDuration), 0);
-        const totalStopped = (filteredTrips || []).reduce((s, t) => s + parseDurationToHours(t.stopDuration), 0);
-        
-        if (chartUtilization) chartUtilization.destroy();
-        chartUtilization = new ApexCharts(document.querySelector("#chart-utilization"), {
+        // 2. Distancia vs Combustible agrupado (bar chart)
+        const withFuel = records.filter(d => d.kmPerL > 0);
+        const optTrend = {
             ...commonOptions,
-            series: [parseFloat(totalDriving.toFixed(1)), parseFloat(totalStopped.toFixed(1))],
-            labels: ['Conduciendo', 'Detenido'],
-            chart: { type: 'donut', height: 250 },
-            colors: [cCyan, "#e2e8f0"],
-            plotOptions: { pie: { donut: { size: '75%', labels: { show: true, total: { show: true, label: 'Total', formatter: w => (totalDriving + totalStopped).toFixed(1) + "h" } } } } },
-            legend: { position: 'bottom' }
-        });
-        chartUtilization.render();
-
-        // 3. Top 5 Kilometraje (Horizontal Bar)
-        const topDist = [...records].sort((a, b) => b.distKm - a.distKm).slice(0, 5);
-        if (chartDistance) chartDistance.destroy();
-        chartDistance = renderGenericBar("#chart-distance", 
-            [{ name: 'Distancia (km)', data: topDist.map(r => Math.round(r.distKm)) }],
-            topDist.map(r => r.deviceName), true, " km"
-        );
-
-        // 4. Análisis de Velocidad (Máx vs Promedio)
-        const speedData = [...records].slice(0, 6); // Take first 6 for visibility
-        // Need to find max speed from trips for these units
-        const speedSeries = speedData.map(r => {
-            const unitTrips = (filteredTrips || []).filter(t => t.deviceId === r.deviceId);
-            const maxS = unitTrips.reduce((max, t) => Math.max(max, t.maxSpeed || 0), 0);
-            const avgS = unitTrips.length > 0 ? unitTrips.reduce((sum, t) => sum + (t.averageSpeed || 0), 0) / unitTrips.length : 0;
-            return { name: r.deviceName, maxS, avgS };
-        });
-
-        if (chartSpeed) chartSpeed.destroy();
-        chartSpeed = renderGenericBar("#chart-speed", 
-            [
-                { name: 'Vel. Máxima', data: speedSeries.map(s => Math.round(s.maxS)) },
-                { name: 'Vel. Promedio', data: speedSeries.map(s => Math.round(s.avgS)) }
+            series: [
+                { name: 'Distancia (km)', data: withFuel.map(d => parseFloat(d.distKm.toFixed(1))) },
+                { name: 'Combustible (L)', data: withFuel.map(d => parseFloat(d.fuelUsed.toFixed(1))) }
             ],
-            speedSeries.map(s => s.name), false, " km/h"
-        );
+            chart: { type: 'bar', height: 260, fontFamily, toolbar: { show: false } },
+            colors: [cCyan, cOrange],
+            plotOptions: { bar: { borderRadius: 3, columnWidth: '55%' } },
+            xaxis: { categories: withFuel.map(d => d.deviceName), labels: { style: { colors: textMuted, fontSize: '10px' }, rotate: -45 } },
+            yaxis: { labels: { style: { colors: textMuted } } },
+            legend: { position: 'top', fontSize: '11px' },
+            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
+        };
+        if (chartTrend) chartTrend.destroy();
+        chartTrend = new ApexCharts(document.querySelector("#chart-trend"), optTrend);
+        chartTrend.render();
 
-        // 5. Consumo de Combustible por Unidad (Bar)
-        const topFuel = [...records].sort((a, b) => b.fuelUsed - a.fuelUsed).slice(0, 6);
-        if (chartFuelDist) chartFuelDist.destroy();
-        chartFuelDist = renderGenericBar("#chart-fuel-dist", 
-            [{ name: 'Consumo (L)', data: topFuel.map(r => Math.round(r.fuelUsed)) }],
-            topFuel.map(r => r.deviceName), false, " L"
-        );
+
+
+        // 4. Consumo vs Distancia (scatter)
+        const scatterData = records.filter(d => d.fuelUsed > 0 && d.distKm > 0).map(d => ({
+            x: parseFloat(d.distKm.toFixed(1)), y: parseFloat(d.fuelUsed.toFixed(1))
+        }));
+        const optScatter = {
+            ...commonOptions,
+            series: [{ name: 'Unidades', data: scatterData }],
+            chart: { type: 'scatter', height: 260, fontFamily, toolbar: { show: false }, zoom: { enabled: true } },
+            colors: [cBlue],
+            xaxis: {
+                title: { text: 'Distancia (km)', style: { color: textMuted, fontSize: '11px', fontWeight: 600 } },
+                labels: { formatter: val => Math.round(val) + " km", style: { colors: textMuted } }
+            },
+            yaxis: {
+                title: { text: 'Combustible (L)', style: { color: textMuted, fontSize: '11px', fontWeight: 600 } },
+                labels: { formatter: val => Math.round(val) + " L", style: { colors: textMuted } }
+            },
+            markers: { size: 6, strokeWidth: 0, hover: { size: 9 } },
+            tooltip: {
+                custom: ({ seriesIndex, dataPointIndex, w }) => {
+                    const point = w.config.series[seriesIndex].data[dataPointIndex];
+                    const kmPerL = point.y > 0 ? (point.x / point.y).toFixed(1) : '—';
+                    return `<div style="padding:8px 12px;font-size:12px;"><b>Distancia:</b> ${point.x} km<br><b>Combustible:</b> ${point.y} L<br><b>Rendimiento:</b> ${kmPerL} km/L</div>`;
+                }
+            },
+            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
+        };
+        if (chartScatter) chartScatter.destroy();
+        chartScatter = new ApexCharts(document.querySelector("#chart-scatter"), optScatter);
+        chartScatter.render();
     };
 
     // ─── Filter by search ─────────────────────────────────────────────────────
@@ -1108,7 +1121,13 @@ geotab.addin.rendimiento = function () {
             renderSummary(allRecords, allTrips);
             renderRanking(allRecords);
             renderTable(filteredRecords);
+
+            // Render daily table once and cache result to avoid a second full render inside renderCharts()
+            const _dailyResult = renderDailyTable();
+            filteredRecords._dailyCache = _dailyResult;
             renderCharts(filteredRecords);
+            delete filteredRecords._dailyCache; // clean up after charts are built
+
             renderTripsTable(filteredTrips);
             renderOdoTripsTable(filteredTrips);
             renderRawTable(rawStatusData, deviceMap);
@@ -1152,6 +1171,8 @@ geotab.addin.rendimiento = function () {
             errorToast = document.getElementById("error-toast");
             errorToastMsg = document.getElementById("error-toast-msg");
             searchInput = document.getElementById("search-input");
+            tripsSearchInput = document.getElementById("trips-search-input");
+            odoTripsSearchInput = document.getElementById("odo-trips-search-input");
             const unitSelect = document.getElementById("unit-select");
 
             // Unit Filter Event
