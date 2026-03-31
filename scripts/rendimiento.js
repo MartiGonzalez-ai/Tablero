@@ -13,7 +13,7 @@ geotab.addin.rendimiento = function () {
     let deviceMap = {};        // Global device map
 
     // Chart instances
-    let chartEffByUnit, chartScatter;
+    let chartEffByUnit;
 
     // DOM refs
     let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
@@ -849,36 +849,6 @@ geotab.addin.rendimiento = function () {
 
 
 
-        // 4. Consumo vs Distancia (scatter)
-        const scatterData = records.filter(d => d.fuelUsed > 0 && d.distKm > 0).map(d => ({
-            x: parseFloat(d.distKm.toFixed(1)), y: parseFloat(d.fuelUsed.toFixed(1))
-        }));
-        const optScatter = {
-            ...commonOptions,
-            series: [{ name: 'Unidades', data: scatterData }],
-            chart: { type: 'scatter', height: 260, fontFamily, toolbar: { show: false }, zoom: { enabled: true } },
-            colors: [cBlue],
-            xaxis: {
-                title: { text: 'Distancia (km)', style: { color: textMuted, fontSize: '11px', fontWeight: 600 } },
-                labels: { formatter: val => Math.round(val) + " km", style: { colors: textMuted } }
-            },
-            yaxis: {
-                title: { text: 'Combustible (L)', style: { color: textMuted, fontSize: '11px', fontWeight: 600 } },
-                labels: { formatter: val => Math.round(val) + " L", style: { colors: textMuted } }
-            },
-            markers: { size: 6, strokeWidth: 0, hover: { size: 9 } },
-            tooltip: {
-                custom: ({ seriesIndex, dataPointIndex, w }) => {
-                    const point = w.config.series[seriesIndex].data[dataPointIndex];
-                    const kmPerL = point.y > 0 ? (point.x / point.y).toFixed(1) : '—';
-                    return `<div style="padding:8px 12px;font-size:12px;"><b>Distancia:</b> ${point.x} km<br><b>Combustible:</b> ${point.y} L<br><b>Rendimiento:</b> ${kmPerL} km/L</div>`;
-                }
-            },
-            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        if (chartScatter) chartScatter.destroy();
-        chartScatter = new ApexCharts(document.querySelector("#chart-scatter"), optScatter);
-        chartScatter.render();
     };
 
     // ─── Filter by search ─────────────────────────────────────────────────────
