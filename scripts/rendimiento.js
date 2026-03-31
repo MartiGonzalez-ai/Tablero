@@ -14,7 +14,7 @@ geotab.addin.rendimiento = function () {
     let allTrips = [];         // Global trips data
     let filteredTrips = [];
     let chartEffByUnit, chartUtilization, chartDistance, chartSpeed, chartFuelDist;
-    let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
+    let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput;
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const getDateRange = () => {
@@ -349,57 +349,7 @@ geotab.addin.rendimiento = function () {
         });
     };
 
-    // ─── Render Accumulated Odometer per Trip Table ──────────────────────────
-    const renderOdoTripsTable = (trips) => {
-        const tbody = document.getElementById("odo-trips-tbody");
-        const emptyEl = document.getElementById("odo-trips-empty");
-        const badgeOdoTrips = document.getElementById("badge-odo-trips");
 
-        if (!tbody) return;
-        tbody.innerHTML = "";
-        if (badgeOdoTrips) badgeOdoTrips.textContent = `${trips.length} viajes`;
-
-        if (trips.length === 0) {
-            if (emptyEl) emptyEl.style.display = "flex";
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = "none";
-
-        // Sort trips by date (newest first)
-        const sorted = [...trips].sort((a, b) => new Date(b.start) - new Date(a.start));
-
-        sorted.forEach(t => {
-            const tr = document.createElement("tr");
-            tr.className = "perf-row";
-
-            tr.innerHTML = `
-                <td>
-                    <div class="unit-chip">
-                        <div class="unit-dot" style="background: var(--color-primary);"></div>
-                        <span>${t.deviceName}</span>
-                    </div>
-                </td>
-                <td>
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(t.start)}</span>
-                        <span class="date-time">${formatTimeShort(t.start)}</span>
-                    </div>
-                </td>
-                <td>
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(t.stop)}</span>
-                        <span class="date-time">${formatTimeShort(t.stop)}</span>
-                    </div>
-                </td>
-                <td style="font-weight:600; text-align:right;">${t.distance.toFixed(1)} km</td>
-                <td style="font-weight:700; text-align:right; color:var(--color-primary);">${formatOdometer(t.stopOdometer)}</td>
-                <td>
-                    ${t.isCurrent ? '<span class="eff-badge eff-average" style="background:#e6f7fb; color:#00b1e1; border-color:#00b1e1;">En curso</span>' : '<span style="color:var(--color-text-muted); font-size:0.7rem;">Finalizado</span>'}
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    };
 
     // ─── Process Trips and FuelUsed ──────────────────────────────────────────
     const processTripsData = (trips, fuelStatusData, deviceMap, driverMap) => {
@@ -514,49 +464,7 @@ geotab.addin.rendimiento = function () {
         });
     };
 
-    // ─── Render Raw Odometer Table ────────────────────────────────────────────
-    const renderOdoRawTable = (data, deviceMap) => {
-        const thead = document.getElementById("odo-raw-thead");
-        const tbody = document.getElementById("odo-raw-tbody");
-        const badgeRaw = document.getElementById("badge-raw-odo");
-        if (!thead || !tbody) return;
 
-        // Filter only odometer diagnostics
-        let odoRaw = data.filter(s => s.diagnostic && s.diagnostic.id === "DiagnosticOdometerId");
-
-        if (selectedUnitId !== "all") {
-            odoRaw = odoRaw.filter(s => s.device && s.device.id === selectedUnitId);
-        }
-
-        if (badgeRaw) badgeRaw.textContent = `${odoRaw.length} registros`;
-
-        if (odoRaw.length === 0) {
-            thead.innerHTML = "<tr><th>Sin datos</th></tr>";
-            tbody.innerHTML = '<tr><td style="text-align:center; padding: 2rem;">No se encontraron registros de odómetro en el periodo seleccionado.</td></tr>';
-            return;
-        }
-
-        thead.innerHTML = "<tr><th>Dispositivo</th><th>Diagnóstico</th><th>Fecha y Hora</th><th>Valor (km)</th><th>Device ID</th></tr>";
-        tbody.innerHTML = "";
-        const sorted = [...odoRaw].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-
-        sorted.forEach(s => {
-            const tr = document.createElement("tr");
-            const devId = s.device ? s.device.id : "—";
-            const devName = (s.device && s.device.name) ? s.device.name : (deviceMap[devId] || devId);
-            const dateStr = formatDateTime(s.dateTime);
-            const value = s.data !== undefined && s.data !== null ? s.data / 1000 : 0;
-
-            tr.innerHTML = `
-                <td>${devName}</td>
-                <td style="color:var(--color-primary);">Odómetro</td>
-                <td>${dateStr}</td>
-                <td style="font-weight:700; text-align:right;">${value.toLocaleString("es-MX", { maximumFractionDigits: 1 })} km</td>
-                <td style="font-family:monospace; font-size:0.7rem; color:var(--color-text-muted);">${devId}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-    };
 
     // ─── Render Daily Table ───────────────────────────────────────────────────
     const renderDailyTable = () => {
@@ -760,11 +668,6 @@ geotab.addin.rendimiento = function () {
         if (rawThead) rawThead.innerHTML = `<tr><th>Cargando Combustible...</th></tr>`;
         if (rawTbody) rawTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>').join("");
 
-        const odoThead = document.getElementById("odo-raw-thead");
-        const odoTbody = document.getElementById("odo-raw-tbody");
-        if (odoThead) odoThead.innerHTML = `<tr><th>Cargando Odómetro...</th></tr>`;
-        if (odoTbody) odoTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>').join("");
-
         const tripsTbody = document.getElementById("trips-tbody");
         if (tripsTbody) tripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>').join("");
 
@@ -777,15 +680,8 @@ geotab.addin.rendimiento = function () {
         const badgeFuelSummary = document.getElementById("badge-fuel-summary");
         if (badgeFuelSummary) badgeFuelSummary.textContent = "—";
 
-        const odoTripsTbody = document.getElementById("odo-trips-tbody");
-        if (odoTripsTbody) odoTripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>').join("");
-
-        const badgeOdoTrips = document.getElementById("badge-odo-trips");
-        if (badgeOdoTrips) badgeOdoTrips.textContent = "—";
-
         if (searchInput) searchInput.value = "";
         if (tripsSearchInput) tripsSearchInput.value = "";
-        if (odoTripsSearchInput) odoTripsSearchInput.value = "";
     };
 
     // ─── Render Charts ────────────────────────────────────────────────────────
@@ -866,7 +762,7 @@ geotab.addin.rendimiento = function () {
         // 2. Utilización de Flota (Dona)
         const totalDriving = (filteredTrips || []).reduce((s, t) => s + parseDurationToHours(t.drivingDuration), 0);
         const totalStopped = (filteredTrips || []).reduce((s, t) => s + parseDurationToHours(t.stopDuration), 0);
-        
+
         if (chartUtilization) chartUtilization.destroy();
         chartUtilization = new ApexCharts(document.querySelector("#chart-utilization"), {
             ...commonOptions,
@@ -882,7 +778,7 @@ geotab.addin.rendimiento = function () {
         // 3. Top 5 Kilometraje (Horizontal Bar)
         const topDist = [...records].sort((a, b) => b.distKm - a.distKm).slice(0, 5);
         if (chartDistance) chartDistance.destroy();
-        chartDistance = renderGenericBar("#chart-distance", 
+        chartDistance = renderGenericBar("#chart-distance",
             [{ name: 'Distancia (km)', data: topDist.map(r => Math.round(r.distKm)) }],
             topDist.map(r => r.deviceName), true, " km"
         );
@@ -898,7 +794,7 @@ geotab.addin.rendimiento = function () {
         });
 
         if (chartSpeed) chartSpeed.destroy();
-        chartSpeed = renderGenericBar("#chart-speed", 
+        chartSpeed = renderGenericBar("#chart-speed",
             [
                 { name: 'Vel. Máxima', data: speedSeries.map(s => Math.round(s.maxS)) },
                 { name: 'Vel. Promedio', data: speedSeries.map(s => Math.round(s.avgS)) }
@@ -909,7 +805,7 @@ geotab.addin.rendimiento = function () {
         // 5. Consumo de Combustible por Unidad (Bar)
         const topFuel = [...records].sort((a, b) => b.fuelUsed - a.fuelUsed).slice(0, 6);
         if (chartFuelDist) chartFuelDist.destroy();
-        chartFuelDist = renderGenericBar("#chart-fuel-dist", 
+        chartFuelDist = renderGenericBar("#chart-fuel-dist",
             [{ name: 'Consumo (L)', data: topFuel.map(r => Math.round(r.fuelUsed)) }],
             topFuel.map(r => r.deviceName), false, " L"
         );
@@ -943,18 +839,7 @@ geotab.addin.rendimiento = function () {
         renderTripsTable(filteredTrips);
     };
 
-    const applyOdoTripsSearch = (query) => {
-        let trips = [...allTrips];
-        if (selectedUnitId !== "all") {
-            trips = trips.filter(t => t.deviceId === selectedUnitId);
-        }
-        if (query && query.trim() !== "") {
-            const q = query.trim().toLowerCase();
-            trips = trips.filter(t => t.deviceName.toLowerCase().includes(q));
-        }
-        filteredOdoTrips = trips;
-        renderOdoTripsTable(filteredOdoTrips);
-    };
+
 
     const populateUnitFilter = (devices) => {
         const select = document.getElementById("unit-select");
@@ -1004,15 +889,11 @@ geotab.addin.rendimiento = function () {
         if (tripsSearchInput && tripsSearchInput.value) applyTripsSearch(tripsSearchInput.value);
         else renderTripsTable(filteredTrips);
 
-        if (odoTripsSearchInput && odoTripsSearchInput.value) applyOdoTripsSearch(odoTripsSearchInput.value);
-        else renderOdoTripsTable(filteredTrips);
-
         // Update Summary (KPIs) with filtered records and trips
         renderSummary(filteredRecords, filteredTrips);
 
         // Update Raw Tables
         renderRawTable(rawStatusData, deviceMap);
-        renderOdoRawTable(rawStatusData, deviceMap);
     };
 
     // ─── MAIN DATA LOADER ─────────────────────────────────────────────────────
@@ -1110,9 +991,7 @@ geotab.addin.rendimiento = function () {
             renderTable(filteredRecords);
             renderCharts(filteredRecords);
             renderTripsTable(filteredTrips);
-            renderOdoTripsTable(filteredTrips);
             renderRawTable(rawStatusData, deviceMap);
-            renderOdoRawTable(rawStatusData, deviceMap);
 
             // Trigger filtering if unit was already selected
             if (selectedUnitId !== "all") {
@@ -1246,13 +1125,7 @@ geotab.addin.rendimiento = function () {
                 });
             }
 
-            if (odoTripsSearchInput) {
-                var odoTripsSearchTimer = null;
-                odoTripsSearchInput.addEventListener("input", function () {
-                    clearTimeout(odoTripsSearchTimer);
-                    odoTripsSearchTimer = setTimeout(function () { applyOdoTripsSearch(odoTripsSearchInput.value); }, 250);
-                });
-            }
+
 
             btnRefresh.addEventListener("click", function () { loadData(); });
 
