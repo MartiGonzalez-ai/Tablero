@@ -131,12 +131,36 @@
                 </div>
             </div>
 
+            <!-- Tiempo Total Conduciendo -->
+            <div class="stat-card" data-color="purple">
+                <div class="stat-icon stat-icon--purple">
+                    <i data-lucide="clock" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Tiempo Conduciendo</div>
+                    <div class="stat-value skeleton" id="stat-tiempo">—</div>
+                    <div class="stat-sub">en movimiento</div>
+                </div>
+            </div>
+
+            <!-- Emisiones CO2 Estimadas -->
+            <div class="stat-card" data-color="teal">
+                <div class="stat-icon stat-icon--teal">
+                    <i data-lucide="leaf" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Emisiones CO2</div>
+                    <div class="stat-value skeleton" id="stat-co2">—</div>
+                    <div class="stat-sub">tons estimadas</div>
+                </div>
+            </div>
+
         </section>
 
         <!-- ═══════════ CHARTS SECTION ═══════════ -->
         <section class="charts-section">
             <div class="chart-row">
-                <!-- Rendimiento por Unidad -->
+                <!-- Tendencia de Rendimiento -->
                 <div class="chart-card glass-panel col-span-3">
                     <div class="panel-header">
                         <div class="panel-title-group">
@@ -145,6 +169,52 @@
                         </div>
                     </div>
                     <div id="chart-eff-unit" class="chart-container"></div>
+                </div>
+            </div>
+
+            <div class="chart-row grid-4">
+                <!-- Utilización de Flota -->
+                <div class="chart-card glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="pie-chart" width="16" height="16" stroke-width="2"></i>
+                            <span>Utilización de Flota</span>
+                        </div>
+                    </div>
+                    <div id="chart-utilization" class="chart-container" style="height: 250px;"></div>
+                </div>
+
+                <!-- Kilometraje por Unidad -->
+                <div class="chart-card glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="bar-chart-3" width="16" height="16" stroke-width="2"></i>
+                            <span>Top 5 Kilometraje (km)</span>
+                        </div>
+                    </div>
+                    <div id="chart-distance" class="chart-container" style="height: 250px;"></div>
+                </div>
+
+                <!-- Análisis de Velocidad -->
+                <div class="chart-card glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="zap" width="16" height="16" stroke-width="2"></i>
+                            <span>Velocidad: Máx vs Promedio</span>
+                        </div>
+                    </div>
+                    <div id="chart-speed" class="chart-container" style="height: 250px;"></div>
+                </div>
+
+                <!-- Distribución de Consumo -->
+                <div class="chart-card glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="droplets" width="16" height="16" stroke-width="2"></i>
+                            <span>Consumo por Unidad (L)</span>
+                        </div>
+                    </div>
+                    <div id="chart-fuel-dist" class="chart-container" style="height: 250px;"></div>
                 </div>
             </div>
 
