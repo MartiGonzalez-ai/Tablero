@@ -13,7 +13,7 @@ geotab.addin.rendimiento = function () {
     let deviceMap = {};        // Global device map
 
     // Chart instances
-    let chartEffByUnit, chartTrend, chartScatter;
+    let chartEffByUnit;
 
     // DOM refs
     let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
@@ -845,58 +845,10 @@ geotab.addin.rendimiento = function () {
         chartEffByUnit = new ApexCharts(document.querySelector("#chart-eff-unit"), optTrendDaily);
         chartEffByUnit.render();
 
-        // 2. Distancia vs Combustible agrupado (bar chart)
-        const withFuel = records.filter(d => d.kmPerL > 0);
-        const optTrend = {
-            ...commonOptions,
-            series: [
-                { name: 'Distancia (km)', data: withFuel.map(d => parseFloat(d.distKm.toFixed(1))) },
-                { name: 'Combustible (L)', data: withFuel.map(d => parseFloat(d.fuelUsed.toFixed(1))) }
-            ],
-            chart: { type: 'bar', height: 260, fontFamily, toolbar: { show: false } },
-            colors: [cCyan, cOrange],
-            plotOptions: { bar: { borderRadius: 3, columnWidth: '55%' } },
-            xaxis: { categories: withFuel.map(d => d.deviceName), labels: { style: { colors: textMuted, fontSize: '10px' }, rotate: -45 } },
-            yaxis: { labels: { style: { colors: textMuted } } },
-            legend: { position: 'top', fontSize: '11px' },
-            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        if (chartTrend) chartTrend.destroy();
-        chartTrend = new ApexCharts(document.querySelector("#chart-trend"), optTrend);
-        chartTrend.render();
 
 
 
-        // 4. Consumo vs Distancia (scatter)
-        const scatterData = records.filter(d => d.fuelUsed > 0 && d.distKm > 0).map(d => ({
-            x: parseFloat(d.distKm.toFixed(1)), y: parseFloat(d.fuelUsed.toFixed(1))
-        }));
-        const optScatter = {
-            ...commonOptions,
-            series: [{ name: 'Unidades', data: scatterData }],
-            chart: { type: 'scatter', height: 260, fontFamily, toolbar: { show: false }, zoom: { enabled: true } },
-            colors: [cBlue],
-            xaxis: {
-                title: { text: 'Distancia (km)', style: { color: textMuted, fontSize: '11px', fontWeight: 600 } },
-                labels: { formatter: val => Math.round(val) + " km", style: { colors: textMuted } }
-            },
-            yaxis: {
-                title: { text: 'Combustible (L)', style: { color: textMuted, fontSize: '11px', fontWeight: 600 } },
-                labels: { formatter: val => Math.round(val) + " L", style: { colors: textMuted } }
-            },
-            markers: { size: 6, strokeWidth: 0, hover: { size: 9 } },
-            tooltip: {
-                custom: ({ seriesIndex, dataPointIndex, w }) => {
-                    const point = w.config.series[seriesIndex].data[dataPointIndex];
-                    const kmPerL = point.y > 0 ? (point.x / point.y).toFixed(1) : '—';
-                    return `<div style="padding:8px 12px;font-size:12px;"><b>Distancia:</b> ${point.x} km<br><b>Combustible:</b> ${point.y} L<br><b>Rendimiento:</b> ${kmPerL} km/L</div>`;
-                }
-            },
-            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        if (chartScatter) chartScatter.destroy();
-        chartScatter = new ApexCharts(document.querySelector("#chart-scatter"), optScatter);
-        chartScatter.render();
+
     };
 
     // ─── Filter by search ─────────────────────────────────────────────────────
@@ -1253,5 +1205,3 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
-
-
