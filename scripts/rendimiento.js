@@ -340,7 +340,7 @@ geotab.addin.rendimiento = function () {
     };
 
     // ─── Render Accumulated Odometer per Trip Table ──────────────────────────
-    const renderOdoTripsTable = (trips, baselineOdoMap = {}) => {
+    const renderOdoTripsTable = (trips) => {
         const tbody = document.getElementById("odo-trips-tbody");
         const emptyEl = document.getElementById("odo-trips-empty");
         const badgeOdoTrips = document.getElementById("badge-odo-trips");
@@ -355,36 +355,10 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
-        // Group trips by device to calculate running total correctly for each
-        const tripsByDevice = {};
-        trips.forEach(t => {
-            if (!tripsByDevice[t.deviceId]) tripsByDevice[t.deviceId] = [];
-            tripsByDevice[t.deviceId].push(t);
-        });
+        // Sort trips by date (newest first)
+        const sorted = [...trips].sort((a, b) => new Date(b.start) - new Date(a.start));
 
-        const allProcessedTrips = [];
-
-        Object.keys(tripsByDevice).forEach(devId => {
-            // Sort device trips newest to oldest for retrospective calculation
-            const deviceTrips = tripsByDevice[devId].sort((a, b) => new Date(b.start) - new Date(a.start));
-            
-            // Start with the baseline odometer for this device
-            let currentOdo = baselineOdoMap[devId] || 0;
-
-            deviceTrips.forEach(t => {
-                // The current odometer is the "stopOdometer" for this trip
-                t.calculatedOdo = currentOdo;
-                allProcessedTrips.push(t);
-                
-                // Subtract the distance for the next (older) trip in the iteration
-                currentOdo -= (t.distance * 1000); // dist is in km, odo in meters
-            });
-        });
-
-        // Re-sort everything by overall date for the table display (newest to oldest)
-        const finalSorted = allProcessedTrips.sort((a, b) => new Date(b.start) - new Date(a.start));
-
-        finalSorted.forEach(t => {
+        sorted.forEach(t => {
             const tr = document.createElement("tr");
             tr.className = "perf-row";
 
@@ -408,7 +382,7 @@ geotab.addin.rendimiento = function () {
                     </div>
                 </td>
                 <td style="font-weight:600; text-align:right;">${t.distance.toFixed(1)} km</td>
-                <td style="font-weight:700; text-align:right; color:var(--color-primary);">${formatOdometer(t.calculatedOdo)}</td>
+                <td style="font-weight:700; text-align:right; color:var(--color-primary);">${formatOdometer(t.stopOdometer)}</td>
                 <td>
                     ${t.isCurrent ? '<span class="eff-badge eff-average" style="background:#e6f7fb; color:#00b1e1; border-color:#00b1e1;">En curso</span>' : '<span style="color:var(--color-text-muted); font-size:0.7rem;">Finalizado</span>'}
                 </td>
@@ -596,7 +570,7 @@ geotab.addin.rendimiento = function () {
         // Initialize dailyData with all dates in the selected range
         const dailyData = {};
         const range = window.getDateRange ? window.getDateRange() : { fromDate: new Date().toISOString(), toDate: new Date().toISOString() };
-        
+
         const startD = new Date(range.fromDate);
         const endD = new Date(range.toDate);
         startD.setHours(12, 0, 0, 0); // avoid tz boundary issues
@@ -719,7 +693,7 @@ geotab.addin.rendimiento = function () {
             });
 
             if (calls.length > 0 && calls.length <= 15000) {
-                api.multiCall(calls, function(results) {
+                api.multiCall(calls, function (results) {
                     const dailyOdoSum = {};
                     results.forEach((res, i) => {
                         const cellInfo = callMap[i];
@@ -741,7 +715,7 @@ geotab.addin.rendimiento = function () {
                             }
                         }
                     });
-                }, function(e) {
+                }, function (e) {
                     console.error("Error fetching exact odometers:", e);
                 });
             }
@@ -1055,14 +1029,6 @@ geotab.addin.rendimiento = function () {
                 }
             }],
             ["Get", {
-                typeName: "StatusData",
-                search: {
-                    diagnosticSearch: { id: "DiagnosticOdometerId" },
-                    toDate: toDate,
-                    resultsLimit: 1
-                }
-            }],
-            ["Get", {
                 typeName: "Trip",
                 search: commonSearch
             }],
@@ -1079,7 +1045,6 @@ geotab.addin.rendimiento = function () {
             var fuelUsedRaw = results[3] || [];
             var devices = results[4] || [];
             var drivers = results[5] || [];
-            var baselineOdoRaw = results[6] || [];
 
             // Build maps
             deviceMap = {};
@@ -1087,23 +1052,6 @@ geotab.addin.rendimiento = function () {
             const driverMap = {};
             drivers.forEach(function (dr) {
                 driverMap[dr.id] = (dr.firstName && dr.lastName) ? (dr.firstName + " " + dr.lastName) : dr.name;
-            });
-
-            // Map baseline odometer per device
-            const baselineOdoMap = {};
-            baselineOdoRaw.forEach(s => {
-                const devId = s.device ? s.device.id : null;
-                if (devId) baselineOdoMap[devId] = s.data || 0;
-            });
-
-            // If we have odoData in the range, the last reading might be even newer than the baseline (which was toDate)
-            odoData.forEach(s => {
-                const devId = s.device ? s.device.id : null;
-                if (devId) {
-                    if (!baselineOdoMap[devId] || new Date(s.dateTime) > new Date(toDate)) {
-                         baselineOdoMap[devId] = s.data || 0;
-                    }
-                }
             });
 
             populateUnitFilter(devices);
@@ -1146,7 +1094,7 @@ geotab.addin.rendimiento = function () {
             renderTable(filteredRecords);
             renderCharts(filteredRecords);
             renderTripsTable(filteredTrips);
-            renderOdoTripsTable(filteredTrips, baselineOdoMap);
+            renderOdoTripsTable(filteredTrips);
             renderRawTable(rawStatusData, deviceMap);
             renderOdoRawTable(rawStatusData, deviceMap);
 
@@ -1305,6 +1253,3 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
-
-
-
