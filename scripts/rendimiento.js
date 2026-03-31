@@ -12,6 +12,14 @@ geotab.addin.rendimiento = function () {
     let selectedUnitId = "all"; // "all" or specific device ID
     let deviceMap = {};        // Global device map
 
+    // Chart instances
+    let chartEffByUnit;
+
+    // DOM refs
+    let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
+    let allTrips = [], filteredTrips = [];
+    let filteredOdoTrips = [];
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const getDateRange = () => {
         if (isCustomRange && customFromDate && customToDate) {
@@ -1080,6 +1088,8 @@ geotab.addin.rendimiento = function () {
             errorToast = document.getElementById("error-toast");
             errorToastMsg = document.getElementById("error-toast-msg");
             searchInput = document.getElementById("search-input");
+            tripsSearchInput = document.getElementById("trips-search-input");
+            odoTripsSearchInput = document.getElementById("odo-trips-search-input");
             const unitSelect = document.getElementById("unit-select");
 
             // Unit Filter Event
