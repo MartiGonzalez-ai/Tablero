@@ -1,1257 +1,1091 @@
-"use strict";
-
-geotab.addin.rendimiento = function () {
-    let api;
-    let selectedDays = 7;
-    let customFromDate = null;
-    let customToDate = null;
-    let isCustomRange = false;
-    let allRecords = [];       // Processed performance records (per device)
-    let filteredRecords = [];
-    let rawStatusData = [];    // Raw StatusData for the raw table
-    let selectedUnitId = "all"; // "all" or specific device ID
-    let deviceMap = {};        // Global device map
-
-    // Chart instances
-    let chartEffByUnit, chartTrend, chartScatter;
-
-    // DOM refs
-    let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
-    let allTrips = [], filteredTrips = [];
-    let filteredOdoTrips = [];
-
-    // ─── Helpers ─────────────────────────────────────────────────────────────
-    const getDateRange = () => {
-        if (isCustomRange && customFromDate && customToDate) {
-            return { fromDate: customFromDate, toDate: customToDate };
-        }
-        const toDate = new Date();
-        const fromDate = new Date();
-        fromDate.setDate(fromDate.getDate() - selectedDays);
-        return { fromDate: fromDate.toISOString(), toDate: toDate.toISOString() };
-    };
-
-    const formatDateShort = (isoStr) => {
-        if (!isoStr) return "—";
-        const d = new Date(isoStr);
-        return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
-    };
-
-    const formatTimeShort = (isoStr) => {
-        if (!isoStr) return "";
-        const d = new Date(isoStr);
-        return d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
-    };
-
-    const formatDateTime = (isoStr) => {
-        if (!isoStr) return "—";
-        const d = new Date(isoStr);
-        return d.toLocaleString("es-MX", {
-            day: "2-digit", month: "short", year: "numeric",
-            hour: "2-digit", minute: "2-digit", second: "2-digit"
-        });
-    };
-
-    const formatOdometer = (meters) => {
-        if (!meters && meters !== 0) return "—";
-        return Math.round(meters / 1000).toLocaleString("es-MX") + " km";
-    };
-
-    const formatDuration = (timeSpan) => {
-        if (!timeSpan) return "0s";
-        // Geotab spans are often strings like "00:30:15.0000000"
-        const parts = timeSpan.split(':');
-        if (parts.length < 3) return timeSpan;
-        const h = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10);
-        const s = Math.round(parseFloat(parts[2]));
-        const res = [];
-        if (h > 0) res.push(h + "h");
-        if (m > 0) res.push(m + "m");
-        if (s > 0 || res.length === 0) res.push(s + "s");
-        return res.join(" ");
-    };
-
-    const showError = (msg) => {
-        errorToastMsg.textContent = msg;
-        errorToast.style.display = "flex";
-        setTimeout(() => { errorToast.style.display = "none"; }, 5000);
-    };
-
-    const animateCount = (el, target, decimals = 0, suffix = "") => {
-        const duration = 900;
-        const start = performance.now();
-        const step = (now) => {
-            const progress = Math.min((now - start) / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            const current = target * eased;
-            el.textContent = (decimals > 0
-                ? current.toFixed(decimals)
-                : Math.round(current).toLocaleString("es-MX")) + suffix;
-            if (progress < 1) requestAnimationFrame(step);
-        };
-        requestAnimationFrame(step);
-    };
-
-    const getEffClass = (kmPerL) => {
-        if (kmPerL >= 12) return "eff-excellent";
-        if (kmPerL >= 8) return "eff-good";
-        if (kmPerL >= 5) return "eff-average";
-        return "eff-poor";
-    };
-
-    // ─── Process StatusData into performance records per device ───────────────
-    const processStatusData = (fuelData, odoData, deviceMap) => {
-        const fuelByDevice = {};
-        const odoByDevice = {};
-
-        fuelData.forEach(s => {
-            const devId = s.device ? s.device.id : null;
-            if (!devId) return;
-            if (!fuelByDevice[devId]) fuelByDevice[devId] = [];
-            fuelByDevice[devId].push({ dateTime: s.dateTime, value: s.data || 0 });
-        });
-
-        odoData.forEach(s => {
-            const devId = s.device ? s.device.id : null;
-            if (!devId) return;
-            if (!odoByDevice[devId]) odoByDevice[devId] = [];
-            odoByDevice[devId].push({ dateTime: s.dateTime, value: s.data || 0 });
-        });
-
-        const perfRecords = [];
-        const allDeviceIds = new Set([...Object.keys(fuelByDevice), ...Object.keys(odoByDevice)]);
-
-        allDeviceIds.forEach(devId => {
-            const fuelReadings = (fuelByDevice[devId] || []).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-            const odoReadings = (odoByDevice[devId] || []).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-            const deviceName = deviceMap[devId] || devId;
-
-            let fuelUsed = 0, distKm = 0, odoStart = 0, odoEnd = 0;
-            let dateStart = null, dateEnd = null;
-
-            if (odoReadings.length >= 2) {
-                odoStart = odoReadings[0].value;
-                odoEnd = odoReadings[odoReadings.length - 1].value;
-                distKm = (odoEnd - odoStart) / 1000;
-                dateStart = odoReadings[0].dateTime;
-                dateEnd = odoReadings[odoReadings.length - 1].dateTime;
-            }
-
-            if (fuelReadings.length >= 2) {
-                const fuelStart = fuelReadings[0].value;
-                const fuelEnd = fuelReadings[fuelReadings.length - 1].value;
-                fuelUsed = fuelEnd - fuelStart;
-                if (!dateStart) dateStart = fuelReadings[0].dateTime;
-                if (!dateEnd) dateEnd = fuelReadings[fuelReadings.length - 1].dateTime;
-            }
-
-            if (distKm > 0 || fuelUsed > 0) {
-                const kmPerL = fuelUsed > 0 ? distKm / fuelUsed : 0;
-                perfRecords.push({
-                    deviceId: devId,
-                    deviceName,
-                    fuelUsed: fuelUsed > 0 ? fuelUsed : 0,
-                    distKm: distKm > 0 ? distKm : 0,
-                    kmPerL: kmPerL > 0 ? kmPerL : 0,
-                    odoStart, odoEnd,
-                    dateStart, dateEnd,
-                    fuelReadingsCount: fuelReadings.length,
-                    odoReadingsCount: odoReadings.length
-                });
-            }
-        });
-
-        return perfRecords;
-    };
-
-    // ─── Render summary KPIs ─────────────────────────────────────────────────
-    const renderSummary = (records, trips) => {
-        const totalDist = (trips || []).reduce((s, t) => s + (parseFloat(t.distance) || 0), 0);
-        const totalFuel = (records || []).reduce((s, r) => s + (parseFloat(r.fuelUsed) || 0), 0);
-        const avgKmPerL = totalFuel > 0 ? totalDist / totalFuel : 0;
-        const unidades = records.length;
-
-        const elRendimiento = document.getElementById("stat-rendimiento");
-        const elDistancia = document.getElementById("stat-distancia");
-        const elCombustible = document.getElementById("stat-combustible");
-        const elUnidades = document.getElementById("stat-unidades");
-
-        if (elRendimiento) { elRendimiento.classList.remove("skeleton"); animateCount(elRendimiento, avgKmPerL, 1, " km/L"); }
-        if (elDistancia) { elDistancia.classList.remove("skeleton"); animateCount(elDistancia, Math.round(totalDist), 0, ""); }
-        if (elCombustible) { elCombustible.classList.remove("skeleton"); animateCount(elCombustible, Math.round(totalFuel), 0, ""); }
-        if (elUnidades) { elUnidades.classList.remove("skeleton"); animateCount(elUnidades, unidades, 0, ""); }
-
-        const totalBadge = document.getElementById("stat-total-badge");
-        if (totalBadge) totalBadge.textContent = isCustomRange ? "rango personalizado" : `últimos ${selectedDays} días`;
-
-        const badgeRanking = document.getElementById("badge-ranking");
-        if (badgeRanking) {
-            badgeRanking.classList.remove("skeleton");
-            badgeRanking.textContent = `${unidades} unidades`;
-        }
-    };
-
-    // ─── Render ranking ──────────────────────────────────────────────────────
-    const renderRanking = (records) => {
-        const sorted = [...records].filter(d => d.kmPerL > 0).sort((a, b) => b.kmPerL - a.kmPerL);
-        const maxKmPerL = sorted.length > 0 ? sorted[0].kmPerL : 1;
-        const ul = document.getElementById("ranking-list");
-        if (!ul) return;
-        ul.innerHTML = "";
-
-        if (sorted.length === 0) {
-            ul.innerHTML = `<li class="ranking-empty">Sin datos en el periodo seleccionado</li>`;
-            return;
-        }
-
-        sorted.forEach((item, idx) => {
-            const pct = Math.round((item.kmPerL / maxKmPerL) * 100);
-            const li = document.createElement("li");
-            li.className = "ranking-item";
-            li.innerHTML = `
-                <div class="ranking-pos">${idx + 1}</div>
-                <div class="ranking-info">
-                    <div class="ranking-name">${item.deviceName}</div>
-                    <div class="ranking-bar-wrap">
-                        <div class="ranking-bar" style="width:${pct}%"></div>
-                    </div>
-                </div>
-                <div class="ranking-stats">
-                    <span class="ranking-count">${item.kmPerL.toFixed(1)}</span>
-                    <span class="ranking-liters">km/L</span>
-                </div>
-            `;
-            ul.appendChild(li);
-        });
-    };
-
-    // ─── Render performance table ────────────────────────────────────────────
-    const renderTable = (records) => {
-        const tbody = document.getElementById("perf-tbody");
-        const emptyEl = document.getElementById("table-empty");
-        const badgeTable = document.getElementById("badge-table");
-
-        if (!tbody) return;
-        tbody.innerHTML = "";
-        if (badgeTable) badgeTable.textContent = `${records.length} registros`;
-
-        if (records.length === 0) {
-            if (emptyEl) emptyEl.style.display = "flex";
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = "none";
-
-        const sorted = [...records].sort((a, b) => b.fuelUsed - a.fuelUsed);
-
-        sorted.forEach(r => {
-            const tr = document.createElement("tr");
-            tr.className = "perf-row";
-            tr.innerHTML = `
-                <td>
-                    <div class="unit-chip">
-                        <div class="unit-dot"></div>
-                        <span>${r.deviceName}</span>
-                    </div>
-                </td>
-                <td style="text-align:right; font-weight:700; color:var(--c-blue);">${r.fuelUsed > 0 ? r.fuelUsed.toFixed(2) + " L" : "0.00 L"}</td>
-                <td>
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(r.dateStart)}</span>
-                        <span class="date-time">→ ${formatDateShort(r.dateEnd)}</span>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    };
-
-    // ─── Render Trips Performance Table ──────────────────────────────────────
-    const renderTripsTable = (trips) => {
-        const tbody = document.getElementById("trips-tbody");
-        const emptyEl = document.getElementById("trips-empty");
-        const badgeTrips = document.getElementById("badge-trips");
-
-        if (!tbody) return;
-        tbody.innerHTML = "";
-        if (badgeTrips) badgeTrips.textContent = `${trips.length} viajes`;
-
-        if (trips.length === 0) {
-            if (emptyEl) emptyEl.style.display = "flex";
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = "none";
-
-        trips.forEach(t => {
-            const tr = document.createElement("tr");
-            tr.className = "perf-row";
-            const eff = t.fuelUsed > 0 ? (t.distance / t.fuelUsed) : 0;
-            const effClass = getEffClass(eff);
-
-            tr.innerHTML = `
-                <td>
-                    <div class="unit-chip">
-                        <div class="unit-dot" style="background: var(--c-purple);"></div>
-                        <span>${t.deviceName}</span>
-                    </div>
-                </td>
-                <td style="font-size:0.75rem;">${t.driverName}</td>
-                <td>
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(t.start)}</span>
-                        <span class="date-time">${formatTimeShort(t.start)}</span>
-                    </div>
-                </td>
-                <td>
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(t.stop)}</span>
-                        <span class="date-time">${formatTimeShort(t.stop)}</span>
-                    </div>
-                </td>
-                <td style="font-weight:600; text-align:right;">${t.distance.toFixed(1)} km</td>
-                <td style="text-align:right;">${t.maxSpeed ? Math.round(t.maxSpeed) + " km/h" : "—"}</td>
-                <td style="text-align:right;">${t.averageSpeed ? Math.round(t.averageSpeed) + " km/h" : "—"}</td>
-                <td style="text-align:right;">${formatDuration(t.drivingDuration)}</td>
-                <td style="text-align:right;">${formatDuration(t.stopDuration)}</td>
-                <td style="color:var(--c-blue); font-weight:600; text-align:right;">${t.fuelUsed > 0 ? t.fuelUsed.toFixed(2) + " L" : "—"}</td>
-                <td style="text-align:center;">
-                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : "0.0 km/L"}</span>
-                </td>
-                <td style="text-align:right;">${t.workDistance.toFixed(1)} km</td>
-                <td style="text-align:right;">${formatDuration(t.workDrivingDuration)}</td>
-                <td style="text-align:right;">${t.afterHoursDistance.toFixed(1)} km</td>
-                <td style="text-align:right;">${formatDuration(t.afterHoursDrivingDuration)}</td>
-                <td style="font-size:0.7rem; color:var(--color-text-muted);">${t.stopPoint}</td>
-                <td>
-                    ${t.isCurrent ? '<span class="eff-badge eff-average" style="background:#e6f7fb; color:#00b1e1; border-color:#00b1e1;">En curso</span>' : '<span style="color:var(--color-text-muted); font-size:0.7rem;">Finalizado</span>'}
-                </td>
-                <td style="text-align:right;">${formatDuration(t.workStopDuration)}</td>
-                <td style="text-align:right;">${formatDuration(t.afterHoursStopDuration)}</td>
-                <td style="text-align:right;">
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(t.nextTripStart)}</span>
-                        <span class="date-time">${formatTimeShort(t.nextTripStart)}</span>
-                    </div>
-                </td>
-                <td style="font-family:monospace; font-size:0.7rem; color:var(--color-text-muted);">${t.id}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-    };
-
-    // ─── Render Accumulated Odometer per Trip Table ──────────────────────────
-    const renderOdoTripsTable = (trips) => {
-        const tbody = document.getElementById("odo-trips-tbody");
-        const emptyEl = document.getElementById("odo-trips-empty");
-        const badgeOdoTrips = document.getElementById("badge-odo-trips");
-
-        if (!tbody) return;
-        tbody.innerHTML = "";
-        if (badgeOdoTrips) badgeOdoTrips.textContent = `${trips.length} viajes`;
-
-        if (trips.length === 0) {
-            if (emptyEl) emptyEl.style.display = "flex";
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = "none";
-
-        // Sort trips by date (newest first)
-        const sorted = [...trips].sort((a, b) => new Date(b.start) - new Date(a.start));
-
-        sorted.forEach(t => {
-            const tr = document.createElement("tr");
-            tr.className = "perf-row";
-
-            tr.innerHTML = `
-                <td>
-                    <div class="unit-chip">
-                        <div class="unit-dot" style="background: var(--color-primary);"></div>
-                        <span>${t.deviceName}</span>
-                    </div>
-                </td>
-                <td>
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(t.start)}</span>
-                        <span class="date-time">${formatTimeShort(t.start)}</span>
-                    </div>
-                </td>
-                <td>
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(t.stop)}</span>
-                        <span class="date-time">${formatTimeShort(t.stop)}</span>
-                    </div>
-                </td>
-                <td style="font-weight:600; text-align:right;">${t.distance.toFixed(1)} km</td>
-                <td style="font-weight:700; text-align:right; color:var(--color-primary);">${formatOdometer(t.stopOdometer)}</td>
-                <td>
-                    ${t.isCurrent ? '<span class="eff-badge eff-average" style="background:#e6f7fb; color:#00b1e1; border-color:#00b1e1;">En curso</span>' : '<span style="color:var(--color-text-muted); font-size:0.7rem;">Finalizado</span>'}
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    };
-
-    // ─── Process Trips and FuelUsed ──────────────────────────────────────────
-    const processTripsData = (trips, fuelStatusData, deviceMap, driverMap) => {
-        const fuelByDevice = {};
-        fuelStatusData.forEach(f => {
-            const devId = f.device ? f.device.id : null;
-            if (!devId) return;
-            if (!fuelByDevice[devId]) fuelByDevice[devId] = [];
-            fuelByDevice[devId].push({
-                dateTime: new Date(f.dateTime).getTime(),
-                value: f.data || 0
-            });
-        });
-
-        // Sort each device's fuel readings by time
-        Object.keys(fuelByDevice).forEach(devId => {
-            fuelByDevice[devId].sort((a, b) => a.dateTime - b.dateTime);
-        });
-
-        return trips.map(trip => {
-            const devId = trip.device ? trip.device.id : null;
-            const deviceName = deviceMap[devId] || devId || "Desconocido";
-            const tripStart = new Date(trip.start).getTime();
-            const tripStop = new Date(trip.stop).getTime();
-            const driverId = (trip.driver && trip.driver.id) ? trip.driver.id : null;
-            const driverName = driverMap[driverId] || driverId || "Sin Conductor";
-
-            // Calculate fuel used during trip using StatusData increments (similar to daily table)
-            let tripFuel = 0;
-            if (fuelByDevice[devId]) {
-                const readings = fuelByDevice[devId];
-                for (let i = 1; i < readings.length; i++) {
-                    // If the reading timestamp falls within the trip, add the delta
-                    if (readings[i].dateTime > tripStart && readings[i].dateTime <= tripStop) {
-                        const delta = readings[i].value - readings[i - 1].value;
-                        if (delta > 0) tripFuel += delta;
-                    }
-                }
-            }
-
-            const parseDurationToHours = (ds) => {
-                if (!ds || typeof ds !== "string") return 0;
-                const parts = ds.split(':');
-                if (parts.length < 3) return 0;
-                const h = parseInt(parts[0], 10);
-                const m = parseInt(parts[1], 10);
-                const s = parseFloat(parts[2]);
-                return h + (m / 60) + (s / 3600);
-            };
-
-            const drivingHours = parseDurationToHours(trip.drivingDuration);
-            const avgSpeed = (drivingHours > 0) ? (trip.distance) / drivingHours : 0;
-
-            return {
-                id: trip.id,
-                deviceId: devId,
-                deviceName: deviceName,
-                driverName: driverName,
-                start: trip.start,
-                stop: trip.stop,
-                distance: trip.distance || 0,
-                drivingDuration: trip.drivingDuration,
-                stopDuration: trip.stopDuration,
-                maxSpeed: trip.maximumSpeed,
-                averageSpeed: avgSpeed,
-                fuelUsed: tripFuel,
-                workDistance: trip.workDistance || 0,
-                workDrivingDuration: trip.workDrivingDuration,
-                afterHoursDistance: trip.afterHoursDistance || 0,
-                afterHoursDrivingDuration: trip.afterHoursDrivingDuration,
-                workStopDuration: trip.workStopDuration,
-                afterHoursStopDuration: trip.afterHoursStopDuration,
-                nextTripStart: trip.nextTripStart,
-                stopPoint: trip.stopPoint ? `${trip.stopPoint.y.toFixed(5)}, ${trip.stopPoint.x.toFixed(5)}` : "—",
-                isCurrent: trip.isCurrent,
-                stopOdometer: trip.stopOdometer || 0
-            };
-        });
-    };
-
-    // ─── Render Raw StatusData Table (Fuel) ──────────────────────────────────
-    const renderRawTable = (data, deviceMap) => {
-        const thead = document.getElementById("raw-thead");
-        const tbody = document.getElementById("raw-tbody");
-        const badgeRaw = document.getElementById("badge-raw");
-        if (!thead || !tbody) return;
-
-        // Filter only fuel diagnostics
-        let fuelRaw = data.filter(s => s.diagnostic && s.diagnostic.id === "DiagnosticDeviceTotalFuelId");
-
-        if (selectedUnitId !== "all") {
-            fuelRaw = fuelRaw.filter(s => s.device && s.device.id === selectedUnitId);
-        }
-
-        if (badgeRaw) badgeRaw.textContent = `${fuelRaw.length} registros`;
-
-        if (fuelRaw.length === 0) {
-            thead.innerHTML = "<tr><th>Sin datos</th></tr>";
-            tbody.innerHTML = '<tr><td style="text-align:center; padding: 2rem;">No se encontraron registros de combustible en el periodo seleccionado.</td></tr>';
-            return;
-        }
-
-        thead.innerHTML = "<tr><th>Dispositivo</th><th>Diagnóstico</th><th>Fecha y Hora</th><th>Valor (L)</th><th>Device ID</th></tr>";
-        tbody.innerHTML = "";
-        const sorted = [...fuelRaw].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-
-        sorted.forEach(s => {
-            const tr = document.createElement("tr");
-            const devId = s.device ? s.device.id : "—";
-            const devName = (s.device && s.device.name) ? s.device.name : (deviceMap[devId] || devId);
-            const dateStr = formatDateTime(s.dateTime);
-            const value = s.data !== undefined && s.data !== null ? s.data : 0;
-
-            tr.innerHTML = `
-                <td>${devName}</td>
-                <td style="color:var(--c-blue);">Combustible Total</td>
-                <td>${dateStr}</td>
-                <td style="font-weight:700; text-align:right;">${value.toLocaleString("es-MX", { maximumFractionDigits: 2 })} L</td>
-                <td style="font-family:monospace; font-size:0.7rem; color:var(--color-text-muted);">${devId}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-    };
-
-    // ─── Render Raw Odometer Table ────────────────────────────────────────────
-    const renderOdoRawTable = (data, deviceMap) => {
-        const thead = document.getElementById("odo-raw-thead");
-        const tbody = document.getElementById("odo-raw-tbody");
-        const badgeRaw = document.getElementById("badge-raw-odo");
-        if (!thead || !tbody) return;
-
-        // Filter only odometer diagnostics
-        let odoRaw = data.filter(s => s.diagnostic && s.diagnostic.id === "DiagnosticOdometerId");
-
-        if (selectedUnitId !== "all") {
-            odoRaw = odoRaw.filter(s => s.device && s.device.id === selectedUnitId);
-        }
-
-        if (badgeRaw) badgeRaw.textContent = `${odoRaw.length} registros`;
-
-        if (odoRaw.length === 0) {
-            thead.innerHTML = "<tr><th>Sin datos</th></tr>";
-            tbody.innerHTML = '<tr><td style="text-align:center; padding: 2rem;">No se encontraron registros de odómetro en el periodo seleccionado.</td></tr>';
-            return;
-        }
-
-        thead.innerHTML = "<tr><th>Dispositivo</th><th>Diagnóstico</th><th>Fecha y Hora</th><th>Valor (km)</th><th>Device ID</th></tr>";
-        tbody.innerHTML = "";
-        const sorted = [...odoRaw].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-
-        sorted.forEach(s => {
-            const tr = document.createElement("tr");
-            const devId = s.device ? s.device.id : "—";
-            const devName = (s.device && s.device.name) ? s.device.name : (deviceMap[devId] || devId);
-            const dateStr = formatDateTime(s.dateTime);
-            const value = s.data !== undefined && s.data !== null ? s.data / 1000 : 0;
-
-            tr.innerHTML = `
-                <td>${devName}</td>
-                <td style="color:var(--color-primary);">Odómetro</td>
-                <td>${dateStr}</td>
-                <td style="font-weight:700; text-align:right;">${value.toLocaleString("es-MX", { maximumFractionDigits: 1 })} km</td>
-                <td style="font-family:monospace; font-size:0.7rem; color:var(--color-text-muted);">${devId}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-    };
-
-    // ─── Render Daily Table ───────────────────────────────────────────────────
-    const renderDailyTable = () => {
-        const tbody = document.getElementById("daily-tbody");
-        const emptyEl = document.getElementById("daily-empty");
-        const badgeDaily = document.getElementById("badge-daily");
-
-        if (!tbody) return;
-        tbody.innerHTML = "";
-
-        // Initialize dailyData with all dates in the selected range
-        const dailyData = {};
-        const range = window.getDateRange ? window.getDateRange() : { fromDate: new Date().toISOString(), toDate: new Date().toISOString() };
-
-        const startD = new Date(range.fromDate);
-        const endD = new Date(range.toDate);
-        startD.setHours(12, 0, 0, 0); // avoid tz boundary issues
-        endD.setHours(12, 0, 0, 0);
-
-        for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
-            const dStr = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
-            dailyData[dStr] = { dist: 0, fuel: 0 };
-        }
-
-        // 1. Distance from Trips
-        (filteredTrips || []).forEach(t => {
-            if (!t.start) return;
-            const dateObj = new Date(t.start);
-            const dStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
-            if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
-            dailyData[dStr].dist += (parseFloat(t.distance) || 0);
-        });
-
-        // 2. Fuel from StatusData (Datos Crudos)
-        let fuelDataToProcess = rawStatusData;
-        if (selectedUnitId !== "all") {
-            fuelDataToProcess = rawStatusData.filter(d => d.device && d.device.id === selectedUnitId);
-        }
-        const fuelData = fuelDataToProcess.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticDeviceTotalFuelId");
-
-        const fuelByDev = {};
-        fuelData.forEach(d => {
-            const devId = d.device.id;
-            if (!fuelByDev[devId]) fuelByDev[devId] = [];
-            fuelByDev[devId].push(d);
-        });
-
-        const odoData = fuelDataToProcess.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticOdometerId");
-        const odoByDev = {};
-        odoData.forEach(d => {
-            const devId = d.device.id;
-            if (!odoByDev[devId]) odoByDev[devId] = [];
-            odoByDev[devId].push(d);
-        });
-        Object.keys(odoByDev).forEach(devId => {
-            odoByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-        });
-
-        Object.keys(fuelByDev).forEach(devId => {
-            const arr = fuelByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-            for (let i = 1; i < arr.length; i++) {
-                const deltaL = arr[i].data - arr[i - 1].data;
-                if (deltaL > 0) { // Only positive increments in total fuel
-                    const tzDate = new Date(arr[i].dateTime);
-                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth() + 1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
-                    if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
-                    dailyData[dStr].fuel += deltaL;
-                }
-            }
-        });
-
-        const sortedDates = Object.keys(dailyData).sort();
-
-        if (badgeDaily) badgeDaily.textContent = `${sortedDates.length} días`;
-
-        if (sortedDates.length === 0) {
-            if (emptyEl) emptyEl.style.display = "flex";
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = "none";
-
-        sortedDates.forEach(dateStr => {
-            dailyData[dateStr].acumulado = 0; // Default, will update async
-        });
-
-        // Sort descending so most recent is on top
-        const reversedDates = [...sortedDates].reverse();
-
-        reversedDates.forEach(dateStr => {
-            const day = dailyData[dateStr];
-            const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
-            const effClass = getEffClass(eff);
-
-            const tr = document.createElement("tr");
-            tr.className = "perf-row";
-            tr.innerHTML = `
-                <td>
-                    <div class="date-cell">
-                        <span class="date-main" style="font-weight:600; color:var(--color-primary);">${dateStr}</span>
-                    </div>
-                </td>
-                <td style="text-align:right; font-weight:600;">${day.dist.toFixed(1)} km</td>
-                <td style="text-align:right; font-weight:600; color:var(--text-color);" id="odo-${dateStr}">
-                    <span style="opacity:0.5;">Cargando...</span>
-                </td>
-                <td style="text-align:right; font-weight:600; color:var(--c-blue);">${day.fuel.toFixed(2)} L</td>
-                <td style="text-align:center;">
-                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : ((day.dist >= 0 || day.fuel >= 0) ? "0.0 km/L" : "—")}</span>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        // Asynchronously fetch the interpolated Odometer at 23:59:59 of each day for accurate fleet tracking
-        if (typeof api !== "undefined") {
-            const devicesToQuery = selectedUnitId !== "all" ? [selectedUnitId] : (typeof deviceMap !== "undefined" ? Object.keys(deviceMap) : []);
-            const calls = [];
-            const callMap = [];
-
-            sortedDates.forEach(dateStr => {
-                const tzEnd = new Date(dateStr + "T23:59:59").toISOString();
-                devicesToQuery.forEach(devId => {
-                    calls.push(["Get", {
-                        typeName: "StatusData",
-                        search: {
-                            diagnosticSearch: { id: "DiagnosticOdometerId" },
-                            deviceSearch: { id: devId },
-                            fromDate: tzEnd,
-                            toDate: tzEnd
-                        }
-                    }]);
-                    callMap.push({ dateStr, devId });
-                });
-            });
-
-            if (calls.length > 0 && calls.length <= 15000) {
-                api.multiCall(calls, function (results) {
-                    const dailyOdoSum = {};
-                    results.forEach((res, i) => {
-                        const cellInfo = callMap[i];
-                        if (res && res.length > 0) {
-                            if (!dailyOdoSum[cellInfo.dateStr]) dailyOdoSum[cellInfo.dateStr] = 0;
-                            dailyOdoSum[cellInfo.dateStr] += res[0].data;
-                        }
-                    });
-
-                    sortedDates.forEach(dateStr => {
-                        const el = document.getElementById("odo-" + dateStr);
-                        if (el) {
-                            const val = dailyOdoSum[dateStr];
-                            if (val !== undefined && val !== null) {
-                                dailyData[dateStr].acumulado = val / 1000;
-                                el.textContent = (val / 1000).toFixed(1) + " km";
-                            } else {
-                                el.textContent = "—";
-                            }
-                        }
-                    });
-                }, function (e) {
-                    console.error("Error fetching exact odometers:", e);
-                });
-            }
-        }
-
-        return { dailyData, sortedDates };
-    };
-
-    // ─── Reset UI ─────────────────────────────────────────────────────────────
-    const resetUI = () => {
-        ["stat-rendimiento", "stat-distancia", "stat-combustible", "stat-costo", "stat-unidades"].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) { el.textContent = "—"; el.classList.add("skeleton"); }
-        });
-
-        const ul = document.getElementById("ranking-list");
-        if (ul) ul.innerHTML = Array(5).fill('<li class="ranking-skeleton"></li>').join("");
-
-        const badgeRanking = document.getElementById("badge-ranking");
-        if (badgeRanking) { badgeRanking.textContent = "—"; badgeRanking.classList.add("skeleton"); }
-
-        const tbody = document.getElementById("perf-tbody");
-        if (tbody) tbody.innerHTML = Array(5).fill('<tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>').join("");
-
-        const badgeTable = document.getElementById("badge-table");
-        if (badgeTable) badgeTable.textContent = "—";
-
-        const emptyEl = document.getElementById("table-empty");
-        if (emptyEl) emptyEl.style.display = "none";
-
-        const dailyTbody = document.getElementById("daily-tbody");
-        if (dailyTbody) dailyTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>').join("");
-
-        const badgeDaily = document.getElementById("badge-daily");
-        if (badgeDaily) badgeDaily.textContent = "—";
-
-        const dailyEmptyEl = document.getElementById("daily-empty");
-        if (dailyEmptyEl) dailyEmptyEl.style.display = "none";
-
-        const rawThead = document.getElementById("raw-thead");
-        const rawTbody = document.getElementById("raw-tbody");
-        if (rawThead) rawThead.innerHTML = `<tr><th>Cargando Combustible...</th></tr>`;
-        if (rawTbody) rawTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>').join("");
-
-        const odoThead = document.getElementById("odo-raw-thead");
-        const odoTbody = document.getElementById("odo-raw-tbody");
-        if (odoThead) odoThead.innerHTML = `<tr><th>Cargando Odómetro...</th></tr>`;
-        if (odoTbody) odoTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>').join("");
-
-        const tripsTbody = document.getElementById("trips-tbody");
-        if (tripsTbody) tripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>').join("");
-
-        const badgeTrips = document.getElementById("badge-trips");
-        if (badgeTrips) badgeTrips.textContent = "—";
-
-        const fuelSummaryTbody = document.getElementById("fuel-summary-tbody");
-        if (fuelSummaryTbody) fuelSummaryTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>').join("");
-
-        const badgeFuelSummary = document.getElementById("badge-fuel-summary");
-        if (badgeFuelSummary) badgeFuelSummary.textContent = "—";
-
-        const odoTripsTbody = document.getElementById("odo-trips-tbody");
-        if (odoTripsTbody) odoTripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>').join("");
-
-        const badgeOdoTrips = document.getElementById("badge-odo-trips");
-        if (badgeOdoTrips) badgeOdoTrips.textContent = "—";
-
-        if (searchInput) searchInput.value = "";
-        if (tripsSearchInput) tripsSearchInput.value = "";
-        if (odoTripsSearchInput) odoTripsSearchInput.value = "";
-    };
-
-    // ─── Render Charts ────────────────────────────────────────────────────────
-    const renderCharts = (records) => {
-        if (!window.ApexCharts) return;
-
-        const cCyan = "#00b1e1", cBlue = "#003666", cGreen = "#3b753c", cOrange = "#f29300", cRed = "#cc0000";
-        const textMuted = "#5e6c84";
-        const fontFamily = "'Inter', sans-serif";
-        const commonOptions = {
-            chart: { fontFamily, toolbar: { show: false } },
-            dataLabels: { enabled: false },
-            tooltip: { theme: 'light' }
-        };
-
-        // 1. Tendencia de Rendimiento Flota Diaria (km/L)
-        // Ensure chart and table exactly match by getting calculated points directly from the UI generator
-        const { dailyData, sortedDates } = renderDailyTable();
-
-        const trendSeries = sortedDates.map(date => {
-            const day = dailyData[date];
-            const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
-            return { x: date, y: parseFloat(eff.toFixed(1)) };
-        });
-
-        const optTrendDaily = {
-            ...commonOptions,
-            series: [{ name: 'Rendimiento Promedio (km/L)', data: trendSeries }],
-            chart: { type: 'area', height: 260, fontFamily, toolbar: { show: false }, zoom: { enabled: false } },
-            dataLabels: {
-                enabled: true,
-                formatter: val => val.toFixed(1),
-                offsetY: -5,
-                style: { colors: [cCyan] },
-                background: { enabled: true, foreColor: '#fff', borderRadius: 4, borderWidth: 0 }
-            },
-            stroke: { curve: 'smooth', width: 3 },
-            fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05, stops: [20, 100] } },
-            colors: [cCyan],
-            xaxis: {
-                type: 'datetime',
-                labels: { style: { colors: textMuted }, format: 'dd MMM' },
-                axisBorder: { show: false },
-                axisTicks: { show: false }
-            },
-            yaxis: {
-                labels: {
-                    style: { colors: textMuted },
-                    formatter: val => val.toFixed(1) + " km/L"
-                }
-            },
-            grid: { borderColor: '#f1f1f1' },
-            markers: { size: 4, colors: [cCyan], strokeWidth: 2, hover: { size: 6 } },
-            noData: { text: "Cargando datos de tendencia...", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        if (chartEffByUnit) chartEffByUnit.destroy();
-        chartEffByUnit = new ApexCharts(document.querySelector("#chart-eff-unit"), optTrendDaily);
-        chartEffByUnit.render();
-
-        // 2. Distancia vs Combustible agrupado (bar chart)
-        const withFuel = records.filter(d => d.kmPerL > 0);
-        const optTrend = {
-            ...commonOptions,
-            series: [
-                { name: 'Distancia (km)', data: withFuel.map(d => parseFloat(d.distKm.toFixed(1))) },
-                { name: 'Combustible (L)', data: withFuel.map(d => parseFloat(d.fuelUsed.toFixed(1))) }
-            ],
-            chart: { type: 'bar', height: 260, fontFamily, toolbar: { show: false } },
-            colors: [cCyan, cOrange],
-            plotOptions: { bar: { borderRadius: 3, columnWidth: '55%' } },
-            xaxis: { categories: withFuel.map(d => d.deviceName), labels: { style: { colors: textMuted, fontSize: '10px' }, rotate: -45 } },
-            yaxis: { labels: { style: { colors: textMuted } } },
-            legend: { position: 'top', fontSize: '11px' },
-            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        if (chartTrend) chartTrend.destroy();
-        chartTrend = new ApexCharts(document.querySelector("#chart-trend"), optTrend);
-        chartTrend.render();
-
-
-
-        // 4. Consumo vs Distancia (scatter)
-        const scatterData = records.filter(d => d.fuelUsed > 0 && d.distKm > 0).map(d => ({
-            x: parseFloat(d.distKm.toFixed(1)), y: parseFloat(d.fuelUsed.toFixed(1))
-        }));
-        const optScatter = {
-            ...commonOptions,
-            series: [{ name: 'Unidades', data: scatterData }],
-            chart: { type: 'scatter', height: 260, fontFamily, toolbar: { show: false }, zoom: { enabled: true } },
-            colors: [cBlue],
-            xaxis: {
-                title: { text: 'Distancia (km)', style: { color: textMuted, fontSize: '11px', fontWeight: 600 } },
-                labels: { formatter: val => Math.round(val) + " km", style: { colors: textMuted } }
-            },
-            yaxis: {
-                title: { text: 'Combustible (L)', style: { color: textMuted, fontSize: '11px', fontWeight: 600 } },
-                labels: { formatter: val => Math.round(val) + " L", style: { colors: textMuted } }
-            },
-            markers: { size: 6, strokeWidth: 0, hover: { size: 9 } },
-            tooltip: {
-                custom: ({ seriesIndex, dataPointIndex, w }) => {
-                    const point = w.config.series[seriesIndex].data[dataPointIndex];
-                    const kmPerL = point.y > 0 ? (point.x / point.y).toFixed(1) : '—';
-                    return `<div style="padding:8px 12px;font-size:12px;"><b>Distancia:</b> ${point.x} km<br><b>Combustible:</b> ${point.y} L<br><b>Rendimiento:</b> ${kmPerL} km/L</div>`;
-                }
-            },
-            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        if (chartScatter) chartScatter.destroy();
-        chartScatter = new ApexCharts(document.querySelector("#chart-scatter"), optScatter);
-        chartScatter.render();
-    };
-
-    // ─── Filter by search ─────────────────────────────────────────────────────
-    const applySearch = (query) => {
-        let records = [...allRecords];
-        if (selectedUnitId !== "all") {
-            records = records.filter(r => r.deviceId === selectedUnitId);
-        }
-        if (query && query.trim() !== "") {
-            const q = query.trim().toLowerCase();
-            records = records.filter(r => r.deviceName.toLowerCase().includes(q));
-        }
-        filteredRecords = records;
-        renderTable(filteredRecords);
-        renderCharts(filteredRecords);
-    };
-
-    const applyTripsSearch = (query) => {
-        let trips = [...allTrips];
-        if (selectedUnitId !== "all") {
-            trips = trips.filter(t => t.deviceId === selectedUnitId);
-        }
-        if (query && query.trim() !== "") {
-            const q = query.trim().toLowerCase();
-            trips = trips.filter(t => t.deviceName.toLowerCase().includes(q));
-        }
-        filteredTrips = trips;
-        renderTripsTable(filteredTrips);
-    };
-
-    const applyOdoTripsSearch = (query) => {
-        let trips = [...allTrips];
-        if (selectedUnitId !== "all") {
-            trips = trips.filter(t => t.deviceId === selectedUnitId);
-        }
-        if (query && query.trim() !== "") {
-            const q = query.trim().toLowerCase();
-            trips = trips.filter(t => t.deviceName.toLowerCase().includes(q));
-        }
-        filteredOdoTrips = trips;
-        renderOdoTripsTable(filteredOdoTrips);
-    };
-
-    const populateUnitFilter = (devices) => {
-        const select = document.getElementById("unit-select");
-        if (!select) return;
-
-        // Save current selection if possible
-        const currentVal = select.value;
-
-        // Clear and add "All"
-        select.innerHTML = '<option value="all">Todas las Unidades</option>';
-
-        // Sort devices by name
-        const sortedDevices = [...devices].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-
-        sortedDevices.forEach(d => {
-            const opt = document.createElement("option");
-            opt.value = d.id;
-            opt.textContent = d.name || d.id;
-            select.appendChild(opt);
-        });
-
-        // Restore selection if it still exists
-        if ([...select.options].some(o => o.value === currentVal)) {
-            select.value = currentVal;
-        } else {
-            selectedUnitId = "all";
-        }
-    };
-
-    const applyUnitFilter = () => {
-        // Filter performance records
-        if (selectedUnitId === "all") {
-            filteredRecords = [...allRecords];
-            filteredTrips = [...allTrips];
-        } else {
-            filteredRecords = allRecords.filter(r => r.deviceId === selectedUnitId);
-            filteredTrips = allTrips.filter(t => t.deviceId === selectedUnitId);
-        }
-
-        // Apply any existing search terms
-        if (searchInput && searchInput.value) applySearch(searchInput.value);
-        else {
-            renderTable(filteredRecords);
-            renderCharts(filteredRecords);
-        }
-
-        if (tripsSearchInput && tripsSearchInput.value) applyTripsSearch(tripsSearchInput.value);
-        else renderTripsTable(filteredTrips);
-
-        if (odoTripsSearchInput && odoTripsSearchInput.value) applyOdoTripsSearch(odoTripsSearchInput.value);
-        else renderOdoTripsTable(filteredTrips);
-
-        // Update Summary (KPIs) with filtered records and trips
-        renderSummary(filteredRecords, filteredTrips);
-
-        // Update Raw Tables
-        renderRawTable(rawStatusData, deviceMap);
-        renderOdoRawTable(rawStatusData, deviceMap);
-    };
-
-    // ─── MAIN DATA LOADER ─────────────────────────────────────────────────────
-    const loadData = () => {
-        resetUI();
-        btnRefresh.disabled = true;
-        btnRefresh.classList.add("loading");
-
-        const { fromDate, toDate } = getDateRange();
-
-        const commonSearch = { fromDate, toDate, resultsLimit: 100000 };
-        if (selectedUnitId !== "all") {
-            commonSearch.deviceSearch = { id: selectedUnitId };
-        }
-
-        // Query StatusData for fuel + odometer diagnostics, plus Device list
-        api.multiCall([
-            ["Get", {
-                typeName: "StatusData",
-                search: {
-                    ...commonSearch,
-                    diagnosticSearch: { id: "DiagnosticDeviceTotalFuelId" }
-                }
-            }],
-            ["Get", {
-                typeName: "StatusData",
-                search: {
-                    ...commonSearch,
-                    diagnosticSearch: { id: "DiagnosticOdometerId" }
-                }
-            }],
-            ["Get", {
-                typeName: "Trip",
-                search: commonSearch
-            }],
-            ["Get", {
-                typeName: "FuelUsed",
-                search: commonSearch
-            }],
-            ["Get", { typeName: "Device" }],
-            ["Get", { typeName: "User", search: { isDriver: true } }]
-        ], function (results) {
-            var fuelData = results[0] || [];
-            var odoData = results[1] || [];
-            var tripsRaw = results[2] || [];
-            var fuelUsedRaw = results[3] || [];
-            var devices = results[4] || [];
-            var drivers = results[5] || [];
-
-            // Build maps
-            deviceMap = {};
-            devices.forEach(function (d) { deviceMap[d.id] = d.name; });
-            const driverMap = {};
-            drivers.forEach(function (dr) {
-                driverMap[dr.id] = (dr.firstName && dr.lastName) ? (dr.firstName + " " + dr.lastName) : dr.name;
-            });
-
-            populateUnitFilter(devices);
-
-            // Enrich StatusData with device names
-            fuelData.forEach(function (s) {
-                if (!s.diagnostic) s.diagnostic = { id: "DiagnosticDeviceTotalFuelId" };
-                if (s.device && s.device.id && deviceMap[s.device.id]) {
-                    s.device.name = deviceMap[s.device.id];
-                }
-            });
-            odoData.forEach(function (s) {
-                if (!s.diagnostic) s.diagnostic = { id: "DiagnosticOdometerId" };
-                if (s.device && s.device.id && deviceMap[s.device.id]) {
-                    s.device.name = deviceMap[s.device.id];
-                }
-            });
-
-            // Store raw data for raw table (combine fuel + odo)
-            rawStatusData = [].concat(fuelData, odoData);
-
-            // Process into performance records per device
-            allRecords = processStatusData(fuelData, odoData, deviceMap);
-            filteredRecords = allRecords.slice();
-
-            // Process Trips Performance using fuelData (StatusData) instead of FuelUsed entity
-            allTrips = processTripsData(tripsRaw, fuelData, deviceMap, driverMap);
-            filteredTrips = allTrips.slice();
-
-            console.log("[Rendimiento] Fuel StatusData records:", fuelData.length);
-            console.log("[Rendimiento] Odometer StatusData records:", odoData.length);
-            console.log("[Rendimiento] Trips raw:", tripsRaw.length);
-            console.log("[Rendimiento] FuelUsed raw:", fuelUsedRaw.length);
-            console.log("[Rendimiento] Devices:", devices.length);
-            console.log("[Rendimiento] Performance records:", allRecords.length);
-            console.log("[Rendimiento] Processed Trips:", allTrips.length);
-
-            renderSummary(allRecords, allTrips);
-            renderRanking(allRecords);
-            renderTable(filteredRecords);
-            renderCharts(filteredRecords);
-            renderTripsTable(filteredTrips);
-            renderOdoTripsTable(filteredTrips);
-            renderRawTable(rawStatusData, deviceMap);
-            renderOdoRawTable(rawStatusData, deviceMap);
-
-            // Trigger filtering if unit was already selected
-            if (selectedUnitId !== "all") {
-                applyUnitFilter();
-            }
-
-            if (window.lucide) {
-                lucide.createIcons();
-            }
-
-            var now = new Date();
-            lastUpdatedEl.textContent = "Actualizado: " + now.toLocaleTimeString("es-MX", {
-                hour: "2-digit", minute: "2-digit", second: "2-digit"
-            });
-
-            btnRefresh.disabled = false;
-            btnRefresh.classList.remove("loading");
-        }, function (err) {
-            console.error("[Rendimiento] Error:", err);
-            showError("Error al cargar los datos: " + (err.message || err));
-            btnRefresh.disabled = false;
-            btnRefresh.classList.remove("loading");
-        });
-    };
-
-    // ─── ADD-IN LIFECYCLE ─────────────────────────────────────────────────────
-    return {
-        initialize: function (_api, state, callback) {
-            api = _api;
-
-            if (window.lucide) {
-                lucide.createIcons();
-            }
-
-            btnRefresh = document.getElementById("btn-refresh");
-            lastUpdatedEl = document.getElementById("last-updated-time");
-            errorToast = document.getElementById("error-toast");
-            errorToastMsg = document.getElementById("error-toast-msg");
-            searchInput = document.getElementById("search-input");
-            tripsSearchInput = document.getElementById("trips-search-input");
-            odoTripsSearchInput = document.getElementById("odo-trips-search-input");
-            const unitSelect = document.getElementById("unit-select");
-
-            // Unit Filter Event
-            if (unitSelect) {
-                unitSelect.addEventListener("change", function () {
-                    selectedUnitId = unitSelect.value;
-                    applyUnitFilter();
-                });
-            }
-
-            // Date range buttons
-            document.querySelectorAll(".btn-range[data-days]").forEach(function (btn) {
-                btn.addEventListener("click", function () {
-                    document.querySelectorAll(".btn-range").forEach(function (b) { b.classList.remove("active"); });
-                    btn.classList.add("active");
-                    selectedDays = parseInt(btn.dataset.days, 10);
-                    isCustomRange = false;
-                    customFromDate = null;
-                    customToDate = null;
-                    var btnCustom = document.getElementById("btn-custom");
-                    if (btnCustom) {
-                        btnCustom.innerHTML = '<i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i> Personalizado';
-                        if (window.lucide) lucide.createIcons();
-                    }
-                    loadData();
-                });
-            });
-
-            // Custom date popover
-            var btnCustom = document.getElementById("btn-custom");
-            var datePopover = document.getElementById("date-popover");
-            var dateFromInput = document.getElementById("date-from");
-            var dateToInput = document.getElementById("date-to");
-            var btnApply = document.getElementById("btn-date-apply");
-            var btnCancel = document.getElementById("btn-date-cancel");
-
-            var todayStr = new Date().toISOString().slice(0, 10);
-            var weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            dateFromInput.value = weekAgo.toISOString().slice(0, 10);
-            dateToInput.value = todayStr;
-            dateToInput.max = todayStr;
-
-            var closePopover = function () { datePopover.classList.remove("open"); };
-
-            btnCustom.addEventListener("click", function (e) {
-                e.stopPropagation();
-                datePopover.classList.toggle("open");
-            });
-
-            btnCancel.addEventListener("click", closePopover);
-
-            btnApply.addEventListener("click", function () {
-                var from = dateFromInput.value;
-                var to = dateToInput.value;
-                if (!from || !to) { showError("Selecciona ambas fechas."); return; }
-                if (new Date(from) > new Date(to)) { showError("'Desde' no puede ser mayor que 'Hasta'."); return; }
-
-                customFromDate = new Date(from + "T00:00:00").toISOString();
-                customToDate = new Date(to + "T23:59:59").toISOString();
-                isCustomRange = true;
-
-                var fmt = function (s) { return new Date(s + "T12:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short" }); };
-                btnCustom.innerHTML = '<i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i> ' + fmt(from) + " – " + fmt(to);
-                if (window.lucide) lucide.createIcons();
-
-                document.querySelectorAll(".btn-range").forEach(function (b) { b.classList.remove("active"); });
-                btnCustom.classList.add("active");
-                closePopover();
-                loadData();
-            });
-
-            document.addEventListener("click", function (e) {
-                if (!datePopover.contains(e.target) && e.target !== btnCustom) closePopover();
-            });
-
-            dateFromInput.addEventListener("change", function () { dateToInput.min = dateFromInput.value; });
-
-            // Search
-            if (searchInput) {
-                var searchTimer = null;
-                searchInput.addEventListener("input", function () {
-                    clearTimeout(searchTimer);
-                    searchTimer = setTimeout(function () { applySearch(searchInput.value); }, 250);
-                });
-            }
-            if (tripsSearchInput) {
-                var tripsSearchTimer = null;
-                tripsSearchInput.addEventListener("input", function () {
-                    clearTimeout(tripsSearchTimer);
-                    tripsSearchTimer = setTimeout(function () { applyTripsSearch(tripsSearchInput.value); }, 250);
-                });
-            }
-
-            if (odoTripsSearchInput) {
-                var odoTripsSearchTimer = null;
-                odoTripsSearchInput.addEventListener("input", function () {
-                    clearTimeout(odoTripsSearchTimer);
-                    odoTripsSearchTimer = setTimeout(function () { applyOdoTripsSearch(odoTripsSearchInput.value); }, 250);
-                });
-            }
-
-            btnRefresh.addEventListener("click", function () { loadData(); });
-
-            callback();
-        },
-        focus: function (_api, state) {
-            api = _api;
-            loadData();
-        },
-        blur: function () {
-            // cleanup if needed
-        }
-    };
-};
-
-
+:root {
+    /* Base - Modo Claro Geotab */
+    --color-bg-main: #f0f2f5;
+    --color-bg-surface: #ffffff;
+    --color-bg-panel: #ffffff;
+    --color-panel-border: #d4d9e0;
+
+    /* Primary accent */
+    --color-primary: #003666;
+    --color-primary-glow: rgba(0, 54, 102, 0.1);
+
+    /* Text */
+    --color-text-main: #333333;
+    --color-text-muted: #5e6c84;
+    --color-text-sub: #4a5568;
+
+    /* KPI colour palette */
+    --c-orange: #f29300;
+    --c-orange-bg: #fff0d9;
+    --c-orange-glow: rgba(242, 147, 0, 0);
+
+    --c-blue: #003666;
+    --c-blue-bg: #e6ebf0;
+    --c-blue-glow: rgba(0, 54, 102, 0);
+
+    --c-red: #cc0000;
+    --c-red-bg: #fae6e6;
+    --c-red-glow: rgba(204, 0, 0, 0);
+
+    --c-purple: #813896;
+    --c-purple-bg: #f2ebf4;
+    --c-purple-glow: rgba(129, 56, 150, 0.1);
+
+    --c-green: #3b753c;
+    --c-green-bg: #ebf1ec;
+    --c-green-glow: rgba(59, 117, 60, 0);
+
+    --c-cyan: #00b1e1;
+    --c-cyan-bg: #e6f7fb;
+    --c-cyan-glow: rgba(0, 177, 225, 0);
+
+    --c-teal: #0d9488;
+    --c-teal-bg: #f0fdfa;
+    --c-teal-glow: rgba(13, 148, 136, 0.1);
+
+    /* Layout */
+    --nav-height: 72px;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-glow: 0;
+
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════════════════ */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    font-family: var(--font);
+    background-color: var(--color-bg-main);
+    background-image: none;
+    color: var(--color-text-main);
+    min-height: 100vh;
+    overflow-y: auto;
+}
+
+#app-rendimiento {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GLASS UTILITY
+═══════════════════════════════════════════════════════════════ */
+.glass-panel {
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-panel-border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOP NAVIGATION
+═══════════════════════════════════════════════════════════════ */
+.top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--nav-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    border-bottom: 1px solid var(--color-panel-border);
+    gap: 1rem;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    flex-shrink: 0;
+}
+
+.nav-brand svg {
+    flex-shrink: 0;
+}
+
+.nav-brand h1 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-primary);
+    line-height: 1.2;
+}
+
+.nav-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    position: relative;
+}
+
+/* ── Date Range Buttons ── */
+.date-range-group {
+    display: flex;
+    background: #ffffff;
+    border: 1px solid var(--color-panel-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.btn-range {
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    font-family: var(--font);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.45rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-range:hover {
+    background: #f1f5f9;
+    color: var(--color-text-main);
+}
+
+.btn-range.active {
+    background: var(--color-primary);
+    color: #ffffff;
+}
+
+.btn-range--custom {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-left: 1px solid var(--color-panel-border);
+    padding-left: 0.9rem;
+}
+
+/* ── Date Range Popover ── */
+.date-popover {
+    position: absolute;
+    top: calc(100% + 0.75rem);
+    right: 0;
+    z-index: 200;
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    box-shadow: 0 24px 60px -8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.date-popover.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+}
+
+.date-popover-header {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-panel-border);
+    padding-bottom: 0.75rem;
+}
+
+.date-popover-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.date-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.date-field label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+}
+
+.date-input {
+    width: 100%;
+    background: #f8fafc;
+    border: 1px solid var(--color-panel-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-main);
+    font-family: var(--font);
+    font-size: 0.8rem;
+    padding: 0.5rem 0.6rem;
+    transition: all 0.2s ease;
+    color-scheme: light;
+}
+
+.date-input:focus {
+    outline: none;
+    border-color: var(--c-cyan);
+    box-shadow: 0 0 0 2px var(--c-cyan-glow);
+}
+
+.date-popover-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.25rem;
+    border-top: 1px solid var(--color-panel-border);
+}
+
+.btn-popover-cancel {
+    background: transparent;
+    border: 1px solid var(--color-panel-border);
+    color: var(--color-text-muted);
+    font-family: var(--font);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.45rem 0.9rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-popover-cancel:hover {
+    background: #f1f5f9;
+    color: var(--color-text-main);
+}
+
+.btn-popover-apply {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--c-cyan);
+    border: none;
+    color: #000;
+    font-family: var(--font);
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.45rem 0.9rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 0 12px var(--c-cyan-glow);
+}
+
+.btn-popover-apply:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 0 20px var(--c-cyan-glow);
+}
+
+/* ── Refresh button ── */
+.btn-refresh {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #ffffff;
+    border: 1px solid var(--color-panel-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-main);
+    font-family: var(--font);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.45rem 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-refresh:hover {
+    background: rgba(6, 182, 212, 0.1);
+    border-color: var(--c-cyan);
+    color: var(--c-cyan);
+}
+
+.btn-refresh:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-refresh.loading svg {
+    animation: spin 1s linear infinite;
+}
+
+.last-updated {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+/* ── Unit Filter ── */
+.unit-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #ffffff;
+    border: 1px solid var(--color-panel-border);
+    border-radius: var(--radius-md);
+    padding: 0 0.75rem;
+    height: 34px; /* Matches btn-range height */
+    transition: all 0.2s ease;
+}
+
+.unit-filter-group:hover, .unit-filter-group:focus-within {
+    border-color: var(--c-cyan);
+    box-shadow: 0 0 0 2px var(--c-cyan-glow);
+}
+
+.unit-filter-group svg {
+    color: var(--color-text-muted);
+}
+
+.unit-select {
+    background: transparent;
+    border: none;
+    color: var(--color-text-main);
+    font-family: var(--font);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0;
+    cursor: pointer;
+    outline: none;
+    max-width: 200px;
+    text-overflow: ellipsis;
+}
+
+.unit-select option {
+    background: #ffffff;
+    color: var(--color-text-main);
+    font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SUMMARY STRIP
+═══════════════════════════════════════════════════════════════ */
+.summary-strip {
+    display: flex;
+    gap: 1rem;
+    padding: 1.25rem 2rem 0;
+    flex-wrap: wrap;
+}
+
+.stat-card {
+    flex: 1 1 160px;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-panel-border);
+    border-radius: var(--radius-xl);
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    box-shadow: var(--shadow-lg);
+    transition: transform 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-card[data-color="cyan"]   { border-left: 3px solid var(--c-cyan); }
+.stat-card[data-color="green"]  { border-left: 3px solid var(--c-green); }
+.stat-card[data-color="blue"]   { border-left: 3px solid var(--c-blue); }
+.stat-card[data-color="purple"] { border-left: 3px solid var(--c-purple); }
+.stat-card[data-color="orange"] { border-left: 3px solid var(--c-orange); }
+.stat-card[data-color="teal"]   { border-left: 3px solid var(--c-teal); }
+
+.stat-icon {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px;
+}
+
+.stat-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.stat-icon--cyan   { background: var(--c-cyan-bg);   color: var(--c-cyan); }
+.stat-icon--green  { background: var(--c-green-bg);  color: var(--c-green); }
+.stat-icon--blue   { background: var(--c-blue-bg);   color: var(--c-blue); }
+.stat-icon--purple { background: var(--c-purple-bg); color: var(--c-purple); }
+.stat-icon--orange { background: var(--c-orange-bg); color: var(--c-orange); }
+.stat-icon--teal   { background: var(--c-teal-bg);   color: var(--c-teal); }
+
+.stat-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.stat-label {
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--color-text-muted);
+    margin-bottom: 0.2rem;
+}
+
+.stat-value {
+    font-size: 1.85rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--color-text-main);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-value--sm {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.stat-sub {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    margin-top: 0.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHARTS SECTION
+═══════════════════════════════════════════════════════════════ */
+.charts-section {
+    padding: 1rem 2rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.chart-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.chart-card {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-card.col-span-2 {
+    grid-column: span 2;
+}
+
+.chart-card.col-span-3 {
+    grid-column: span 3;
+}
+
+.chart-row.grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.chart-container {
+    padding: 1rem;
+    height: 300px;
+    width: 100%;
+}
+
+@media (max-width: 1024px) {
+    .chart-row {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-card.col-span-2,
+    .chart-card.col-span-3 {
+        grid-column: span 1;
+    }
+
+    .chart-row.grid-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1400px) and (min-width: 1025px) {
+    .chart-row.grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN CONTENT (Ranking + Table)
+═══════════════════════════════════════════════════════════════ */
+.main-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 1rem;
+    padding: 1rem 2rem 2rem;
+    align-items: start;
+}
+
+/* ── Panel base ── */
+.panel {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--color-panel-border);
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.panel-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text-sub);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.panel-title-group svg {
+    flex-shrink: 0;
+}
+
+.panel-badge {
+    background: rgba(6, 182, 212, 0.12);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+    color: var(--c-cyan);
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 99px;
+    white-space: nowrap;
+}
+
+/* ── Search input ── */
+.table-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.search-input {
+    background: #ffffff;
+    border: 1px solid var(--color-panel-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-main);
+    font-family: var(--font);
+    font-size: 0.78rem;
+    padding: 0.38rem 0.75rem;
+    width: 180px;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: var(--color-text-muted);
+}
+
+.search-input:focus {
+    border-color: var(--c-cyan);
+    box-shadow: 0 0 0 2px var(--c-cyan-glow);
+    background: #fff;
+}
+
+/* ════════════════════════════════════
+   RANKING PANEL
+════════════════════════════════════ */
+.ranking-panel {
+    min-height: 350px;
+}
+
+.ranking-list {
+    list-style: none;
+    padding: 0.75rem 0;
+}
+
+.ranking-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1.25rem;
+    transition: background 0.15s;
+    cursor: default;
+}
+
+.ranking-item:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.ranking-pos {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    border: 1px solid var(--color-panel-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+}
+
+.ranking-item:nth-child(1) .ranking-pos {
+    background: rgba(59, 117, 60, 0.2);
+    border-color: var(--c-green);
+    color: var(--c-green);
+}
+
+.ranking-item:nth-child(2) .ranking-pos {
+    background: rgba(6, 182, 212, 0.15);
+    border-color: var(--c-cyan);
+    color: var(--c-cyan);
+}
+
+.ranking-item:nth-child(3) .ranking-pos {
+    background: rgba(168, 85, 247, 0.15);
+    border-color: var(--c-purple);
+    color: var(--c-purple);
+}
+
+.ranking-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ranking-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.3rem;
+}
+
+.ranking-bar-wrap {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.ranking-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--c-green), var(--c-cyan));
+    border-radius: 99px;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ranking-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.ranking-count {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--c-green);
+    line-height: 1;
+}
+
+.ranking-liters {
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+    margin-top: 0.1rem;
+}
+
+.ranking-skeleton {
+    height: 52px;
+    margin: 0.3rem 1.25rem;
+    border-radius: var(--radius-md);
+    background: linear-gradient(90deg,
+            rgba(0, 0, 0, 0.04) 25%,
+            rgba(0, 0, 0, 0.08) 50%,
+            rgba(0, 0, 0, 0.04) 75%);
+    background-size: 400px 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+}
+
+.ranking-empty {
+    padding: 2rem 1.25rem;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* ════════════════════════════════════
+   TABLE PANEL
+════════════════════════════════════ */
+.table-panel {
+    min-height: 350px;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+    position: relative;
+}
+
+.perf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+
+.perf-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.97);
+}
+
+.perf-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-panel-border);
+    white-space: nowrap;
+}
+
+.perf-table td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--color-panel-border);
+    color: var(--color-text-sub);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.perf-row {
+    transition: background 0.15s;
+}
+
+.perf-row:hover td {
+    background: rgba(6, 182, 212, 0.04);
+}
+
+.perf-row:last-child td {
+    border-bottom: none;
+}
+
+/* Unit chip */
+.unit-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.unit-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--c-cyan);
+    box-shadow: 0 0 6px var(--c-cyan-glow);
+    flex-shrink: 0;
+}
+
+.unit-chip span {
+    font-weight: 600;
+    color: var(--color-text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+/* Date cell */
+.date-cell {
+    display: flex;
+    flex-direction: column;
+}
+
+.date-main {
+    font-weight: 600;
+    color: var(--color-text-main);
+}
+
+.date-time {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    margin-top: 0.1rem;
+}
+
+/* Efficiency badge */
+.eff-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 99px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.eff-excellent {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--c-green);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.eff-good {
+    background: rgba(6, 182, 212, 0.12);
+    color: var(--c-cyan);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+}
+
+.eff-average {
+    background: rgba(242, 147, 0, 0.12);
+    color: var(--c-orange);
+    border: 1px solid rgba(242, 147, 0, 0.25);
+}
+
+.eff-poor {
+    background: rgba(204, 0, 0, 0.1);
+    color: var(--c-red);
+    border: 1px solid rgba(204, 0, 0, 0.2);
+}
+
+/* Skeleton rows */
+.tr-skeleton td {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--color-panel-border);
+}
+
+.td-skel {
+    height: 24px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(90deg,
+            rgba(0, 0, 0, 0.04) 25%,
+            rgba(0, 0, 0, 0.09) 50%,
+            rgba(0, 0, 0, 0.04) 75%);
+    background-size: 400px 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Empty state */
+.table-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 3rem 2rem;
+    color: var(--color-text-muted);
+}
+
+.table-empty p {
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+/* ════════════════════════════════════
+   RAW DATA TABLE (ALL COLUMNS)
+════════════════════════════════════ */
+/* ════════════════════════════════════
+   TRIPS PERFORMANCE TABLE
+════════════════════════════════════ */
+.trips-panel {
+    padding: 0 2rem 1.5rem;
+}
+
+.trips-panel .table-wrapper {
+    max-height: 500px;
+}
+
+.raw-data-panel {
+    padding: 0 2rem 2rem;
+}
+
+.raw-table-wrapper {
+    max-height: 500px;
+    padding-bottom: 0.5rem;
+}
+
+.raw-table th,
+.raw-table td {
+    padding: 0.6rem 1rem;
+    white-space: nowrap;
+    font-size: 0.75rem;
+}
+
+.raw-table th {
+    font-family: var(--font);
+    font-size: 0.67rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SKELETON LOADING
+═══════════════════════════════════════════════════════════════ */
+@keyframes shimmer {
+    0% {
+        background-position: -400px 0;
+    }
+
+    100% {
+        background-position: 400px 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg,
+            rgba(0, 0, 0, 0.04) 25%,
+            rgba(0, 0, 0, 0.10) 50%,
+            rgba(0, 0, 0, 0.04) 75%);
+    background-size: 400px 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+    border-radius: var(--radius-sm);
+    color: transparent !important;
+    user-select: none;
+    pointer-events: none;
+    min-width: 60px;
+    display: inline-block;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ERROR TOAST
+═══════════════════════════════════════════════════════════════ */
+.error-toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(244, 63, 94, 0.15);
+    border: 1px solid var(--c-red);
+    color: var(--c-red);
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    z-index: 9999;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 30px -5px var(--c-red-glow);
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 1rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 1100px) {
+    .main-content {
+        grid-template-columns: 260px 1fr;
+    }
+}
+
+@media (max-width: 850px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-strip {
+        gap: 0.75rem;
+    }
+
+    .stat-card {
+        flex: 1 1 130px;
+    }
+}
+
+@media (max-width: 600px) {
+    .main-content {
+        padding: 0.75rem 1rem 1.5rem;
+    }
+
+    .summary-strip {
+        padding: 0.75rem 1rem 0;
+    }
+
+    .top-nav {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 0.875rem 1rem;
+    }
+
+    .nav-controls {
+        flex-wrap: wrap;
+    }
+
+    .search-input {
+        width: 130px;
+    }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.22);
+}
