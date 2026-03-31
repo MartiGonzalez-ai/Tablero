@@ -131,36 +131,12 @@
                 </div>
             </div>
 
-            <!-- Tiempo Total Conduciendo -->
-            <div class="stat-card" data-color="purple">
-                <div class="stat-icon stat-icon--purple">
-                    <i data-lucide="clock" stroke-width="2"></i>
-                </div>
-                <div class="stat-body">
-                    <div class="stat-label">Tiempo Conduciendo</div>
-                    <div class="stat-value skeleton" id="stat-tiempo">—</div>
-                    <div class="stat-sub">en movimiento</div>
-                </div>
-            </div>
-
-            <!-- Emisiones CO2 Estimadas -->
-            <div class="stat-card" data-color="teal">
-                <div class="stat-icon stat-icon--teal">
-                    <i data-lucide="leaf" stroke-width="2"></i>
-                </div>
-                <div class="stat-body">
-                    <div class="stat-label">Emisiones CO2</div>
-                    <div class="stat-value skeleton" id="stat-co2">—</div>
-                    <div class="stat-sub">tons estimadas</div>
-                </div>
-            </div>
-
         </section>
 
         <!-- ═══════════ CHARTS SECTION ═══════════ -->
         <section class="charts-section">
             <div class="chart-row">
-                <!-- Tendencia de Rendimiento -->
+                <!-- Rendimiento por Unidad -->
                 <div class="chart-card glass-panel col-span-3">
                     <div class="panel-header">
                         <div class="panel-title-group">
@@ -172,52 +148,28 @@
                 </div>
             </div>
 
-            <div class="chart-row grid-4">
-                <!-- Utilización de Flota -->
+            <div class="chart-row">
+                <!-- Tendencia de Rendimiento -->
                 <div class="chart-card glass-panel">
                     <div class="panel-header">
                         <div class="panel-title-group">
-                            <i data-lucide="pie-chart" width="16" height="16" stroke-width="2"></i>
-                            <span>Utilización de Flota</span>
+                            <i data-lucide="trending-up" width="16" height="16" stroke-width="2"></i>
+                            <span>Tendencia de Rendimiento</span>
                         </div>
                     </div>
-                    <div id="chart-utilization" class="chart-container" style="height: 250px;"></div>
+                    <div id="chart-trend" class="chart-container"></div>
                 </div>
-
-                <!-- Kilometraje por Unidad -->
-                <div class="chart-card glass-panel">
+                <!-- Consumo vs Distancia -->
+                <div class="chart-card glass-panel col-span-2">
                     <div class="panel-header">
                         <div class="panel-title-group">
-                            <i data-lucide="bar-chart-3" width="16" height="16" stroke-width="2"></i>
-                            <span>Top 5 Kilometraje (km)</span>
+                            <i data-lucide="scatter-chart" width="16" height="16" stroke-width="2"></i>
+                            <span>Consumo vs Distancia por Unidad</span>
                         </div>
                     </div>
-                    <div id="chart-distance" class="chart-container" style="height: 250px;"></div>
-                </div>
-
-                <!-- Análisis de Velocidad -->
-                <div class="chart-card glass-panel">
-                    <div class="panel-header">
-                        <div class="panel-title-group">
-                            <i data-lucide="zap" width="16" height="16" stroke-width="2"></i>
-                            <span>Velocidad: Máx vs Promedio</span>
-                        </div>
-                    </div>
-                    <div id="chart-speed" class="chart-container" style="height: 250px;"></div>
-                </div>
-
-                <!-- Distribución de Consumo -->
-                <div class="chart-card glass-panel">
-                    <div class="panel-header">
-                        <div class="panel-title-group">
-                            <i data-lucide="droplets" width="16" height="16" stroke-width="2"></i>
-                            <span>Consumo por Unidad (L)</span>
-                        </div>
-                    </div>
-                    <div id="chart-fuel-dist" class="chart-container" style="height: 250px;"></div>
+                    <div id="chart-scatter" class="chart-container"></div>
                 </div>
             </div>
-
         </section>
 
         <!-- ═══════════ MAIN CONTENT ═══════════ -->
@@ -263,31 +215,11 @@
                             </tr>
                         </thead>
                         <tbody id="perf-tbody">
-                            <tr class="tr-skeleton">
-                                <td colspan="3">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
-                            <tr class="tr-skeleton">
-                                <td colspan="3">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
-                            <tr class="tr-skeleton">
-                                <td colspan="3">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
-                            <tr class="tr-skeleton">
-                                <td colspan="3">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
-                            <tr class="tr-skeleton">
-                                <td colspan="3">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
+                            <tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>
                         </tbody>
                     </table>
                     <div class="table-empty" id="table-empty" style="display:none;">
@@ -321,21 +253,9 @@
                             </tr>
                         </thead>
                         <tbody id="daily-tbody">
-                            <tr class="tr-skeleton">
-                                <td colspan="5">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
-                            <tr class="tr-skeleton">
-                                <td colspan="5">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
-                            <tr class="tr-skeleton">
-                                <td colspan="5">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
+                            <tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>
                         </tbody>
                     </table>
                     <div class="table-empty" id="daily-empty" style="display:none;">
@@ -387,21 +307,9 @@
                             </tr>
                         </thead>
                         <tbody id="trips-tbody">
-                            <tr class="tr-skeleton">
-                                <td colspan="21">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
-                            <tr class="tr-skeleton">
-                                <td colspan="21">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
-                            <tr class="tr-skeleton">
-                                <td colspan="21">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
+                            <tr class="tr-skeleton"><td colspan="21"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="21"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="21"><div class="td-skel"></div></td></tr>
                         </tbody>
                     </table>
                     <div class="table-empty" id="trips-empty" style="display:none;">
@@ -427,16 +335,10 @@
                 <div class="raw-table-wrapper table-wrapper">
                     <table class="perf-table raw-table" id="raw-table">
                         <thead id="raw-thead">
-                            <tr>
-                                <th>Cargando...</th>
-                            </tr>
+                            <tr><th>Cargando...</th></tr>
                         </thead>
                         <tbody id="raw-tbody">
-                            <tr class="tr-skeleton">
-                                <td>
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
+                            <tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -456,16 +358,10 @@
                 <div class="raw-table-wrapper table-wrapper">
                     <table class="perf-table raw-table" id="odo-raw-table">
                         <thead id="odo-raw-thead">
-                            <tr>
-                                <th>Cargando...</th>
-                            </tr>
+                            <tr><th>Cargando...</th></tr>
                         </thead>
                         <tbody id="odo-raw-tbody">
-                            <tr class="tr-skeleton">
-                                <td>
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
+                            <tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -482,8 +378,7 @@
                         <span>Odómetro Acumulado por Viaje</span>
                     </div>
                     <div class="table-controls">
-                        <input type="text" id="odo-trips-search-input" class="search-input"
-                            placeholder="Buscar viaje...">
+                        <input type="text" id="odo-trips-search-input" class="search-input" placeholder="Buscar viaje...">
                         <span class="panel-badge" id="badge-odo-trips">—</span>
                     </div>
                 </div>
@@ -500,21 +395,9 @@
                             </tr>
                         </thead>
                         <tbody id="odo-trips-tbody">
-                            <tr class="tr-skeleton">
-                                <td colspan="6">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
-                            <tr class="tr-skeleton">
-                                <td colspan="6">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
-                            <tr class="tr-skeleton">
-                                <td colspan="6">
-                                    <div class="td-skel"></div>
-                                </td>
-                            </tr>
+                            <tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>
                         </tbody>
                     </table>
                     <div class="table-empty" id="odo-trips-empty" style="display:none;">
