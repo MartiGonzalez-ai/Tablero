@@ -244,6 +244,62 @@
             </div>
         </section>
 
+        <!-- ═══════════ TRIPS PERFORMANCE TABLE ═══════════ -->
+        <section class="trips-panel">
+            <div class="panel glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="map-pin" width="16" height="16" stroke-width="2"></i>
+                        <span>Detalle de Viajes (Rendimiento por Trayecto)</span>
+                    </div>
+                    <div class="table-controls">
+                        <input type="text" id="trips-search-input" class="search-input" placeholder="Buscar viaje...">
+                        <span class="panel-badge" id="badge-trips">—</span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="perf-table" id="trips-table">
+                        <thead>
+                            <tr>
+                                <th>Unidad</th>
+                                <th>Conductor</th>
+                                <th>Inicio</th>
+                                <th>Fin</th>
+                                <th>Distancia</th>
+                                <th>Vel. Máx.</th>
+                                <th>Vel. Prom.</th>
+                                <th>Dur. Conducción</th>
+                                <th>Dur. Parada</th>
+                                <th>Combustible</th>
+                                <th>Rendimiento</th>
+                                <th>Dist. Trabajo</th>
+                                <th>Dur. Trabajo</th>
+                                <th>Dist. Fuera Horario</th>
+                                <th>Dur. Fuera Horario</th>
+                                <th>Punto de Parada</th>
+                                <th>Estado</th>
+                                <th>Parada Trabajo</th>
+                                <th>Parada Fuera Horario</th>
+                                <th>Inicio Próx. Viaje</th>
+                                <th>ID Viaje</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trips-tbody">
+                            <tr class="tr-skeleton"><td colspan="21"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="21"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="21"><div class="td-skel"></div></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="table-empty" id="trips-empty" style="display:none;">
+                        <i data-lucide="map" width="40" height="40" stroke-width="1.5"></i>
+                        <p>No se encontraron registros de viajes en el periodo seleccionado.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+
         <!-- ═══════════ RAW STATUSDATA TABLE ═══════════ -->
         <section class="raw-data-panel">
             <div class="panel glass-panel">
