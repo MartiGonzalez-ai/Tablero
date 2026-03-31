@@ -13,7 +13,7 @@ geotab.addin.rendimiento = function () {
     let deviceMap = {};        // Global device map
 
     // Chart instances
-    // Removed: chartEffByUnit, chartTrend, chartScatter
+    let chartEffByUnit, chartTrend;
 
     // DOM refs
     let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput;
@@ -728,7 +728,79 @@ geotab.addin.rendimiento = function () {
 
     // ─── Render Charts ────────────────────────────────────────────────────────
     const renderCharts = (records) => {
-        // Charts removed as per user request
+        if (!window.ApexCharts) return;
+
+        const cCyan = "#00b1e1", cBlue = "#003666", cGreen = "#3b753c", cOrange = "#f29300", cRed = "#cc0000";
+        const textMuted = "#5e6c84";
+        const fontFamily = "'Inter', sans-serif";
+        const commonOptions = {
+            chart: { fontFamily, toolbar: { show: false } },
+            dataLabels: { enabled: false },
+            tooltip: { theme: 'light' }
+        };
+
+        // 1. Tendencia de Rendimiento Flota Diaria (km/L)
+        const { dailyData, sortedDates } = renderDailyTable();
+
+        const trendSeries = sortedDates.map(date => {
+            const day = dailyData[date];
+            const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
+            return { x: date, y: parseFloat(eff.toFixed(1)) };
+        });
+
+        const optTrendDaily = {
+            ...commonOptions,
+            series: [{ name: 'Rendimiento Promedio (km/L)', data: trendSeries }],
+            chart: { type: 'area', height: 260, fontFamily, toolbar: { show: false }, zoom: { enabled: false } },
+            dataLabels: {
+                enabled: true,
+                formatter: val => val.toFixed(1),
+                offsetY: -5,
+                style: { colors: [cCyan] },
+                background: { enabled: true, foreColor: '#fff', borderRadius: 4, borderWidth: 0 }
+            },
+            stroke: { curve: 'smooth', width: 3 },
+            fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05, stops: [20, 100] } },
+            colors: [cCyan],
+            xaxis: {
+                type: 'datetime',
+                labels: { style: { colors: textMuted }, format: 'dd MMM' },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
+            },
+            yaxis: {
+                labels: {
+                    style: { colors: textMuted },
+                    formatter: val => val.toFixed(1) + " km/L"
+                }
+            },
+            grid: { borderColor: '#f1f1f1' },
+            markers: { size: 4, colors: [cCyan], strokeWidth: 2, hover: { size: 6 } },
+            noData: { text: "Cargando datos de tendencia...", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
+        };
+        if (chartEffByUnit) chartEffByUnit.destroy();
+        chartEffByUnit = new ApexCharts(document.querySelector("#chart-eff-unit"), optTrendDaily);
+        chartEffByUnit.render();
+
+        // 2. Distancia vs Combustible agrupado (bar chart)
+        const withFuel = records.filter(d => d.kmPerL > 0);
+        const optTrend = {
+            ...commonOptions,
+            series: [
+                { name: 'Distancia (km)', data: withFuel.map(d => parseFloat(d.distKm.toFixed(1))) },
+                { name: 'Combustible (L)', data: withFuel.map(d => parseFloat(d.fuelUsed.toFixed(1))) }
+            ],
+            chart: { type: 'bar', height: 260, fontFamily, toolbar: { show: false } },
+            colors: [cCyan, cOrange],
+            plotOptions: { bar: { borderRadius: 3, columnWidth: '55%' } },
+            xaxis: { categories: withFuel.map(d => d.deviceName), labels: { style: { colors: textMuted, fontSize: '10px' }, rotate: -45 } },
+            yaxis: { labels: { style: { colors: textMuted } } },
+            legend: { position: 'top', fontSize: '11px' },
+            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
+        };
+        if (chartTrend) chartTrend.destroy();
+        chartTrend = new ApexCharts(document.querySelector("#chart-trend"), optTrend);
+        chartTrend.render();
     };
 
     // ─── Filter by search ─────────────────────────────────────────────────────
