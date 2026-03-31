@@ -2,394 +2,346 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Control de Flota - Clean Light</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <style>
-        :root {
-            --bg-body: #f0f2f5;
-            --bg-surface: #ffffff;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --border-color: rgba(255, 255, 255, 0.5);
-            --accent-primary: #6366f1;
-            --accent-hover: #4f46e5;
-            
-            /* Sombras modernas y sutiles */
-            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.02);
-            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-            --glass-bg: rgba(255, 255, 255, 0.7);
-            --glass-border: 1px solid rgba(255, 255, 255, 0.5);
-            --glass-blur: blur(12px);
-            
-            --radius-md: 16px;
-            --radius-lg: 24px;
-            --transition-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-body);
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxMDAlJyBoZWlnaHQ9JzEwMCUnPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0nYScgeDE9JzAlJyB5MT0nMCUnIHgyPScxMDAlJyB5Mj0nMTAwJSc+PHN0b3Agb2Zmc2V0PScwJyBzdG9wLWNvbG9yPScjZjBmMmY1Jy8+PHN0b3Agb2Zmc2V0PScxJyBzdG9wLWNvbG9yPScjZTFmNWZlJy8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3QgZmlsbD0ndXJsKCNhKScgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScvPjwvc3ZnPg==');
-            background-size: cover;
-            background-attachment: fixed;
-            color: var(--text-primary);
-            display: flex;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* Animación de entrada fluida */
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* --- CONTENIDO PRINCIPAL --- */
-        .main-content {
-            flex: 1;
-            margin: 0 auto;
-            padding: 48px;
-            max-width: 1400px;
-        }
-
-        /* --- HEADER --- */
-        header {
-            margin-bottom: 40px;
-            animation: fadeUp 0.4s ease-out;
-        }
-
-        header h1 {
-            font-size: 2.25rem;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            color: var(--text-primary);
-            margin-bottom: 6px;
-            background: linear-gradient(to right, #1e293b, #4f46e5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        header p {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            font-weight: 400;
-        }
-
-        /* --- GRID Y TARJETAS --- */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 32px;
-        }
-
-        .card {
-            background: var(--glass-bg);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border: var(--glass-border);
-            border-radius: var(--radius-lg);
-            padding: 28px;
-            box-shadow: var(--shadow-card);
-            transition: all 0.4s var(--transition-bounce);
-            text-decoration: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-            overflow: hidden;
-            animation: fadeUp 0.5s ease-out backwards;
-        }
-
-        /* Efecto de brillo en hover */
-        .card::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%);
-            transform: translateX(-100%);
-            transition: transform 0.6s;
-        }
-
-        .card:hover::after {
-            transform: translateX(100%);
-        }
-
-        /* Retardo escalonado */
-        .card:nth-child(1) { animation-delay: 0.1s; }
-        .card:nth-child(2) { animation-delay: 0.15s; }
-        .card:nth-child(3) { animation-delay: 0.2s; }
-        .card:nth-child(4) { animation-delay: 0.25s; }
-        .card:nth-child(5) { animation-delay: 0.3s; }
-        .card:nth-child(6) { animation-delay: 0.35s; }
-
-        .card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: var(--shadow-hover);
-            border-color: rgba(255, 255, 255, 0.8);
-            background: rgba(255, 255, 255, 0.9);
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .icon-box {
-            width: 56px;
-            height: 56px;
-            border-radius: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.6rem;
-            transition: all 0.4s var(--transition-bounce);
-            box-shadow: 0 8px 16px -4px rgba(0,0,0,0.1);
-        }
-
-        .card:hover .icon-box {
-            transform: scale(1.1) rotate(-5deg);
-            box-shadow: 0 12px 20px -4px rgba(0,0,0,0.15);
-        }
-
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 24px;
-            letter-spacing: -0.01em;
-            transition: color 0.3s;
-        }
-        
-        .card:hover .card-title {
-            color: var(--accent-primary);
-        }
-
-        .card-stats {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 28px;
-        }
-
-        .stat-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        /* --- PÍLDORAS (PILLS) --- */
-        .pill {
-            padding: 6px 14px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            letter-spacing: 0.02em;
-        }
-
-        .pill-warn { background: rgba(255, 237, 213, 0.6); color: #c2410c; border: 1px solid rgba(255, 237, 213, 1); }
-        .pill-danger { background: rgba(254, 226, 226, 0.6); color: #b91c1c; border: 1px solid rgba(254, 226, 226, 1); }
-        .pill-info { background: rgba(219, 234, 254, 0.6); color: #1d4ed8; border: 1px solid rgba(219, 234, 254, 1); }
-        .pill-success { background: rgba(220, 252, 231, 0.6); color: #15803d; border: 1px solid rgba(220, 252, 231, 1); }
-        .pill-neutral { background: rgba(243, 244, 246, 0.6); color: #374151; border: 1px solid rgba(243, 244, 246, 1); }
-
-        /* --- BOTÓN DETALLES --- */
-        .btn-detail {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--accent-primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s ease;
-            margin-top: auto;
-            padding: 8px 0;
-        }
-
-        .card:hover .btn-detail {
-            color: var(--accent-hover);
-            gap: 12px;
-            transform: translateX(4px);
-        }
-
-        /* --- COLORES DE ICONOS --- */
-        /* Gradients más vivos y modernos */
-        .manto { background: linear-gradient(135deg, #fff1eb 0%, #ace0f9 100%); color: #0284c7; } /* Azul claro fresco */
-        .rpm { background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); color: #6366f1; } /* Lavanda a azul */
-        .speed { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); color: #be123c; } /* Rosa a rojo */
-        .collision { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #ffffff; } /* Púrpura intenso */
-        .fuel { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); color: #0f766e; } /* Menta fresco */
-        .refill { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: #b45309; } /* Naranja soleado */
-
-        /* Ajustes específicos para iconos con fondo oscuro/intenso */
-        .collision i { text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-
-    </style>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="Dashboard de Rendimiento de Flota - Geotab">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Rendimiento de Flota</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/vendor.css">
+    <link rel="stylesheet" href="styles/Rendimiento.css">
 </head>
 
 <body>
+    <div id="app-rendimiento">
 
-    <div class="main-content">
-
-        <main class="dashboard-grid">
-            <a href="#manto" class="card">
+        <!-- ═══════════ HEADER ═══════════ -->
+        <header class="top-nav glass-panel">
+            <div class="nav-brand">
+                <i data-lucide="gauge" width="30" height="30" stroke="var(--color-primary)" stroke-width="2"></i>
                 <div>
-                    <div class="card-header">
-                        <div class="icon-box manto"><i class="fa-solid fa-screwdriver-wrench"></i></div>
-                        <i class="fa-solid fa-ellipsis text-gray-400" style="color: #cbd5e1; cursor: pointer;"></i>
+                    <h1>Rendimiento de Flota</h1>
+                </div>
+            </div>
+
+            <div class="nav-controls">
+                <!-- Date Range Buttons -->
+                <div class="date-range-group" id="date-range-group">
+                    <button class="btn-range active" data-days="7" id="btn-7d">7 días</button>
+                    <button class="btn-range" data-days="15" id="btn-15d">15 días</button>
+                    <button class="btn-range" data-days="30" id="btn-30d">30 días</button>
+                    <button class="btn-range btn-range--custom" id="btn-custom">
+                        <i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i>
+                        Personalizado
+                    </button>
+                </div>
+
+                <!-- Custom Date Popover -->
+                <div class="date-popover glass-panel" id="date-popover">
+                    <div class="date-popover-header">Rango de Fechas</div>
+                    <div class="date-popover-fields">
+                        <div class="date-field">
+                            <label for="date-from">Desde</label>
+                            <input type="date" id="date-from" class="date-input">
+                        </div>
+                        <div class="date-field">
+                            <label for="date-to">Hasta</label>
+                            <input type="date" id="date-to" class="date-input">
+                        </div>
                     </div>
-                    <div class="card-title">Mantto. Correctivo</div>
-                    <div class="card-stats">
-                        <div class="stat-row">
-                            <span>Pendientes</span>
-                            <span class="pill pill-warn">12 Órdenes</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Tiempo Prom.</span>
-                            <span class="pill pill-neutral">4.5 días</span>
-                        </div>
+                    <div class="date-popover-footer">
+                        <button class="btn-popover-cancel" id="btn-date-cancel">Cancelar</button>
+                        <button class="btn-popover-apply" id="btn-date-apply">
+                            <i data-lucide="check" width="13" height="13" stroke-width="2.5"></i>
+                            Aplicar
+                        </button>
                     </div>
                 </div>
-                <div class="btn-detail">Ver Detalles <i class="fa-solid fa-arrow-right"></i></div>
-            </a>
 
-            <a href="#rpm" class="card">
-                <div>
-                    <div class="card-header">
-                        <div class="icon-box rpm"><i class="fa-solid fa-gauge"></i></div>
+                <!-- Unit Filter -->
+                <div class="unit-filter-group" id="unit-filter-group">
+                    <i data-lucide="truck" width="14" height="14" stroke-width="2.5"></i>
+                    <select id="unit-select" class="unit-select">
+                        <option value="all">Todas las Unidades</option>
+                    </select>
+                </div>
+
+                <!-- Refresh -->
+                <button id="btn-refresh" class="btn-refresh" title="Refrescar datos">
+                    <i data-lucide="refresh-cw" width="18" height="18" stroke-width="2.5"></i>
+                    <span>Refrescar</span>
+                </button>
+
+                <span class="last-updated" id="last-updated-time">Actualizado: --:--</span>
+            </div>
+        </header>
+
+        <!-- ═══════════ SUMMARY KPI STRIP ═══════════ -->
+        <section class="summary-strip">
+
+            <!-- Rendimiento Promedio -->
+            <div class="stat-card" data-color="green">
+                <div class="stat-icon stat-icon--green">
+                    <i data-lucide="gauge" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Rendimiento Promedio</div>
+                    <div class="stat-value skeleton" id="stat-rendimiento">—</div>
+                    <div class="stat-sub" id="stat-total-badge">— días</div>
+                </div>
+            </div>
+
+            <!-- Distancia Total -->
+            <div class="stat-card" data-color="cyan">
+                <div class="stat-icon stat-icon--cyan">
+                    <i data-lucide="route" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Distancia Total</div>
+                    <div class="stat-value skeleton" id="stat-distancia">—</div>
+                    <div class="stat-sub">kilómetros recorridos</div>
+                </div>
+            </div>
+
+            <!-- Combustible Total -->
+            <div class="stat-card" data-color="blue">
+                <div class="stat-icon stat-icon--blue">
+                    <i data-lucide="droplet" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Combustible Total</div>
+                    <div class="stat-value skeleton" id="stat-combustible">—</div>
+                    <div class="stat-sub">litros consumidos</div>
+                </div>
+            </div>
+
+
+
+            <!-- Unidades Monitoreadas -->
+            <div class="stat-card" data-color="orange">
+                <div class="stat-icon stat-icon--orange">
+                    <i data-lucide="truck" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Unidades</div>
+                    <div class="stat-value skeleton" id="stat-unidades">—</div>
+                    <div class="stat-sub">monitoreadas</div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ═══════════ CHARTS SECTION ═══════════ -->
+        <section class="charts-section">
+            <div class="chart-row">
+                <!-- Rendimiento por Unidad -->
+                <div class="chart-card glass-panel col-span-3">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="trending-up" width="16" height="16" stroke-width="2"></i>
+                            <span>Tendencia de Rendimiento Flota (km/L)</span>
+                        </div>
                     </div>
-                    <div class="card-title">Medición de RPM</div>
-                    <div class="card-stats">
-                        <div class="stat-row">
-                            <span>Promedio</span>
-                            <span class="pill pill-info">2,350 RPM</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Hoy</span>
-                            <span class="pill pill-danger">3 Excesos</span>
-                        </div>
+                    <div id="chart-eff-unit" class="chart-container"></div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ═══════════ MAIN CONTENT ═══════════ -->
+        <main class="main-content">
+
+            <!-- Left: Ranking de unidades por rendimiento -->
+            <section class="panel glass-panel ranking-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="award" width="16" height="16" stroke-width="2"></i>
+                        <span>Mejor Rendimiento</span>
+                    </div>
+                    <span class="panel-badge skeleton" id="badge-ranking">—</span>
+                </div>
+                <ul class="ranking-list" id="ranking-list">
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                    <li class="ranking-skeleton"></li>
+                </ul>
+            </section>
+
+            <!-- Right: Tabla de rendimiento -->
+            <section class="panel glass-panel table-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="table" width="16" height="16" stroke-width="2"></i>
+                        <span>Detalle de Rendimiento</span>
+                    </div>
+                    <div class="table-controls">
+                        <input type="text" id="search-input" class="search-input" placeholder="Buscar unidad...">
+                        <span class="panel-badge" id="badge-table">—</span>
                     </div>
                 </div>
-                <div class="btn-detail">Ver Detalles <i class="fa-solid fa-arrow-right"></i></div>
-            </a>
-
-            <a href="#velocidad" class="card">
-                <div>
-                    <div class="card-header">
-                        <div class="icon-box speed"><i class="fa-solid fa-bolt"></i></div>
-                    </div>
-                    <div class="card-title">Excesos de Velocidad</div>
-                    <div class="card-stats">
-                        <div class="stat-row">
-                            <span>Recientes</span>
-                            <span class="pill pill-danger">5 Eventos</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Máxima</span>
-                            <span class="pill pill-neutral">112 km/h</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="btn-detail">Ver Detalles <i class="fa-solid fa-arrow-right"></i></div>
-            </a>
-
-            <a href="#colisiones" class="card">
-                <div>
-                    <div class="card-header">
-                        <div class="icon-box collision"><i class="fa-solid fa-car-burst"></i></div>
-                    </div>
-                    <div class="card-title">Análisis de Colisiones</div>
-                    <div class="card-stats">
-                        <div class="stat-row">
-                            <span>Nivel de Riesgo</span>
-                            <span class="pill pill-success">Bajo</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Mensual</span>
-                            <span class="pill pill-neutral">0 Eventos</span>
-                        </div>
+                <div class="table-wrapper">
+                    <table class="perf-table" id="perf-table">
+                        <thead>
+                            <tr>
+                                <th>Unidad</th>
+                                <th style="text-align:right;">Consumo Total (L)</th>
+                                <th>Periodo Analizado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="perf-tbody">
+                            <tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="3"><div class="td-skel"></div></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="table-empty" id="table-empty" style="display:none;">
+                        <i data-lucide="search" width="40" height="40" stroke-width="1.5"></i>
+                        <p>No se encontraron registros de rendimiento en el periodo seleccionado.</p>
                     </div>
                 </div>
-                <div class="btn-detail">Ver Detalles <i class="fa-solid fa-arrow-right"></i></div>
-            </a>
-
-            <a href="Rendimiento.html" class="card">
-                <div>
-                    <div class="card-header">
-                        <div class="icon-box fuel"><i class="fa-solid fa-leaf"></i></div>
-                    </div>
-                    <div class="card-title">Rendimiento Combustible</div>
-                    <div class="card-stats">
-                        <div class="stat-row">
-                            <span>Promedio</span>
-                            <span class="pill pill-success">12.1 km/l</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Costo/km</span>
-                            <span class="pill pill-neutral">$3.45</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="btn-detail">Ver Detalles <i class="fa-solid fa-arrow-right"></i></div>
-            </a>
-
-            <a href="#llenados" class="card">
-                <div>
-                    <div class="card-header">
-                        <div class="icon-box refill"><i class="fa-solid fa-gas-pump"></i></div>
-                    </div>
-                    <div class="card-title">Llenados Combustible</div>
-                    <div class="card-stats">
-                        <div class="stat-row">
-                            <span>Total Mes</span>
-                            <span class="pill pill-warn">45 Cargas</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Volumen</span>
-                            <span class="pill pill-info">2,150 L</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="btn-detail">Ver Detalles <i class="fa-solid fa-arrow-right"></i></div>
-            </a>
+            </section>
 
         </main>
+
+        <!-- ═══════════ DAILY PERFORMANCE TABLE ═══════════ -->
+        <section class="daily-panel" style="padding: 0 2rem 2rem;">
+            <div class="panel glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="calendar-days" width="16" height="16" stroke-width="2"></i>
+                        <span>Rendimiento Diario</span>
+                    </div>
+                    <span class="panel-badge" id="badge-daily">—</span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="perf-table" id="daily-table">
+                        <thead>
+                            <tr>
+                                <th>Día</th>
+                                <th style="text-align:right;">Kilómetros Recorridos (km)</th>
+                                <th style="text-align:right;">Odómetro (km)</th>
+                                <th style="text-align:right;">Combustible Consumido (L)</th>
+                                <th style="text-align:center;">Rendimiento (km/L)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daily-tbody">
+                            <tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="table-empty" id="daily-empty" style="display:none;">
+                        <i data-lucide="calendar-x" width="40" height="40" stroke-width="1.5"></i>
+                        <p>No se encontraron registros diarios en el periodo seleccionado.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ RAW STATUSDATA TABLE ═══════════ -->
+        <section class="raw-data-panel">
+            <div class="panel glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="database" width="16" height="16" stroke-width="2"></i>
+                        <span>Datos Crudos — Combustible (StatusData)</span>
+                    </div>
+                    <span class="panel-badge" id="badge-raw">—</span>
+                </div>
+                <div class="raw-table-wrapper table-wrapper">
+                    <table class="perf-table raw-table" id="raw-table">
+                        <thead id="raw-thead">
+                            <tr><th>Cargando...</th></tr>
+                        </thead>
+                        <tbody id="raw-tbody">
+                            <tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ RAW ODOMETER TABLE ═══════════ -->
+        <section class="raw-data-panel odo-raw-panel">
+            <div class="panel glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="database" width="16" height="16" stroke-width="2"></i>
+                        <span>Datos Crudos — Odómetro (StatusData)</span>
+                    </div>
+                    <span class="panel-badge" id="badge-raw-odo">—</span>
+                </div>
+                <div class="raw-table-wrapper table-wrapper">
+                    <table class="perf-table raw-table" id="odo-raw-table">
+                        <thead id="odo-raw-thead">
+                            <tr><th>Cargando...</th></tr>
+                        </thead>
+                        <tbody id="odo-raw-tbody">
+                            <tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ═══════════ ACCUMULATED ODOMETER PER TRIP TABLE ═══════════ -->
+        <section class="trips-panel odo-accumulated-panel" style="padding: 0 2rem 2rem;">
+            <div class="panel glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="info" width="16" height="16" stroke-width="2"></i>
+                        <span>Odómetro Acumulado por Viaje</span>
+                    </div>
+                    <div class="table-controls">
+                        <input type="text" id="odo-trips-search-input" class="search-input" placeholder="Buscar viaje...">
+                        <span class="panel-badge" id="badge-odo-trips">—</span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="perf-table" id="odo-trips-table">
+                        <thead>
+                            <tr>
+                                <th>Unidad</th>
+                                <th>Inicio del Viaje</th>
+                                <th>Fin del Viaje</th>
+                                <th style="text-align:right;">Distancia (km)</th>
+                                <th style="text-align:right;">Odómetro Final (km)</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="odo-trips-tbody">
+                            <tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>
+                            <tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="table-empty" id="odo-trips-empty" style="display:none;">
+                        <i data-lucide="map-pin" width="40" height="40" stroke-width="1.5"></i>
+                        <p>No se encontraron registros de odómetro por viaje en el periodo seleccionado.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Global Error Toast -->
+
+        <div class="error-toast" id="error-toast" style="display:none;">
+            <i data-lucide="alert-circle" width="16" height="16" stroke-width="2"></i>
+            <span id="error-toast-msg">Error al cargar datos.</span>
+        </div>
     </div>
 
-    <script>
-        // Script simple para la fecha
-        const dateElement = document.getElementById('current-date');
-        if (dateElement) {
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const today = new Date();
-            dateElement.textContent = today.toLocaleDateString('es-ES', options);
-            // Capitalize first letter
-            dateElement.textContent = dateElement.textContent.charAt(0).toUpperCase() + dateElement.textContent.slice(1);
-        }
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="scripts/vendor.js"></script>
+    <script src="scripts/rendimiento.js"></script>
 </body>
+
 </html>
