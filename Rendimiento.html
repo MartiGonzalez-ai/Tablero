@@ -134,6 +134,34 @@
         </section>
 
 
+        <!-- ═══════════ CHARTS SECTION ═══════════ -->
+        <section class="charts-section">
+            <div class="chart-row">
+                <!-- Rendimiento por Unidad -->
+                <div class="chart-card glass-panel col-span-3">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="trending-up" width="16" height="16" stroke-width="2"></i>
+                            <span>Tendencia de Rendimiento Flota (km/L)</span>
+                        </div>
+                    </div>
+                    <div id="chart-eff-unit" class="chart-container"></div>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <!-- Tendencia de Rendimiento -->
+                <div class="chart-card glass-panel col-span-3">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="trending-up" width="16" height="16" stroke-width="2"></i>
+                            <span>Tendencia de Rendimiento</span>
+                        </div>
+                    </div>
+                    <div id="chart-trend" class="chart-container"></div>
+                </div>
+            </div>
+        </section>
 
         <!-- ═══════════ MAIN CONTENT ═══════════ -->
         <main class="main-content">
@@ -320,32 +348,4 @@
                 </div>
                 <div class="raw-table-wrapper table-wrapper">
                     <table class="perf-table raw-table" id="odo-raw-table">
-                        <thead id="odo-raw-thead">
-                            <tr><th>Cargando...</th></tr>
-                        </thead>
-                        <tbody id="odo-raw-tbody">
-                            <tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-
-
-
-        <!-- Global Error Toast -->
-
-        <div class="error-toast" id="error-toast" style="display:none;">
-            <i data-lucide="alert-circle" width="16" height="16" stroke-width="2"></i>
-            <span id="error-toast-msg">Error al cargar datos.</span>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="scripts/vendor.js"></script>
-    <script src="scripts/rendimiento.js"></script>
-</body>
-
-</html>
+       
