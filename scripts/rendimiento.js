@@ -339,25 +339,22 @@ geotab.addin.rendimiento = function () {
     };
 
     // ─── Process Trips and FuelUsed ──────────────────────────────────────────
-    const processTripsData = (trips, fuelUsedData, deviceMap, driverMap) => {
+    const processTripsData = (trips, fuelStatusData, deviceMap, driverMap) => {
         const fuelByDevice = {};
-        fuelUsedData.forEach(f => {
+        fuelStatusData.forEach(f => {
             const devId = f.device ? f.device.id : null;
             if (!devId) return;
             if (!fuelByDevice[devId]) fuelByDevice[devId] = [];
-            fuelByDevice[devId].push(f);
+            fuelByDevice[devId].push({
+                dateTime: new Date(f.dateTime).getTime(),
+                value: f.data || 0
+            });
         });
 
-        // Helper to parse "00:30:15.0000000" to hours
-        const parseDurationToHours = (ds) => {
-            if (!ds || typeof ds !== "string") return 0;
-            const parts = ds.split(':');
-            if (parts.length < 3) return 0;
-            const h = parseInt(parts[0], 10);
-            const m = parseInt(parts[1], 10);
-            const s = parseFloat(parts[2]);
-            return h + (m / 60) + (s / 3600);
-        };
+        // Sort each device's fuel readings by time
+        Object.keys(fuelByDevice).forEach(devId => {
+            fuelByDevice[devId].sort((a, b) => a.dateTime - b.dateTime);
+        });
 
         return trips.map(trip => {
             const devId = trip.device ? trip.device.id : null;
@@ -367,14 +364,28 @@ geotab.addin.rendimiento = function () {
             const driverId = (trip.driver && trip.driver.id) ? trip.driver.id : null;
             const driverName = driverMap[driverId] || driverId || "Sin Conductor";
 
+            // Calculate fuel used during trip using StatusData increments (similar to daily table)
             let tripFuel = 0;
             if (fuelByDevice[devId]) {
-                const matchingFuel = fuelByDevice[devId].filter(f => {
-                    const dt = new Date(f.dateTime).getTime();
-                    return dt >= tripStart && dt <= tripStop;
-                });
-                tripFuel = matchingFuel.reduce((sum, f) => sum + (f.fuelUsed || 0), 0);
+                const readings = fuelByDevice[devId];
+                for (let i = 1; i < readings.length; i++) {
+                    // If the reading timestamp falls within the trip, add the delta
+                    if (readings[i].dateTime > tripStart && readings[i].dateTime <= tripStop) {
+                        const delta = readings[i].value - readings[i - 1].value;
+                        if (delta > 0) tripFuel += delta;
+                    }
+                }
             }
+
+            const parseDurationToHours = (ds) => {
+                if (!ds || typeof ds !== "string") return 0;
+                const parts = ds.split(':');
+                if (parts.length < 3) return 0;
+                const h = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                const s = parseFloat(parts[2]);
+                return h + (m / 60) + (s / 3600);
+            };
 
             const drivingHours = parseDurationToHours(trip.drivingDuration);
             const avgSpeed = (drivingHours > 0) ? (trip.distance) / drivingHours : 0;
@@ -405,64 +416,89 @@ geotab.addin.rendimiento = function () {
         });
     };
 
-    // ─── Render Raw StatusData Table ──────────────────────────────────────────
+    // ─── Render Raw StatusData Table (Fuel) ──────────────────────────────────
     const renderRawTable = (data, deviceMap) => {
         const thead = document.getElementById("raw-thead");
         const tbody = document.getElementById("raw-tbody");
         const badgeRaw = document.getElementById("badge-raw");
         if (!thead || !tbody) return;
 
-        let filteredData = data;
+        // Filter only fuel diagnostics
+        let fuelRaw = data.filter(s => s.diagnostic && s.diagnostic.id === "DiagnosticDeviceTotalFuelId");
+
         if (selectedUnitId !== "all") {
-            filteredData = data.filter(s => s.device && s.device.id === selectedUnitId);
+            fuelRaw = fuelRaw.filter(s => s.device && s.device.id === selectedUnitId);
         }
 
-        if (badgeRaw) badgeRaw.textContent = `${filteredData.length} registros`;
+        if (badgeRaw) badgeRaw.textContent = `${fuelRaw.length} registros`;
 
-        if (filteredData.length === 0) {
+        if (fuelRaw.length === 0) {
             thead.innerHTML = "<tr><th>Sin datos</th></tr>";
-            tbody.innerHTML = '<tr><td style="text-align:center; padding: 2rem;">No se encontraron registros de StatusData en el periodo seleccionado.</td></tr>';
+            tbody.innerHTML = '<tr><td style="text-align:center; padding: 2rem;">No se encontraron registros de combustible en el periodo seleccionado.</td></tr>';
             return;
         }
 
-        // Define columns
-        thead.innerHTML = "";
-        const trHead = document.createElement("tr");
-        ["Dispositivo", "Diagnóstico", "Fecha y Hora", "Valor", "Device ID", "Diagnostic ID"].forEach(col => {
-            const th = document.createElement("th");
-            th.textContent = col;
-            trHead.appendChild(th);
-        });
-        thead.appendChild(trHead);
-
-        // Body
+        thead.innerHTML = "<tr><th>Dispositivo</th><th>Diagnóstico</th><th>Fecha y Hora</th><th>Valor (L)</th><th>Device ID</th></tr>";
         tbody.innerHTML = "";
-        const sorted = [...filteredData].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+        const sorted = [...fuelRaw].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
 
         sorted.forEach(s => {
             const tr = document.createElement("tr");
             const devId = s.device ? s.device.id : "—";
             const devName = (s.device && s.device.name) ? s.device.name : (deviceMap[devId] || devId);
-            const diagId = s.diagnostic ? s.diagnostic.id : "—";
             const dateStr = formatDateTime(s.dateTime);
-            const value = s.data !== undefined && s.data !== null ? s.data : "—";
-
-            // Determine a friendly diagnostic name
-            let diagName = diagId;
-            if (diagId === "DiagnosticDeviceTotalFuelId") diagName = "Combustible Total (L)";
-            else if (diagId === "DiagnosticOdometerId") diagName = "Odómetro (m)";
-            else if (diagId === "DiagnosticDeviceTotalIdleFuelId") diagName = "Combustible Ralentí (L)";
-            else if (diagId === "DiagnosticFuelLevelId") diagName = "Nivel de Combustible (%)";
-            else if (diagId.toLowerCase().includes("fuel")) diagName = "Combustible: " + diagId;
-            else if (diagId.toLowerCase().includes("odometer")) diagName = "Odómetro: " + diagId;
+            const value = s.data !== undefined && s.data !== null ? s.data : 0;
 
             tr.innerHTML = `
                 <td>${devName}</td>
-                <td>${diagName}</td>
+                <td style="color:var(--c-blue);">Combustible Total</td>
                 <td>${dateStr}</td>
-                <td style="font-weight:700; text-align:right;">${typeof value === "number" ? value.toLocaleString("es-MX", { maximumFractionDigits: 2 }) : value}</td>
+                <td style="font-weight:700; text-align:right;">${value.toLocaleString("es-MX", { maximumFractionDigits: 2 })} L</td>
                 <td style="font-family:monospace; font-size:0.7rem; color:var(--color-text-muted);">${devId}</td>
-                <td style="font-family:monospace; font-size:0.7rem; color:var(--color-text-muted);">${diagId}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    };
+
+    // ─── Render Raw Odometer Table ────────────────────────────────────────────
+    const renderOdoRawTable = (data, deviceMap) => {
+        const thead = document.getElementById("odo-raw-thead");
+        const tbody = document.getElementById("odo-raw-tbody");
+        const badgeRaw = document.getElementById("badge-raw-odo");
+        if (!thead || !tbody) return;
+
+        // Filter only odometer diagnostics
+        let odoRaw = data.filter(s => s.diagnostic && s.diagnostic.id === "DiagnosticOdometerId");
+
+        if (selectedUnitId !== "all") {
+            odoRaw = odoRaw.filter(s => s.device && s.device.id === selectedUnitId);
+        }
+
+        if (badgeRaw) badgeRaw.textContent = `${odoRaw.length} registros`;
+
+        if (odoRaw.length === 0) {
+            thead.innerHTML = "<tr><th>Sin datos</th></tr>";
+            tbody.innerHTML = '<tr><td style="text-align:center; padding: 2rem;">No se encontraron registros de odómetro en el periodo seleccionado.</td></tr>';
+            return;
+        }
+
+        thead.innerHTML = "<tr><th>Dispositivo</th><th>Diagnóstico</th><th>Fecha y Hora</th><th>Valor (km)</th><th>Device ID</th></tr>";
+        tbody.innerHTML = "";
+        const sorted = [...odoRaw].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+
+        sorted.forEach(s => {
+            const tr = document.createElement("tr");
+            const devId = s.device ? s.device.id : "—";
+            const devName = (s.device && s.device.name) ? s.device.name : (deviceMap[devId] || devId);
+            const dateStr = formatDateTime(s.dateTime);
+            const value = s.data !== undefined && s.data !== null ? s.data / 1000 : 0;
+
+            tr.innerHTML = `
+                <td>${devName}</td>
+                <td style="color:var(--color-primary);">Odómetro</td>
+                <td>${dateStr}</td>
+                <td style="font-weight:700; text-align:right;">${value.toLocaleString("es-MX", { maximumFractionDigits: 1 })} km</td>
+                <td style="font-family:monospace; font-size:0.7rem; color:var(--color-text-muted);">${devId}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -667,8 +703,13 @@ geotab.addin.rendimiento = function () {
 
         const rawThead = document.getElementById("raw-thead");
         const rawTbody = document.getElementById("raw-tbody");
-        if (rawThead) rawThead.innerHTML = `<tr><th>Cargando StatusData...</th></tr>`;
+        if (rawThead) rawThead.innerHTML = `<tr><th>Cargando Combustible...</th></tr>`;
         if (rawTbody) rawTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>').join("");
+
+        const odoThead = document.getElementById("odo-raw-thead");
+        const odoTbody = document.getElementById("odo-raw-tbody");
+        if (odoThead) odoThead.innerHTML = `<tr><th>Cargando Odómetro...</th></tr>`;
+        if (odoTbody) odoTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>').join("");
 
         const tripsTbody = document.getElementById("trips-tbody");
         if (tripsTbody) tripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>').join("");
@@ -876,8 +917,9 @@ geotab.addin.rendimiento = function () {
         // Update Summary (KPIs) with filtered records and trips
         renderSummary(filteredRecords, filteredTrips);
 
-        // Update Raw Table (filtered by unit)
+        // Update Raw Tables
         renderRawTable(rawStatusData, deviceMap);
+        renderOdoRawTable(rawStatusData, deviceMap);
     };
 
     // ─── MAIN DATA LOADER ─────────────────────────────────────────────────────
@@ -958,8 +1000,8 @@ geotab.addin.rendimiento = function () {
             allRecords = processStatusData(fuelData, odoData, deviceMap);
             filteredRecords = allRecords.slice();
 
-            // Process Trips Performance
-            allTrips = processTripsData(tripsRaw, fuelUsedRaw, deviceMap, driverMap);
+            // Process Trips Performance using fuelData (StatusData) instead of FuelUsed entity
+            allTrips = processTripsData(tripsRaw, fuelData, deviceMap, driverMap);
             filteredTrips = allTrips.slice();
 
             console.log("[Rendimiento] Fuel StatusData records:", fuelData.length);
@@ -976,6 +1018,7 @@ geotab.addin.rendimiento = function () {
             renderCharts(filteredRecords);
             renderTripsTable(filteredTrips);
             renderRawTable(rawStatusData, deviceMap);
+            renderOdoRawTable(rawStatusData, deviceMap);
 
             // Trigger filtering if unit was already selected
             if (selectedUnitId !== "all") {
@@ -1123,3 +1166,5 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
+
+
