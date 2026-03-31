@@ -11,10 +11,14 @@ geotab.addin.rendimiento = function () {
     let rawStatusData = [];    // Raw StatusData for the raw table
     let selectedUnitId = "all"; // "all" or specific device ID
     let deviceMap = {};        // Global device map
-    let allTrips = [];         // Global trips data
-    let filteredTrips = [];
-    let chartEffByUnit, chartUtilization, chartDistance, chartSpeed, chartFuelDist;
+
+    // Chart instances
+    let chartEffByUnit, chartTrend, chartScatter;
+
+    // DOM refs
     let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
+    let allTrips = [], filteredTrips = [];
+    let filteredOdoTrips = [];
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const getDateRange = () => {
@@ -66,13 +70,6 @@ geotab.addin.rendimiento = function () {
         if (m > 0) res.push(m + "m");
         if (s > 0 || res.length === 0) res.push(s + "s");
         return res.join(" ");
-    };
-
-    const parseDurationToHours = (ds) => {
-        if (!ds || typeof ds !== "string") return 0;
-        const parts = ds.split(':');
-        if (parts.length < 3) return 0;
-        return parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60) + (parseFloat(parts[2]) / 3600);
     };
 
     const showError = (msg) => {
@@ -175,22 +172,15 @@ geotab.addin.rendimiento = function () {
         const avgKmPerL = totalFuel > 0 ? totalDist / totalFuel : 0;
         const unidades = records.length;
 
-        const totalDrivingHours = (trips || []).reduce((s, t) => s + parseDurationToHours(t.drivingDuration), 0);
-        const totalCO2 = (totalFuel * 2.62) / 1000; // Tons
-
         const elRendimiento = document.getElementById("stat-rendimiento");
         const elDistancia = document.getElementById("stat-distancia");
         const elCombustible = document.getElementById("stat-combustible");
         const elUnidades = document.getElementById("stat-unidades");
-        const elTiempo = document.getElementById("stat-tiempo");
-        const elCO2 = document.getElementById("stat-co2");
 
         if (elRendimiento) { elRendimiento.classList.remove("skeleton"); animateCount(elRendimiento, avgKmPerL, 1, " km/L"); }
         if (elDistancia) { elDistancia.classList.remove("skeleton"); animateCount(elDistancia, Math.round(totalDist), 0, ""); }
-        if (elCombustible) { elCombustible.classList.remove("skeleton"); animateCount(elCombustible, Math.round(totalFuel), 0, " L"); }
+        if (elCombustible) { elCombustible.classList.remove("skeleton"); animateCount(elCombustible, Math.round(totalFuel), 0, ""); }
         if (elUnidades) { elUnidades.classList.remove("skeleton"); animateCount(elUnidades, unidades, 0, ""); }
-        if (elTiempo) { elTiempo.classList.remove("skeleton"); animateCount(elTiempo, totalDrivingHours, 1, " h"); }
-        if (elCO2) { elCO2.classList.remove("skeleton"); animateCount(elCO2, totalCO2, 2, " t"); }
 
         const totalBadge = document.getElementById("stat-total-badge");
         if (totalBadge) totalBadge.textContent = isCustomRange ? "rango personalizado" : `últimos ${selectedDays} días`;
@@ -439,6 +429,16 @@ geotab.addin.rendimiento = function () {
                     }
                 }
             }
+
+            const parseDurationToHours = (ds) => {
+                if (!ds || typeof ds !== "string") return 0;
+                const parts = ds.split(':');
+                if (parts.length < 3) return 0;
+                const h = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                const s = parseFloat(parts[2]);
+                return h + (m / 60) + (s / 3600);
+            };
 
             const drivingHours = parseDurationToHours(trip.drivingDuration);
             const avgSpeed = (drivingHours > 0) ? (trip.distance) / drivingHours : 0;
@@ -726,7 +726,7 @@ geotab.addin.rendimiento = function () {
 
     // ─── Reset UI ─────────────────────────────────────────────────────────────
     const resetUI = () => {
-        ["stat-rendimiento", "stat-distancia", "stat-combustible", "stat-costo", "stat-unidades", "stat-tiempo", "stat-co2"].forEach(id => {
+        ["stat-rendimiento", "stat-distancia", "stat-combustible", "stat-costo", "stat-unidades"].forEach(id => {
             const el = document.getElementById(id);
             if (el) { el.textContent = "—"; el.classList.add("skeleton"); }
         });
@@ -845,74 +845,58 @@ geotab.addin.rendimiento = function () {
         chartEffByUnit = new ApexCharts(document.querySelector("#chart-eff-unit"), optTrendDaily);
         chartEffByUnit.render();
 
-        // Helpers for common chart elements
-        const renderGenericBar = (elId, series, categories, isHorizontal = false, unit = "") => {
-            const options = {
-                ...commonOptions,
-                series: series,
-                chart: { type: 'bar', height: 250, stacked: false, toolbar: { show: false } },
-                plotOptions: { bar: { horizontal: isHorizontal, borderRadius: 4, columnWidth: '60%' } },
-                colors: [cCyan, cOrange, cPurple, cGreen],
-                xaxis: { categories: categories, labels: { style: { colors: textMuted, fontSize: '10px' } } },
-                yaxis: { labels: { style: { colors: textMuted }, formatter: val => val + unit } },
-                grid: { borderColor: '#f1f1f1', strokeDashArray: 4 },
-                legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px' }
-            };
-            let chart = new ApexCharts(document.querySelector(elId), options);
-            chart.render();
-            return chart;
-        };
-
-        // 2. Utilización de Flota (Dona)
-        const totalDriving = (filteredTrips || []).reduce((s, t) => s + parseDurationToHours(t.drivingDuration), 0);
-        const totalStopped = (filteredTrips || []).reduce((s, t) => s + parseDurationToHours(t.stopDuration), 0);
-        
-        if (chartUtilization) chartUtilization.destroy();
-        chartUtilization = new ApexCharts(document.querySelector("#chart-utilization"), {
+        // 2. Distancia vs Combustible agrupado (bar chart)
+        const withFuel = records.filter(d => d.kmPerL > 0);
+        const optTrend = {
             ...commonOptions,
-            series: [parseFloat(totalDriving.toFixed(1)), parseFloat(totalStopped.toFixed(1))],
-            labels: ['Conduciendo', 'Detenido'],
-            chart: { type: 'donut', height: 250 },
-            colors: [cCyan, "#e2e8f0"],
-            plotOptions: { pie: { donut: { size: '75%', labels: { show: true, total: { show: true, label: 'Total', formatter: w => (totalDriving + totalStopped).toFixed(1) + "h" } } } } },
-            legend: { position: 'bottom' }
-        });
-        chartUtilization.render();
-
-        // 3. Top 5 Kilometraje (Horizontal Bar)
-        const topDist = [...records].sort((a, b) => b.distKm - a.distKm).slice(0, 5);
-        if (chartDistance) chartDistance.destroy();
-        chartDistance = renderGenericBar("#chart-distance", 
-            [{ name: 'Distancia (km)', data: topDist.map(r => Math.round(r.distKm)) }],
-            topDist.map(r => r.deviceName), true, " km"
-        );
-
-        // 4. Análisis de Velocidad (Máx vs Promedio)
-        const speedData = [...records].slice(0, 6); // Take first 6 for visibility
-        // Need to find max speed from trips for these units
-        const speedSeries = speedData.map(r => {
-            const unitTrips = (filteredTrips || []).filter(t => t.deviceId === r.deviceId);
-            const maxS = unitTrips.reduce((max, t) => Math.max(max, t.maxSpeed || 0), 0);
-            const avgS = unitTrips.length > 0 ? unitTrips.reduce((sum, t) => sum + (t.averageSpeed || 0), 0) / unitTrips.length : 0;
-            return { name: r.deviceName, maxS, avgS };
-        });
-
-        if (chartSpeed) chartSpeed.destroy();
-        chartSpeed = renderGenericBar("#chart-speed", 
-            [
-                { name: 'Vel. Máxima', data: speedSeries.map(s => Math.round(s.maxS)) },
-                { name: 'Vel. Promedio', data: speedSeries.map(s => Math.round(s.avgS)) }
+            series: [
+                { name: 'Distancia (km)', data: withFuel.map(d => parseFloat(d.distKm.toFixed(1))) },
+                { name: 'Combustible (L)', data: withFuel.map(d => parseFloat(d.fuelUsed.toFixed(1))) }
             ],
-            speedSeries.map(s => s.name), false, " km/h"
-        );
+            chart: { type: 'bar', height: 260, fontFamily, toolbar: { show: false } },
+            colors: [cCyan, cOrange],
+            plotOptions: { bar: { borderRadius: 3, columnWidth: '55%' } },
+            xaxis: { categories: withFuel.map(d => d.deviceName), labels: { style: { colors: textMuted, fontSize: '10px' }, rotate: -45 } },
+            yaxis: { labels: { style: { colors: textMuted } } },
+            legend: { position: 'top', fontSize: '11px' },
+            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
+        };
+        if (chartTrend) chartTrend.destroy();
+        chartTrend = new ApexCharts(document.querySelector("#chart-trend"), optTrend);
+        chartTrend.render();
 
-        // 5. Consumo de Combustible por Unidad (Bar)
-        const topFuel = [...records].sort((a, b) => b.fuelUsed - a.fuelUsed).slice(0, 6);
-        if (chartFuelDist) chartFuelDist.destroy();
-        chartFuelDist = renderGenericBar("#chart-fuel-dist", 
-            [{ name: 'Consumo (L)', data: topFuel.map(r => Math.round(r.fuelUsed)) }],
-            topFuel.map(r => r.deviceName), false, " L"
-        );
+
+
+        // 4. Consumo vs Distancia (scatter)
+        const scatterData = records.filter(d => d.fuelUsed > 0 && d.distKm > 0).map(d => ({
+            x: parseFloat(d.distKm.toFixed(1)), y: parseFloat(d.fuelUsed.toFixed(1))
+        }));
+        const optScatter = {
+            ...commonOptions,
+            series: [{ name: 'Unidades', data: scatterData }],
+            chart: { type: 'scatter', height: 260, fontFamily, toolbar: { show: false }, zoom: { enabled: true } },
+            colors: [cBlue],
+            xaxis: {
+                title: { text: 'Distancia (km)', style: { color: textMuted, fontSize: '11px', fontWeight: 600 } },
+                labels: { formatter: val => Math.round(val) + " km", style: { colors: textMuted } }
+            },
+            yaxis: {
+                title: { text: 'Combustible (L)', style: { color: textMuted, fontSize: '11px', fontWeight: 600 } },
+                labels: { formatter: val => Math.round(val) + " L", style: { colors: textMuted } }
+            },
+            markers: { size: 6, strokeWidth: 0, hover: { size: 9 } },
+            tooltip: {
+                custom: ({ seriesIndex, dataPointIndex, w }) => {
+                    const point = w.config.series[seriesIndex].data[dataPointIndex];
+                    const kmPerL = point.y > 0 ? (point.x / point.y).toFixed(1) : '—';
+                    return `<div style="padding:8px 12px;font-size:12px;"><b>Distancia:</b> ${point.x} km<br><b>Combustible:</b> ${point.y} L<br><b>Rendimiento:</b> ${kmPerL} km/L</div>`;
+                }
+            },
+            noData: { text: "No hay datos", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
+        };
+        if (chartScatter) chartScatter.destroy();
+        chartScatter = new ApexCharts(document.querySelector("#chart-scatter"), optScatter);
+        chartScatter.render();
     };
 
     // ─── Filter by search ─────────────────────────────────────────────────────
@@ -1152,6 +1136,8 @@ geotab.addin.rendimiento = function () {
             errorToast = document.getElementById("error-toast");
             errorToastMsg = document.getElementById("error-toast-msg");
             searchInput = document.getElementById("search-input");
+            tripsSearchInput = document.getElementById("trips-search-input");
+            odoTripsSearchInput = document.getElementById("odo-trips-search-input");
             const unitSelect = document.getElementById("unit-select");
 
             // Unit Filter Event
@@ -1267,3 +1253,5 @@ geotab.addin.rendimiento = function () {
         }
     };
 };
+
+
