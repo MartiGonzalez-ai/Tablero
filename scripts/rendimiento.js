@@ -12,14 +12,6 @@ geotab.addin.rendimiento = function () {
     let selectedUnitId = "all"; // "all" or specific device ID
     let deviceMap = {};        // Global device map
 
-    // Chart instances
-    let chartEffByUnit;
-
-    // DOM refs
-    let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
-    let allTrips = [], filteredTrips = [];
-    let filteredOdoTrips = [];
-
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const getDateRange = () => {
         if (isCustomRange && customFromDate && customToDate) {
@@ -101,9 +93,9 @@ geotab.addin.rendimiento = function () {
     };
 
     // ─── Process StatusData into performance records per device ───────────────
-    const processStatusData = (fuelData, odoData, deviceMap) => {
+    const processStatusData = (fuelData, odoData, trips, deviceMap) => {
         const fuelByDevice = {};
-        const odoByDevice = {};
+        const distByDeviceFromTrips = {};
 
         fuelData.forEach(s => {
             const devId = s.device ? s.device.id : null;
@@ -112,38 +104,39 @@ geotab.addin.rendimiento = function () {
             fuelByDevice[devId].push({ dateTime: s.dateTime, value: s.data || 0 });
         });
 
-        odoData.forEach(s => {
-            const devId = s.device ? s.device.id : null;
+        // Sum up distances from processed trips for more accurate per-device distance
+        (trips || []).forEach(t => {
+            const devId = t.deviceId;
             if (!devId) return;
-            if (!odoByDevice[devId]) odoByDevice[devId] = [];
-            odoByDevice[devId].push({ dateTime: s.dateTime, value: s.data || 0 });
+            if (!distByDeviceFromTrips[devId]) distByDeviceFromTrips[devId] = 0;
+            distByDeviceFromTrips[devId] += (t.distance || 0);
         });
 
         const perfRecords = [];
-        const allDeviceIds = new Set([...Object.keys(fuelByDevice), ...Object.keys(odoByDevice)]);
+        const allDeviceIds = new Set([...Object.keys(fuelByDevice), ...Object.keys(distByDeviceFromTrips)]);
 
         allDeviceIds.forEach(devId => {
             const fuelReadings = (fuelByDevice[devId] || []).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-            const odoReadings = (odoByDevice[devId] || []).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
             const deviceName = deviceMap[devId] || devId;
 
-            let fuelUsed = 0, distKm = 0, odoStart = 0, odoEnd = 0;
+            let fuelUsed = 0, distKm = distByDeviceFromTrips[devId] || 0;
             let dateStart = null, dateEnd = null;
-
-            if (odoReadings.length >= 2) {
-                odoStart = odoReadings[0].value;
-                odoEnd = odoReadings[odoReadings.length - 1].value;
-                distKm = (odoEnd - odoStart) / 1000;
-                dateStart = odoReadings[0].dateTime;
-                dateEnd = odoReadings[odoReadings.length - 1].dateTime;
-            }
 
             if (fuelReadings.length >= 2) {
                 const fuelStart = fuelReadings[0].value;
                 const fuelEnd = fuelReadings[fuelReadings.length - 1].value;
                 fuelUsed = fuelEnd - fuelStart;
-                if (!dateStart) dateStart = fuelReadings[0].dateTime;
-                if (!dateEnd) dateEnd = fuelReadings[fuelReadings.length - 1].dateTime;
+                dateStart = fuelReadings[0].dateTime;
+                dateEnd = fuelReadings[fuelReadings.length - 1].dateTime;
+            }
+
+            // Fallback for dates if no fuel readings
+            if (!dateStart && trips && trips.length > 0) {
+                const deviceTrips = trips.filter(t => t.deviceId === devId).sort((a, b) => new Date(a.start) - new Date(b.start));
+                if (deviceTrips.length > 0) {
+                    dateStart = deviceTrips[0].start;
+                    dateEnd = deviceTrips[deviceTrips.length - 1].stop;
+                }
             }
 
             if (distKm > 0 || fuelUsed > 0) {
@@ -154,10 +147,9 @@ geotab.addin.rendimiento = function () {
                     fuelUsed: fuelUsed > 0 ? fuelUsed : 0,
                     distKm: distKm > 0 ? distKm : 0,
                     kmPerL: kmPerL > 0 ? kmPerL : 0,
-                    odoStart, odoEnd,
                     dateStart, dateEnd,
                     fuelReadingsCount: fuelReadings.length,
-                    odoReadingsCount: odoReadings.length
+                    tripCount: (trips || []).filter(t => t.deviceId === devId).length
                 });
             }
         });
@@ -242,11 +234,13 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
-        const sorted = [...records].sort((a, b) => b.fuelUsed - a.fuelUsed);
+        const sorted = [...records].sort((a, b) => b.distKm - a.distKm);
 
         sorted.forEach(r => {
             const tr = document.createElement("tr");
             tr.className = "perf-row";
+            const effClass = getEffClass(r.kmPerL);
+
             tr.innerHTML = `
                 <td>
                     <div class="unit-chip">
@@ -254,7 +248,11 @@ geotab.addin.rendimiento = function () {
                         <span>${r.deviceName}</span>
                     </div>
                 </td>
+                <td style="text-align:right; font-weight:600;">${r.distKm.toFixed(1)} km</td>
                 <td style="text-align:right; font-weight:700; color:var(--c-blue);">${r.fuelUsed > 0 ? r.fuelUsed.toFixed(2) + " L" : "0.00 L"}</td>
+                <td style="text-align:center;">
+                    <span class="eff-badge ${effClass}">${r.kmPerL > 0 ? r.kmPerL.toFixed(1) + " km/L" : "0.0 km/L"}</span>
+                </td>
                 <td>
                     <div class="date-cell">
                         <span class="date-main">${formatDateShort(r.dateStart)}</span>
@@ -946,6 +944,9 @@ geotab.addin.rendimiento = function () {
         // Update Summary (KPIs) with filtered records and trips
         renderSummary(filteredRecords, filteredTrips);
 
+        // Update Ranking with filtered records
+        renderRanking(filteredRecords);
+
         // Update Raw Tables
         renderRawTable(rawStatusData, deviceMap);
         renderOdoRawTable(rawStatusData, deviceMap);
@@ -1025,13 +1026,13 @@ geotab.addin.rendimiento = function () {
             // Store raw data for raw table (combine fuel + odo)
             rawStatusData = [].concat(fuelData, odoData);
 
-            // Process into performance records per device
-            allRecords = processStatusData(fuelData, odoData, deviceMap);
-            filteredRecords = allRecords.slice();
-
-            // Process Trips Performance using fuelData (StatusData) instead of FuelUsed entity
+            // 1. Process Trips first for distance data
             allTrips = processTripsData(tripsRaw, fuelData, deviceMap, driverMap);
             filteredTrips = allTrips.slice();
+
+            // 2. Process into performance records per device using trip distances
+            allRecords = processStatusData(fuelData, odoData, allTrips, deviceMap);
+            filteredRecords = allRecords.slice();
 
             console.log("[Rendimiento] Fuel StatusData records:", fuelData.length);
             console.log("[Rendimiento] Odometer StatusData records:", odoData.length);
@@ -1088,8 +1089,6 @@ geotab.addin.rendimiento = function () {
             errorToast = document.getElementById("error-toast");
             errorToastMsg = document.getElementById("error-toast-msg");
             searchInput = document.getElementById("search-input");
-            tripsSearchInput = document.getElementById("trips-search-input");
-            odoTripsSearchInput = document.getElementById("odo-trips-search-input");
             const unitSelect = document.getElementById("unit-select");
 
             // Unit Filter Event
