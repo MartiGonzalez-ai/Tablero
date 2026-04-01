@@ -131,42 +131,6 @@
                 </div>
             </div>
 
-            <!-- Costo Estimado -->
-            <div class="stat-card" data-color="purple">
-                <div class="stat-icon stat-icon--purple">
-                    <i data-lucide="banknote" stroke-width="2"></i>
-                </div>
-                <div class="stat-body">
-                    <div class="stat-label">Costo Estimado</div>
-                    <div class="stat-value stat-value--sm skeleton" id="stat-costo">—</div>
-                    <div class="stat-sub" id="stat-costo-sub">— litros × $23.50/L</div>
-                </div>
-            </div>
-
-            <!-- CO2 Estimado -->
-            <div class="stat-card" data-color="teal">
-                <div class="stat-icon stat-icon--teal">
-                    <i data-lucide="leaf" stroke-width="2"></i>
-                </div>
-                <div class="stat-body">
-                    <div class="stat-label">CO₂ Estimado</div>
-                    <div class="stat-value stat-value--sm skeleton" id="stat-co2">—</div>
-                    <div class="stat-sub">kg de CO₂ (2.31 kg/L)</div>
-                </div>
-            </div>
-
-            <!-- Velocidad Promedio de Flota -->
-            <div class="stat-card" data-color="rose">
-                <div class="stat-icon stat-icon--rose">
-                    <i data-lucide="wind" stroke-width="2"></i>
-                </div>
-                <div class="stat-body">
-                    <div class="stat-label">Vel. Promedio Flota</div>
-                    <div class="stat-value skeleton" id="stat-vel-prom">—</div>
-                    <div class="stat-sub">km/h promedio de viajes</div>
-                </div>
-            </div>
-
         </section>
 
         <!-- ═══════════ CHARTS SECTION ═══════════ -->
@@ -184,8 +148,8 @@
                 </div>
             </div>
 
-            <!-- Fila 2: Tres gráficas nuevas -->
-            <div class="chart-row chart-row--3col">
+            <!-- Fila 2: Consumo Diario + Distribución de Velocidad -->
+            <div class="chart-row chart-row--2col">
                 <!-- Consumo Diario vs Distancia -->
                 <div class="chart-card glass-panel">
                     <div class="panel-header">
@@ -195,17 +159,6 @@
                         </div>
                     </div>
                     <div id="chart-daily-fuel" class="chart-container chart-container--sm"></div>
-                </div>
-
-                <!-- Rendimiento por Unidad (barras) -->
-                <div class="chart-card glass-panel">
-                    <div class="panel-header">
-                        <div class="panel-title-group">
-                            <i data-lucide="align-left" width="16" height="16" stroke-width="2"></i>
-                            <span>Rendimiento por Unidad (km/L)</span>
-                        </div>
-                    </div>
-                    <div id="chart-unit-bars" class="chart-container chart-container--sm"></div>
                 </div>
 
                 <!-- Distribución de Velocidad -->
@@ -220,10 +173,9 @@
                 </div>
             </div>
 
-            <!-- Fila 3: Eficiencia por Conductor + Costo & CO2 por Unidad -->
-            <div class="chart-row chart-row--2col">
-                <!-- Eficiencia por Conductor -->
-                <div class="chart-card glass-panel">
+            <!-- Fila 3: Eficiencia por Conductor (ancho completo) -->
+            <div class="chart-row">
+                <div class="chart-card glass-panel col-span-3">
                     <div class="panel-header">
                         <div class="panel-title-group">
                             <i data-lucide="user-check" width="16" height="16" stroke-width="2"></i>
@@ -231,17 +183,6 @@
                         </div>
                     </div>
                     <div id="chart-driver-eff" class="chart-container chart-container--sm"></div>
-                </div>
-
-                <!-- Costo & CO₂ por Unidad -->
-                <div class="chart-card glass-panel">
-                    <div class="panel-header">
-                        <div class="panel-title-group">
-                            <i data-lucide="circle-dollar-sign" width="16" height="16" stroke-width="2"></i>
-                            <span>Costo Estimado por Unidad (MXN)</span>
-                        </div>
-                    </div>
-                    <div id="chart-cost-unit" class="chart-container chart-container--sm"></div>
                 </div>
             </div>
 
