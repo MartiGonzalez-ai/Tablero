@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════════════════════════
+   RECORRIDO.CSS — Estilos Modernos V2 (Filtros Superiores)
+   ═══════════════════════════════════════════════════════════════ */
+
 :root {
     --header-height: 72px;
     --color-primary: #003666;
@@ -158,8 +162,31 @@ body {
 .recorrido-content-grid {
     display: flex;
     flex-direction: column;
-    gap: 3rem; /* Más espacio entre elementos */
+    gap: 4rem; /* Aumentado sustancialmente para 'despegar' elementos */
     animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Chart Styles */
+.chart-container {
+    padding: 2.5rem;
+    border-radius: 24px;
+    background: white;
+    border: 1px solid var(--color-border);
+}
+
+.chart-header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0.75rem;
+}
+
+.chart-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 @keyframes slideUp {
