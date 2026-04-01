@@ -103,8 +103,9 @@ geotab.addin.recorrido = function () {
             typeName: "Trip",
             search: {
                 deviceSearch: { id: deviceId },
-                fromDate: "2015-01-01T00:00:00.000Z", // Un punto de inicio lejano pero estable
-                toDate: searchToDate
+                fromDate: "2015-01-01T00:00:00.000Z",
+                toDate: searchToDate,
+                resultsLimit: 100000
             }
         }, (trips) => {
             loadingOverlay.style.display = "none";
@@ -118,12 +119,11 @@ geotab.addin.recorrido = function () {
                 return;
             }
 
-            // 1. Sumar distancia total
-            let totalMeters = 0;
+            // 1. Sumar distancia total (Sin dividir por 1000, ya que vienen en KM en este entorno)
+            let totalKm = 0;
             trips.forEach(trip => {
-                if (trip.distance) totalMeters += trip.distance;
+                if (trip.distance) totalKm += trip.distance;
             });
-            const totalKm = totalMeters / 1000;
 
             // 2. Agrupar por día (Exactamente como en rendimiento.js)
             const dailyData = {};
@@ -144,7 +144,7 @@ geotab.addin.recorrido = function () {
                 tbody.innerHTML = "";
                 sortedDates.forEach(date => {
                     const tr = document.createElement("tr");
-                    const km = dailyData[date] / 1000;
+                    const km = dailyData[date]; // No dividimos por 1000 aquí tampoco
                     tr.innerHTML = `
                         <td class="date-td">${date}</td>
                         <td class="dist-td" style="text-align: right;">${km.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
