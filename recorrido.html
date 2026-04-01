@@ -1,1 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="Consulta de Recorrido Histórico - Geotab">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Recorrido por Unidad</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/Rendimiento.css">
+    <link rel="stylesheet" href="styles/recorrido.css">
+</head>
+<body>
+    <div id="app-recorrido">
+        <!-- ═══════════ HEADER ═══════════ -->
+        <header class="top-nav glass-panel">
+            <div class="nav-brand">
+                <i data-lucide="map-pin" width="28" height="28" stroke="var(--color-primary)" stroke-width="2.5"></i>
+                <h1>Recorrido Unitario</h1>
+            </div>
+            
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label for="unit-select-recorrido">Unidad</label>
+                    <select id="unit-select-recorrido" class="recorrido-input-top">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
 
+                <div class="filter-group">
+                    <label for="date-until">Hasta</label>
+                    <input type="date" id="date-until" class="recorrido-input-top">
+                </div>
+
+                <button id="btn-consultar" class="btn-primary-top">
+                    <i data-lucide="search" width="16" height="16"></i>
+                    <span>Consultar</span>
+                </button>
+            </div>
+
+            <div class="nav-status">
+                <span class="status-dot"></span>
+                <span id="last-updated-time">Geotab API</span>
+            </div>
+        </header>
+
+        <!-- ═══════════ MAIN CONTENT ═══════════ -->
+        <main class="recorrido-container">
+            <div id="result-container" class="recorrido-content-grid" style="display: none;">
+                <!-- KPI Card Principal -->
+                <div class="main-result-card glass-panel">
+                    <div class="result-icon-v2">
+                        <i data-lucide="route" width="40" height="40"></i>
+                    </div>
+                    <div class="result-details">
+                        <span class="result-label">Odómetro Estimado</span>
+                        <div class="result-value-big">
+                            <span id="distancia-value">0</span>
+                            <span class="unit">km</span>
+                        </div>
+                        <p class="result-meta">Lectura calculada al <span id="fecha-footer">—</span></p>
+                    </div>
+                </div>
+
+                <!-- Nueva Gráfica de Barras Diaria -->
+                <div class="chart-container glass-panel">
+                    <div class="chart-header">
+                        <h3>Distancia Diaria (km)</h3>
+                    </div>
+                    <div id="chart-daily-recorrido" style="min-height: 350px;">
+                        <!-- ApexCharts renders here -->
+                    </div>
+                </div>
+
+                <!-- Nueva tabla de distancia por día -->
+                <div class="daily-table-container">
+                        <div class="table-header">
+                            <h3>Desglose por Día</h3>
+                            <span id="label-periodo" class="label-periodo"></span>
+                        </div>
+                        <div class="table-scroll">
+                            <table class="daily-recorrido-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th style="text-align: right;">Distancia (km)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="daily-recorrido-tbody">
+                                    <!-- Rows populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="loading-overlay" class="loading-overlay" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Calculando recorridos...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Global Error Toast -->
+        <div class="error-toast" id="error-toast" style="display:none;">
+            <i data-lucide="alert-circle" width="16" height="16" stroke-width="2"></i>
+            <span id="error-toast-msg">Error al consultar los datos.</span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="scripts/recorrido.js"></script>
+</body>
+</html>
