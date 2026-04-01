@@ -1,3 +1,10 @@
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * RECORRIDO.JS — Lógica para la consulta de kilómetros históricos
+ * Geotab Add-In | Modern ESM Logic
+ * ═══════════════════════════════════════════════════════════════
+ */
+
 "use strict";
 
 // Geotab API Initialization
@@ -96,7 +103,7 @@ geotab.addin.recorrido = function () {
             typeName: "Trip",
             search: {
                 deviceSearch: { id: deviceId },
-                fromDate: "1900-01-01T00:00:00.000Z", // Garantizar todos los datos históricos
+                fromDate: "2015-01-01T00:00:00.000Z", // Un punto de inicio lejano pero estable
                 toDate: searchToDate
             }
         }, (trips) => {
@@ -111,20 +118,21 @@ geotab.addin.recorrido = function () {
                 return;
             }
 
-            // Sum distances (Trip.distance is in meters)
+            // 1. Sumar distancia total
             let totalMeters = 0;
             trips.forEach(trip => {
-                if (trip.distance) {
-                    totalMeters += trip.distance;
-                }
+                if (trip.distance) totalMeters += trip.distance;
             });
+            const totalKm = totalMeters / 1000;
 
-            // 3. --- Daily Breakdown Breakdown ---
+            // 2. Agrupar por día (Exactamente como en rendimiento.js)
             const dailyData = {};
             trips.forEach(trip => {
-                if (trip.dateTime && trip.distance) {
-                    const dateKey = trip.dateTime.slice(0, 10);
-                    dailyData[dateKey] = (dailyData[dateKey] || 0) + trip.distance;
+                if (trip.start && trip.distance) {
+                    const dateObj = new Date(trip.start);
+                    const dStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
+                    if (!dailyData[dStr]) dailyData[dStr] = 0;
+                    dailyData[dStr] += trip.distance;
                 }
             });
 
@@ -149,12 +157,13 @@ geotab.addin.recorrido = function () {
                 labelPeriodo.textContent = `${sortedDates.length} días con registros`;
             }
 
-            // Updated UI
+            // Refrescar UI (KPI)
             resultContainer.style.display = "block";
             animateCount(distanciaValue, totalKm);
             fechaFooter.textContent = formatDateReadable(toDate);
 
-            // Smooth scroll to result
+            if (window.lucide) lucide.createIcons();
+
             setTimeout(() => {
                 resultContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
             }, 100);
@@ -163,7 +172,7 @@ geotab.addin.recorrido = function () {
             loadingOverlay.style.display = "none";
             btnConsultar.disabled = false;
             console.error("Error fetching trips:", err);
-            showError("Error al consultar los datos de viajes en Geotab.");
+            showError("Error al consultar los datos de viajes en Geotab. Intente con un rango más pequeño si el error persiste.");
         });
     };
 
