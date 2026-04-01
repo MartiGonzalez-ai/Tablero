@@ -1,3 +1,10 @@
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * RECORRIDO.JS — Lógica para la consulta de kilómetros históricos
+ * Geotab Add-In | Modern ESM Logic
+ * ═══════════════════════════════════════════════════════════════
+ */
+
 "use strict";
 
 // Geotab API Initialization
@@ -56,51 +63,43 @@ geotab.addin.recorrido = function () {
         requestAnimationFrame(step);
     };
 
-    const renderChart = (historyData) => {
+    const renderChart = (dailyData) => {
         if (!window.ApexCharts) return;
 
-        // historyData is an array of { x: timestamp, y: odometer_km }
-        // Ensure it's sorted chronologically for ApexCharts
-        const seriesData = [...historyData].sort((a, b) => a.x - b.x);
+        const dates = Object.keys(dailyData).sort();
+        const seriesData = dates.map(d => parseFloat(dailyData[d].toFixed(1)));
 
         const options = {
             series: [{
-                name: 'Odómetro (km)',
+                name: 'Distancia (km)',
                 data: seriesData
             }],
             chart: {
-                type: 'area', // Cambiado de bar a area
-                height: 400,
+                type: 'bar', // Volver a barras como antes
+                height: 350,
                 width: '100%',
-                toolbar: { show: true },
-                fontFamily: "'Inter', sans-serif",
-                zoom: { enabled: true }
+                toolbar: { show: false },
+                fontFamily: "'Inter', sans-serif"
             },
             colors: ['#00b1e1'],
-            stroke: {
-                curve: 'smooth',
-                width: 3
-            },
-            fill: {
-                type: 'gradient',
-                gradient: {
-                    shadeIntensity: 1,
-                    opacityFrom: 0.45,
-                    opacityTo: 0.05,
-                    stops: [20, 100]
+            plotOptions: {
+                bar: {
+                    borderRadius: 6,
+                    columnWidth: '55%',
                 }
             },
             dataLabels: { enabled: false },
             xaxis: {
-                type: 'datetime',
+                categories: dates,
                 labels: {
-                    style: { colors: '#64748b', fontSize: '10px' }
+                    style: { colors: '#64748b', fontSize: '10px' },
+                    rotate: -45
                 }
             },
             yaxis: {
                 labels: {
                     style: { colors: '#64748b' },
-                    formatter: (val) => Math.round(val).toLocaleString("es-MX") + " km"
+                    formatter: (val) => val.toFixed(0) + " km"
                 }
             },
             grid: {
@@ -110,8 +109,7 @@ geotab.addin.recorrido = function () {
             },
             tooltip: {
                 theme: 'light',
-                x: { format: 'dd MMM yyyy HH:mm' },
-                y: { formatter: (val) => val.toLocaleString("es-MX", { minimumFractionDigits: 1 }) + " km" }
+                y: { formatter: (val) => val.toFixed(1) + " km" }
             }
         };
 
@@ -166,16 +164,16 @@ geotab.addin.recorrido = function () {
         loadingOverlay.style.display = "flex";
         btnConsultar.disabled = true;
 
-        // Definimos el rango: 30 días antes de toDate hasta "ahora" (para obtener el odómetro más reciente y restar)
+        // Establecemos el punto final del reporte (el día seleccionado a las 23:59:59)
         const toDateObj = new Date(toDateVal + "T23:59:59Z");
-        const fromDateObj = new Date(toDateObj);
-        fromDateObj.setDate(fromDateObj.getDate() - 30); // 30 días de historial
+        const searchToDate = toDateObj.toISOString();
 
-        const now = new Date();
-        const searchToDate = now.toISOString();
+        // Establecemos el punto inicial para la gráfica (30 días antes)
+        const fromDateObj = new Date(toDateObj);
+        fromDateObj.setDate(fromDateObj.getDate() - 30);
         const searchFromDate = fromDateObj.toISOString();
 
-        // MultiCall para obtener los diagnósticos de odómetro y los viajes
+        // 1. Obtener la lectura de odómetro más reciente HASTA la fecha seleccionada
         const calls = odometerDiagnostics.map(diagId => [
             "Get",
             {
@@ -190,7 +188,7 @@ geotab.addin.recorrido = function () {
             }
         ]);
 
-        // Añadir la llamada de viajes: desde el inicio del historial hasta ahora
+        // 2. Obtener viajes para el periodo de la gráfica (30 días anteriores)
         calls.push([
             "Get",
             {
@@ -208,75 +206,52 @@ geotab.addin.recorrido = function () {
             btnConsultar.disabled = false;
 
             try {
-                // 1. Extraer lectura base de odómetro
+                // Extraer odómetro base en la fecha 'toDate'
                 const odoResults = results.slice(0, odometerDiagnostics.length)
                                           .flat()
                                           .filter(r => r && r.data !== undefined);
                 
-                if (odoResults.length === 0) {
-                    showError("No se encontraron lecturas de odómetro recientes para este vehículo.");
-                    return;
+                let odoAtTargetMeters = 0;
+                if (odoResults.length > 0) {
+                    odoResults.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+                    odoAtTargetMeters = odoResults[0].data;
                 }
 
-                odoResults.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-                const latestOdoData = odoResults[0];
-                let currentOdoMeters = latestOdoData.data;
-                const odoDateTime = new Date(latestOdoData.dateTime);
-
-                // 2. Extraer viajes
+                // Extraer viajes
                 const trips = results[results.length - 1] || [];
-                // Ordenar del más reciente al más antiguo
-                trips.sort((a, b) => new Date(b.stop || b.start) - new Date(a.stop || a.start));
-
-                // 3. Reconstruir historial hacia atrás
-                const history = [];
-                // Punto inicial (ahora)
-                history.push({
-                    x: odoDateTime.getTime(),
-                    y: currentOdoMeters / 1000
-                });
-
-                const dailyDistance = {};
-                let targetOdo = 0;
-                let foundTarget = false;
+                
+                // Agrupar por día para la tabla y la gráfica de barras
+                const dailyDistanceData = {};
+                
+                // Inicializar los últimos 30 días con 0 por si no hay viajes
+                for (let i = 0; i < 30; i++) {
+                    const d = new Date(toDateObj);
+                    d.setDate(d.getDate() - i);
+                    const dStr = d.toISOString().split('T')[0];
+                    dailyDistanceData[dStr] = 0;
+                }
 
                 trips.forEach(trip => {
-                    const tripStart = new Date(trip.start);
-                    const tripDist = trip.distance || 0;
-                    
-                    // Restamos la distancia del viaje para obtener el odómetro ANTES del viaje
-                    currentOdoMeters -= tripDist;
-
-                    // Si el inicio del viaje es anterior o igual a la fecha límite "Hasta",
-                    // y no hemos marcado el targetOdo, este es nuestro valor de KPI
-                    if (!foundTarget && tripStart <= toDateObj) {
-                        targetOdo = (currentOdoMeters + tripDist) / 1000;
-                        foundTarget = true;
-                    }
-
-                    // Guardar punto para la gráfica
-                    history.push({
-                        x: tripStart.getTime(),
-                        y: currentOdoMeters / 1000
-                    });
-
-                    // Agrupar para la tabla (solo lo que está dentro del rango solicitado)
-                    if (tripStart <= toDateObj && tripStart >= fromDateObj) {
+                    if (trip.start && trip.distance) {
+                        const tripStart = new Date(trip.start);
                         const dStr = tripStart.toISOString().split('T')[0];
-                        dailyDistance[dStr] = (dailyDistance[dStr] || 0) + (tripDist / 1000);
+                        // Solo sumar si está dentro de nuestro rango de reporte
+                        if (dailyDistanceData[dStr] !== undefined) {
+                            dailyDistanceData[dStr] += (trip.distance / 1000);
+                        }
                     }
                 });
 
-                // Si nunca encontramos un viaje antes de toDate, el target es el acumulado actual remanente
-                if (!foundTarget) targetOdo = currentOdoMeters / 1000;
-
-                // 4. Actualizar UI
+                // --- UI Update ---
                 resultContainer.style.display = "block";
-                animateCount(distanciaValue, targetOdo);
+                
+                // KPI: Odómetro al final del periodo (convertido a KM)
+                const targetOdoKm = odoAtTargetMeters / 1000;
+                animateCount(distanciaValue, targetOdoKm);
                 fechaFooter.textContent = formatDateReadable(toDateVal);
 
                 // Tabla
-                const sortedDates = Object.keys(dailyDistance).sort((a, b) => b.localeCompare(a));
+                const sortedDates = Object.keys(dailyDistanceData).sort((a, b) => b.localeCompare(a));
                 const tbody = document.getElementById("daily-recorrido-tbody");
                 const labelPeriodo = document.getElementById("label-periodo");
 
@@ -284,7 +259,7 @@ geotab.addin.recorrido = function () {
                     tbody.innerHTML = "";
                     sortedDates.forEach(date => {
                         const tr = document.createElement("tr");
-                        const km = dailyDistance[date];
+                        const km = dailyDistanceData[date];
                         tr.innerHTML = `
                             <td class="date-td">${date}</td>
                             <td class="dist-td" style="text-align: right;">${km.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
@@ -292,10 +267,10 @@ geotab.addin.recorrido = function () {
                         tbody.appendChild(tr);
                     });
                 }
-                if (labelPeriodo) labelPeriodo.textContent = `Últimos 30 días hasta la fecha`;
+                if (labelPeriodo) labelPeriodo.textContent = `Último periodo de 30 días`;
 
-                // Gráfica
-                renderChart(history);
+                // Gráfica de Barras (Distancia Diaria)
+                renderChart(dailyDistanceData);
 
                 if (window.lucide) lucide.createIcons();
                 setTimeout(() => {
@@ -304,7 +279,7 @@ geotab.addin.recorrido = function () {
 
             } catch (err) {
                 console.error("Error processing data:", err);
-                showError("Error al procesar los datos del odómetro.");
+                showError("No se pudieron procesar los datos de odómetro. Verifique el vehículo.");
             }
         }, (err) => {
             loadingOverlay.style.display = "none";
