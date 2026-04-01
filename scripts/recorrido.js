@@ -1,10 +1,3 @@
-/**
- * ═══════════════════════════════════════════════════════════════
- * RECORRIDO.JS — Lógica para la consulta de kilómetros históricos
- * Geotab Add-In | Modern ESM Logic
- * ═══════════════════════════════════════════════════════════════
- */
-
 "use strict";
 
 // Geotab API Initialization
@@ -23,6 +16,8 @@ geotab.addin.recorrido = function () {
     const errorToast = document.getElementById("error-toast");
     const errorToastMsg = document.getElementById("error-toast-msg");
 
+    let chartDaily;
+
     // --- Helpers ---
     const showError = (msg) => {
         if (errorToastMsg) errorToastMsg.textContent = msg;
@@ -34,7 +29,7 @@ geotab.addin.recorrido = function () {
 
     const formatDateReadable = (isoStr) => {
         if (!isoStr) return "—";
-        const d = new Date(isoStr);
+        const d = new Date(isoStr + "T00:00:00"); // Forzar interpretación local
         return d.toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" });
     };
 
@@ -53,6 +48,65 @@ geotab.addin.recorrido = function () {
             if (progress < 1) requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
+    };
+
+    const renderChart = (dailyData) => {
+        if (!window.ApexCharts) return;
+
+        const dates = Object.keys(dailyData).sort();
+        // Mostrar solo los últimos 60 días en la gráfica para legibilidad, o todos si son menos
+        const recentDates = dates.slice(-60);
+        const seriesData = recentDates.map(d => parseFloat(dailyData[d].toFixed(1)));
+
+        const options = {
+            series: [{
+                name: 'Kilómetros',
+                data: seriesData
+            }],
+            chart: {
+                type: 'bar',
+                height: 350,
+                toolbar: { show: false },
+                fontFamily: "'Inter', sans-serif"
+            },
+            colors: ['#00b1e1'],
+            plotOptions: {
+                bar: {
+                    borderRadius: 6,
+                    columnWidth: '60%',
+                }
+            },
+            dataLabels: { enabled: false },
+            xaxis: {
+                categories: recentDates,
+                labels: {
+                    style: { colors: '#64748b', fontSize: '10px' },
+                    rotate: -45,
+                    rotateAlways: false
+                }
+            },
+            yaxis: {
+                labels: {
+                    style: { colors: '#64748b' },
+                    formatter: (val) => val.toFixed(0) + " km"
+                }
+            },
+            grid: {
+                borderColor: '#f1f5f9',
+                strokeDashArray: 4
+            },
+            tooltip: {
+                theme: 'light',
+                y: { formatter: (val) => val.toFixed(1) + " km" }
+            }
+        };
+
+        if (chartDaily) {
+            chartDaily.destroy();
+        }
+
+        chartDaily = new ApexCharts(document.querySelector("#chart-daily-recorrido"), options);
+        chartDaily.render();
     };
 
     // --- Data Loaders ---
@@ -96,14 +150,14 @@ geotab.addin.recorrido = function () {
         btnConsultar.disabled = true;
 
         // Prepare Search
-        // We set toDate to the end of that day
-        const searchToDate = new Date(toDate + "T23:59:59Z").toISOString();
+        // Usar final del día local para incluir el último día filtrado
+        const searchToDate = new Date(toDate + "T23:59:59").toISOString();
 
         api.call("Get", {
             typeName: "Trip",
             search: {
                 deviceSearch: { id: deviceId },
-                fromDate: "2015-01-01T00:00:00.000Z",
+                fromDate: "2015-01-01T00:00:00",
                 toDate: searchToDate,
                 resultsLimit: 100000
             }
@@ -119,17 +173,18 @@ geotab.addin.recorrido = function () {
                 return;
             }
 
-            // 1. Sumar distancia total (Sin dividir por 1000, ya que vienen en KM en este entorno)
+            // 1. Sumar distancia total (Ya vienen en KM)
             let totalKm = 0;
             trips.forEach(trip => {
                 if (trip.distance) totalKm += trip.distance;
             });
 
-            // 2. Agrupar por día (Exactamente como en rendimiento.js)
+            // 2. Agrupar por día
             const dailyData = {};
             trips.forEach(trip => {
                 if (trip.start && trip.distance) {
                     const dateObj = new Date(trip.start);
+                    // Usar fecha local para agrupación
                     const dStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
                     if (!dailyData[dStr]) dailyData[dStr] = 0;
                     dailyData[dStr] += trip.distance;
@@ -144,7 +199,7 @@ geotab.addin.recorrido = function () {
                 tbody.innerHTML = "";
                 sortedDates.forEach(date => {
                     const tr = document.createElement("tr");
-                    const km = dailyData[date]; // No dividimos por 1000 aquí tampoco
+                    const km = dailyData[date];
                     tr.innerHTML = `
                         <td class="date-td">${date}</td>
                         <td class="dist-td" style="text-align: right;">${km.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
@@ -156,6 +211,9 @@ geotab.addin.recorrido = function () {
             if (labelPeriodo && sortedDates.length > 0) {
                 labelPeriodo.textContent = `${sortedDates.length} días con registros`;
             }
+
+            // Renderizar Gráfica
+            renderChart(dailyData);
 
             // Refrescar UI (KPI)
             resultContainer.style.display = "block";
@@ -172,7 +230,7 @@ geotab.addin.recorrido = function () {
             loadingOverlay.style.display = "none";
             btnConsultar.disabled = false;
             console.error("Error fetching trips:", err);
-            showError("Error al consultar los datos de viajes en Geotab. Intente con un rango más pequeño si el error persiste.");
+            showError("Error al consultar los datos. Intente con un rango más pequeño si persiste.");
         });
     };
 
