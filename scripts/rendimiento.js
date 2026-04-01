@@ -13,7 +13,7 @@ geotab.addin.rendimiento = function () {
     let deviceMap = {};        // Global device map
 
     // Chart instances
-    let chartEffByUnit, chartDailyFuel, chartUnitBars, chartSpeedDist, chartDriverEff, chartCostUnit;
+    let chartEffByUnit, chartDailyFuel, chartSpeedDist, chartDriverEff;
 
     // DOM refs
     let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
@@ -170,41 +170,20 @@ geotab.addin.rendimiento = function () {
         const totalDist = (trips || []).reduce((s, t) => s + (parseFloat(t.distance) || 0), 0);
         const totalFuel = (records || []).reduce((s, r) => s + (parseFloat(r.fuelUsed) || 0), 0);
         const avgKmPerL = totalFuel > 0 ? totalDist / totalFuel : 0;
-        const unidades = records.length;
-
-        // Velocidad promedio de flota: promedio ponderado por distancia de cada viaje
-        const tripsWithSpeed = (trips || []).filter(t => t.averageSpeed > 0 && t.distance > 0);
-        const totalDistForSpeed = tripsWithSpeed.reduce((s, t) => s + t.distance, 0);
-        const weightedSpeed = totalDistForSpeed > 0
-            ? tripsWithSpeed.reduce((s, t) => s + (t.averageSpeed * t.distance), 0) / totalDistForSpeed
-            : 0;
-
-        const PRECIO_LITRO = 23.50;
-        const CO2_PER_LITER = 2.31;
-        const costoTotal = totalFuel * PRECIO_LITRO;
-        const co2Total = totalFuel * CO2_PER_LITER;
+        const unidades  = records.length;
 
         const elRendimiento = document.getElementById("stat-rendimiento");
         const elDistancia   = document.getElementById("stat-distancia");
         const elCombustible = document.getElementById("stat-combustible");
         const elUnidades    = document.getElementById("stat-unidades");
-        const elCosto       = document.getElementById("stat-costo");
-        const elCo2         = document.getElementById("stat-co2");
-        const elVelProm     = document.getElementById("stat-vel-prom");
 
         if (elRendimiento)  { elRendimiento.classList.remove("skeleton");  animateCount(elRendimiento, avgKmPerL, 1, " km/L"); }
         if (elDistancia)    { elDistancia.classList.remove("skeleton");    animateCount(elDistancia, Math.round(totalDist), 0, ""); }
         if (elCombustible)  { elCombustible.classList.remove("skeleton");  animateCount(elCombustible, Math.round(totalFuel), 0, ""); }
         if (elUnidades)     { elUnidades.classList.remove("skeleton");     animateCount(elUnidades, unidades, 0, ""); }
-        if (elCosto)        { elCosto.classList.remove("skeleton");        animateCount(elCosto, costoTotal, 0, ""); }
-        if (elCo2)          { elCo2.classList.remove("skeleton");          animateCount(elCo2, Math.round(co2Total), 0, " kg"); }
-        if (elVelProm)      { elVelProm.classList.remove("skeleton");      animateCount(elVelProm, weightedSpeed, 1, " km/h"); }
 
         const totalBadge = document.getElementById("stat-total-badge");
         if (totalBadge) totalBadge.textContent = isCustomRange ? "rango personalizado" : `últimos ${selectedDays} días`;
-
-        const elCostoSub = document.getElementById("stat-costo-sub");
-        if (elCostoSub) elCostoSub.textContent = `${Math.round(totalFuel).toLocaleString("es-MX")} litros × $${PRECIO_LITRO.toFixed(2)}/L`;
 
         const badgeRanking = document.getElementById("badge-ranking");
         if (badgeRanking) {
@@ -739,7 +718,7 @@ geotab.addin.rendimiento = function () {
 
     // ─── Reset UI ─────────────────────────────────────────────────────────────
     const resetUI = () => {
-        ["stat-rendimiento", "stat-distancia", "stat-combustible", "stat-costo", "stat-unidades", "stat-co2", "stat-vel-prom"].forEach(id => {
+        ["stat-rendimiento", "stat-distancia", "stat-combustible", "stat-unidades"].forEach(id => {
             const el = document.getElementById(id);
             if (el) { el.textContent = "—"; el.classList.add("skeleton"); }
         });
@@ -801,18 +780,19 @@ geotab.addin.rendimiento = function () {
         if (odoTripsSearchInput) odoTripsSearchInput.value = "";
     };
 
-    // ─── Render Charts ────────────────────────────────────────────────────────
+    // ─── Render Charts ────────────────────────────────────────────────
     const renderCharts = (records) => {
         if (!window.ApexCharts) return;
 
-        const cCyan    = "#00b1e1";
-        const cBlue    = "#003666";
-        const cGreen   = "#3b753c";
-        const cOrange  = "#f29300";
-        const cRed     = "#cc0000";
-        const cPurple  = "#7c3aed";
-        const textMuted   = "#5e6c84";
-        const fontFamily  = "'Inter', sans-serif";
+        // ── Paleta oficial Geotab ─────────────────────────────────────────
+        const cBlue     = "#003666"; // Geotab Primary Blue
+        const cCyan     = "#00b1e1"; // Geotab Light Blue
+        const cGreen    = "#3b753c"; // Geotab Green
+        const cOrange   = "#f29300"; // Geotab Amber/Orange
+        const cRed      = "#cc0000"; // Geotab Red
+        const cSlate    = "#5e6c84"; // texto mútil / eje muted
+        const textMuted = cSlate;
+        const fontFamily = "'Inter', sans-serif";
 
         const commonOptions = {
             chart: { fontFamily, toolbar: { show: false } },
@@ -820,10 +800,9 @@ geotab.addin.rendimiento = function () {
             tooltip: { theme: 'light' }
         };
 
-        // Helper: destroy a chart instance safely
         const destroyChart = (instance) => { try { if (instance) instance.destroy(); } catch(e) {} };
 
-        // ── 1. Tendencia Diaria de Rendimiento Flota (km/L) ──────────────────
+        // ── 1. Tendencia Diaria de Rendimiento Flota (km/L) — Área azul Geotab ──
         const dailyResult = renderDailyTable();
         const { dailyData, sortedDates } = dailyResult || { dailyData: {}, sortedDates: [] };
 
@@ -840,32 +819,33 @@ geotab.addin.rendimiento = function () {
             dataLabels: {
                 enabled: true,
                 formatter: val => val.toFixed(1),
-                offsetY: -5,
-                style: { colors: [cCyan] },
-                background: { enabled: true, foreColor: '#fff', borderRadius: 4, borderWidth: 0 }
+                offsetY: -6,
+                style: { fontSize: '11px', fontWeight: '700', colors: [cBlue] },
+                background: { enabled: true, foreColor: '#fff', borderRadius: 4, borderWidth: 0, opacity: 0.9 }
             },
-            stroke: { curve: 'smooth', width: 3 },
-            fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05, stops: [20, 100] } },
+            stroke: { curve: 'smooth', width: 2.5 },
+            fill: {
+                type: 'gradient',
+                gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.02, stops: [0, 100],
+                    colorStops: [{ offset: 0, color: cCyan, opacity: 0.35 }, { offset: 100, color: cCyan, opacity: 0 }] }
+            },
             colors: [cCyan],
             xaxis: {
                 type: 'datetime',
-                labels: { style: { colors: textMuted }, format: 'dd MMM' },
+                labels: { style: { colors: textMuted, fontSize: '11px' }, format: 'dd MMM' },
                 axisBorder: { show: false },
                 axisTicks: { show: false }
             },
-            yaxis: {
-                labels: { style: { colors: textMuted }, formatter: val => val.toFixed(1) + " km/L" }
-            },
-            grid: { borderColor: '#f1f1f1' },
-            markers: { size: 4, colors: [cCyan], strokeWidth: 2, hover: { size: 6 } },
-            noData: { text: "Cargando datos de tendencia...", align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
+            yaxis: { labels: { style: { colors: textMuted }, formatter: val => val.toFixed(1) + ' km/L' } },
+            grid: { borderColor: '#eaecf0', strokeDashArray: 4 },
+            markers: { size: 4, colors: ['#fff'], strokeColors: cCyan, strokeWidth: 2.5, hover: { size: 7 } },
+            noData: { text: 'Sin datos de tendencia', align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
         };
         destroyChart(chartEffByUnit);
         chartEffByUnit = new ApexCharts(document.querySelector("#chart-eff-unit"), optTrendDaily);
         chartEffByUnit.render();
 
-        // ── 2. Consumo Diario vs Distancia (Barras agrupadas + eje doble) ─────
-        const dailyLabels = sortedDates;
+        // ── 2. Consumo Diario vs Distancia — Columnas azul Geotab + línea naranja ──
         const dailyFuelSeries = sortedDates.map(d => parseFloat((dailyData[d].fuel || 0).toFixed(2)));
         const dailyDistSeries = sortedDates.map(d => parseFloat((dailyData[d].dist || 0).toFixed(1)));
 
@@ -876,91 +856,41 @@ geotab.addin.rendimiento = function () {
                 { name: 'Distancia (km)',  type: 'line',   data: dailyDistSeries }
             ],
             chart: { type: 'line', height: 240, fontFamily, toolbar: { show: false }, zoom: { enabled: false } },
-            stroke: { width: [0, 3], curve: 'smooth' },
-            plotOptions: { bar: { columnWidth: '55%', borderRadius: 4 } },
+            stroke: { width: [0, 2.5], curve: 'smooth' },
+            plotOptions: { bar: { columnWidth: '52%', borderRadius: 3 } },
             colors: [cBlue, cOrange],
-            fill: { opacity: [0.85, 1] },
-            dataLabels: { enabled: false },
+            fill: { opacity: [0.90, 1] },
             xaxis: {
-                categories: dailyLabels,
-                labels: { style: { colors: textMuted }, rotate: -30, rotateAlways: true },
+                categories: sortedDates,
+                labels: { style: { colors: textMuted, fontSize: '11px' }, rotate: -30, rotateAlways: true },
                 axisBorder: { show: false },
                 axisTicks: { show: false }
             },
             yaxis: [
-                {
-                    seriesName: 'Combustible (L)',
-                    labels: { style: { colors: cBlue }, formatter: v => v.toFixed(0) + ' L' }
-                },
-                {
-                    seriesName: 'Distancia (km)',
-                    opposite: true,
-                    labels: { style: { colors: cOrange }, formatter: v => v.toFixed(0) + ' km' }
-                }
+                { seriesName: 'Combustible (L)',
+                  labels: { style: { colors: cBlue, fontSize: '11px' }, formatter: v => v.toFixed(0) + ' L' } },
+                { seriesName: 'Distancia (km)', opposite: true,
+                  labels: { style: { colors: cOrange, fontSize: '11px' }, formatter: v => v.toFixed(0) + ' km' } }
             ],
-            legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px' },
-            grid: { borderColor: '#f1f1f1' },
+            legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px',
+                      markers: { width: 10, height: 10, radius: 2 } },
+            grid: { borderColor: '#eaecf0', strokeDashArray: 4 },
             tooltip: { shared: true, intersect: false, theme: 'light' },
+            markers: { size: [0, 4], colors: ['#fff'], strokeColors: cOrange, strokeWidth: 2 },
             noData: { text: 'Sin datos', align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
         };
         destroyChart(chartDailyFuel);
         chartDailyFuel = new ApexCharts(document.querySelector("#chart-daily-fuel"), optDailyFuel);
         chartDailyFuel.render();
 
-        // ── 3. Rendimiento por Unidad — Barras horizontales con colores ────────
-        const unitData = [...records]
-            .filter(r => r.kmPerL > 0)
-            .sort((a, b) => b.kmPerL - a.kmPerL)
-            .slice(0, 15);
-
-        const unitColors = unitData.map(r => {
-            if (r.kmPerL >= 12) return cGreen;
-            if (r.kmPerL >= 8)  return cCyan;
-            if (r.kmPerL >= 5)  return cOrange;
-            return cRed;
-        });
-
-        const optUnitBars = {
-            ...commonOptions,
-            series: [{ name: 'Rendimiento (km/L)', data: unitData.map(r => parseFloat(r.kmPerL.toFixed(2))) }],
-            chart: { type: 'bar', height: 240, fontFamily, toolbar: { show: false } },
-            plotOptions: {
-                bar: {
-                    horizontal: true,
-                    distributed: true,
-                    barHeight: '70%',
-                    borderRadius: 4,
-                    dataLabels: { position: 'top' }
-                }
-            },
-            colors: unitColors,
-            dataLabels: {
-                enabled: true,
-                formatter: val => val.toFixed(1) + ' km/L',
-                offsetX: 5,
-                style: { fontSize: '11px', colors: ['#374151'] }
-            },
-            xaxis: {
-                categories: unitData.map(r => r.deviceName),
-                labels: { style: { colors: textMuted }, formatter: v => v.toFixed(0) }
-            },
-            yaxis: { labels: { style: { colors: textMuted, fontSize: '11px' } } },
-            legend: { show: false },
-            grid: { borderColor: '#f1f1f1', xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
-            noData: { text: 'Sin datos de unidades', align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        destroyChart(chartUnitBars);
-        chartUnitBars = new ApexCharts(document.querySelector("#chart-unit-bars"), optUnitBars);
-        chartUnitBars.render();
-
-        // ── 4. Distribución de Velocidad Máxima por Viaje (Donut) ─────────────
-        const speedBuckets = { '0-40 km/h': 0, '40-80 km/h': 0, '80-100 km/h': 0, '100-120 km/h': 0, '>120 km/h': 0 };
+        // ── 3. Distribución de Velocidad Máxima — Donut paleta Geotab ──────────
+        const speedBuckets = { '0–40 km/h': 0, '40–80 km/h': 0, '80–100 km/h': 0, '100–120 km/h': 0, '>120 km/h': 0 };
         (filteredTrips || []).forEach(t => {
             const v = t.maxSpeed || 0;
-            if (v <= 40)       speedBuckets['0-40 km/h']++;
-            else if (v <= 80)  speedBuckets['40-80 km/h']++;
-            else if (v <= 100) speedBuckets['80-100 km/h']++;
-            else if (v <= 120) speedBuckets['100-120 km/h']++;
+            if (v <= 40)       speedBuckets['0–40 km/h']++;
+            else if (v <= 80)  speedBuckets['40–80 km/h']++;
+            else if (v <= 100) speedBuckets['80–100 km/h']++;
+            else if (v <= 120) speedBuckets['100–120 km/h']++;
             else               speedBuckets['>120 km/h']++;
         });
 
@@ -969,18 +899,24 @@ geotab.addin.rendimiento = function () {
             series: Object.values(speedBuckets),
             chart: { type: 'donut', height: 240, fontFamily },
             labels: Object.keys(speedBuckets),
-            colors: [cGreen, cCyan, cOrange, cRed, '#6b21a8'],
-            legend: { position: 'bottom', fontSize: '11px', labels: { colors: textMuted } },
+            // Paleta Geotab: verde → cyan → naranja → rojo → azul oscuro
+            colors: [cGreen, cCyan, cOrange, cRed, cBlue],
+            legend: { position: 'bottom', fontSize: '11px', fontFamily,
+                      labels: { colors: textMuted },
+                      markers: { width: 10, height: 10, radius: 2 } },
             plotOptions: {
                 pie: {
                     donut: {
-                        size: '65%',
+                        size: '62%',
                         labels: {
                             show: true,
+                            value: { fontSize: '18px', fontWeight: '800', color: cBlue,
+                                     formatter: val => Math.round(val) },
                             total: {
                                 show: true,
                                 label: 'Total Viajes',
-                                fontSize: '13px',
+                                fontSize: '11px',
+                                fontWeight: '600',
                                 color: textMuted,
                                 formatter: w => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
                             }
@@ -988,19 +924,16 @@ geotab.addin.rendimiento = function () {
                     }
                 }
             },
-            dataLabels: {
-                enabled: true,
-                formatter: val => val.toFixed(1) + '%',
-                style: { fontSize: '11px' }
-            },
+            dataLabels: { enabled: false },
             tooltip: { y: { formatter: val => val + ' viajes' } },
+            stroke: { width: 2, colors: ['#fff'] },
             noData: { text: 'Sin datos de velocidad', align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
         };
         destroyChart(chartSpeedDist);
         chartSpeedDist = new ApexCharts(document.querySelector("#chart-speed-dist"), optSpeedDist);
         chartSpeedDist.render();
 
-        // ── 5. Eficiencia por Conductor (km/L) — Barras horizontales ──────────
+        // ── 4. Eficiencia por Conductor — Barras horizontales paleta Geotab ───
         const driverEff = {};
         (filteredTrips || []).forEach(t => {
             const name = t.driverName || 'Sin Conductor';
@@ -1013,83 +946,48 @@ geotab.addin.rendimiento = function () {
             .map(([name, v]) => ({ name, kmPerL: v.fuel > 0 ? v.dist / v.fuel : 0 }))
             .filter(d => d.kmPerL > 0)
             .sort((a, b) => b.kmPerL - a.kmPerL)
-            .slice(0, 12);
+            .slice(0, 14);
 
+        // Colores Geotab por umbral de eficiencia
         const driverColors = driverData.map(d => {
-            if (d.kmPerL >= 12) return cGreen;
-            if (d.kmPerL >= 8)  return cCyan;
-            if (d.kmPerL >= 5)  return cOrange;
-            return cRed;
+            if (d.kmPerL >= 12) return cGreen;   // Excelente
+            if (d.kmPerL >= 8)  return cCyan;    // Bueno
+            if (d.kmPerL >= 5)  return cOrange;  // Regular
+            return cRed;                          // Bajo
         });
 
         const optDriverEff = {
             ...commonOptions,
             series: [{ name: 'Rendimiento (km/L)', data: driverData.map(d => parseFloat(d.kmPerL.toFixed(2))) }],
-            chart: { type: 'bar', height: 240, fontFamily, toolbar: { show: false } },
+            chart: { type: 'bar', height: Math.max(240, driverData.length * 34 + 60),
+                     fontFamily, toolbar: { show: false } },
             plotOptions: {
-                bar: { horizontal: true, distributed: true, barHeight: '65%', borderRadius: 4 }
+                bar: { horizontal: true, distributed: true, barHeight: '55%', borderRadius: 4 }
             },
             colors: driverColors,
             dataLabels: {
                 enabled: true,
                 formatter: val => val.toFixed(1) + ' km/L',
-                offsetX: 5,
-                style: { fontSize: '11px', colors: ['#374151'] }
+                offsetX: 6,
+                style: { fontSize: '11px', fontWeight: '700', colors: [cBlue] }
             },
             xaxis: {
                 categories: driverData.map(d => d.name),
-                labels: { style: { colors: textMuted }, formatter: v => v.toFixed(0) }
+                labels: { style: { colors: textMuted, fontSize: '11px' }, formatter: v => v.toFixed(0) + ' km/L' }
             },
-            yaxis: { labels: { style: { colors: textMuted, fontSize: '11px' } } },
+            yaxis: { labels: { style: { colors: cBlue, fontSize: '11px', fontWeight: '600' } } },
             legend: { show: false },
-            grid: { borderColor: '#f1f1f1', xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
-            noData: { text: 'Sin datos de conductores', align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
+            grid: { borderColor: '#eaecf0', strokeDashArray: 4,
+                    xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
+            tooltip: { y: { formatter: val => val.toFixed(2) + ' km/L' } },
+            noData: { text: 'Sin datos de conductores', align: 'center', verticalAlign: 'middle',
+                      style: { color: textMuted } }
         };
         destroyChart(chartDriverEff);
         chartDriverEff = new ApexCharts(document.querySelector("#chart-driver-eff"), optDriverEff);
         chartDriverEff.render();
-
-        // ── 6. Costo Estimado por Unidad (MXN) — Barras verticales ───────────
-        const PRECIO_LITRO_CHART = 23.50;
-        const costData = [...records]
-            .filter(r => r.fuelUsed > 0)
-            .sort((a, b) => b.fuelUsed - a.fuelUsed)
-            .slice(0, 12)
-            .map(r => ({ name: r.deviceName, costo: parseFloat((r.fuelUsed * PRECIO_LITRO_CHART).toFixed(2)) }));
-
-        const optCostUnit = {
-            ...commonOptions,
-            series: [{ name: 'Costo Estimado (MXN)', data: costData.map(c => c.costo) }],
-            chart: { type: 'bar', height: 240, fontFamily, toolbar: { show: false } },
-            plotOptions: {
-                bar: { horizontal: false, columnWidth: '60%', borderRadius: 4 }
-            },
-            colors: [cPurple],
-            fill: { type: 'gradient', gradient: { shade: 'light', type: 'vertical', shadeIntensity: 0.3, opacityFrom: 0.9, opacityTo: 0.6 } },
-            dataLabels: {
-                enabled: true,
-                formatter: val => '$' + val.toLocaleString('es-MX', { maximumFractionDigits: 0 }),
-                style: { fontSize: '10px', colors: ['#374151'] },
-                offsetY: -4
-            },
-            xaxis: {
-                categories: costData.map(c => c.name),
-                labels: { style: { colors: textMuted, fontSize: '11px' }, rotate: -30, rotateAlways: true }
-            },
-            yaxis: {
-                labels: {
-                    style: { colors: textMuted },
-                    formatter: v => '$' + v.toLocaleString('es-MX', { maximumFractionDigits: 0 })
-                }
-            },
-            grid: { borderColor: '#f1f1f1' },
-            tooltip: { y: { formatter: val => '$' + val.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' MXN' } },
-            noData: { text: 'Sin datos de costo', align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        destroyChart(chartCostUnit);
-        chartCostUnit = new ApexCharts(document.querySelector("#chart-cost-unit"), optCostUnit);
-        chartCostUnit.render();
     };
+
 
     // ─── Filter by search ─────────────────────────────────────────────────────
     const applySearch = (query) => {
