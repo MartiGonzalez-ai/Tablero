@@ -1,10 +1,3 @@
-/**
- * ═══════════════════════════════════════════════════════════════
- * RECORRIDO.JS — Lógica para la consulta de kilómetros históricos
- * Geotab Add-In | Modern ESM Logic
- * ═══════════════════════════════════════════════════════════════
- */
-
 "use strict";
 
 // Geotab API Initialization
@@ -22,6 +15,12 @@ geotab.addin.recorrido = function () {
     const fechaFooter = document.getElementById("fecha-footer");
     const errorToast = document.getElementById("error-toast");
     const errorToastMsg = document.getElementById("error-toast-msg");
+    const odometerDiagnostics = [
+        "DiagnosticOdometerAdjustmentId",
+        "DiagnosticOdometerId",
+        "DiagnosticOBDOdometerReaderId",
+        "DiagnosticJ1939TotalVehicleDistanceId"
+    ];
 
     let chartDaily;
 
@@ -57,47 +56,51 @@ geotab.addin.recorrido = function () {
         requestAnimationFrame(step);
     };
 
-    const renderChart = (dailyData) => {
+    const renderChart = (historyData) => {
         if (!window.ApexCharts) return;
 
-        const dates = Object.keys(dailyData).sort();
-        // Mostrar solo los últimos 60 días en la gráfica para legibilidad, o todos si son menos
-        const recentDates = dates.slice(-60);
-        const seriesData = recentDates.map(d => parseFloat(dailyData[d].toFixed(1)));
+        // historyData is an array of { x: timestamp, y: odometer_km }
+        // Ensure it's sorted chronologically for ApexCharts
+        const seriesData = [...historyData].sort((a, b) => a.x - b.x);
 
         const options = {
             series: [{
-                name: 'Kilómetros',
+                name: 'Odómetro (km)',
                 data: seriesData
             }],
             chart: {
-                type: 'bar',
-                height: 350,
+                type: 'area', // Cambiado de bar a area
+                height: 400,
                 width: '100%',
-                toolbar: { show: false },
+                toolbar: { show: true },
                 fontFamily: "'Inter', sans-serif",
-                sparkline: { enabled: false }
+                zoom: { enabled: true }
             },
             colors: ['#00b1e1'],
-            plotOptions: {
-                bar: {
-                    borderRadius: 6,
-                    columnWidth: '60%',
+            stroke: {
+                curve: 'smooth',
+                width: 3
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.45,
+                    opacityTo: 0.05,
+                    stops: [20, 100]
                 }
             },
             dataLabels: { enabled: false },
             xaxis: {
-                categories: recentDates,
+                type: 'datetime',
                 labels: {
-                    style: { colors: '#64748b', fontSize: '10px' },
-                    rotate: -45,
-                    rotateAlways: false
+                    style: { colors: '#64748b', fontSize: '10px' }
                 }
             },
             yaxis: {
                 labels: {
                     style: { colors: '#64748b' },
-                    formatter: (val) => val.toFixed(0) + " km"
+                    formatter: (val) => Math.round(val).toLocaleString("es-MX") + " km"
                 }
             },
             grid: {
@@ -107,7 +110,8 @@ geotab.addin.recorrido = function () {
             },
             tooltip: {
                 theme: 'light',
-                y: { formatter: (val) => val.toFixed(1) + " km" }
+                x: { format: 'dd MMM yyyy HH:mm' },
+                y: { formatter: (val) => val.toLocaleString("es-MX", { minimumFractionDigits: 1 }) + " km" }
             }
         };
 
@@ -147,13 +151,13 @@ geotab.addin.recorrido = function () {
 
     const calculateDistance = () => {
         const deviceId = unitSelect.value;
-        const toDate = dateUntilInput.value;
+        const toDateVal = dateUntilInput.value;
 
         if (!deviceId) {
             showError("Por favor, selecciona una unidad.");
             return;
         }
-        if (!toDate) {
+        if (!toDateVal) {
             showError("Por favor, selecciona una fecha límite.");
             return;
         }
@@ -162,92 +166,151 @@ geotab.addin.recorrido = function () {
         loadingOverlay.style.display = "flex";
         btnConsultar.disabled = true;
 
-        // Prepare Search
-        // Para incluir el día seleccionado completo, tomamos el inicio del día SIGUIENTE a la fecha límite
-        const dateLimit = new Date(toDate + "T00:00:00");
-        dateLimit.setDate(dateLimit.getDate() + 1);
-        const searchToDate = dateLimit.toISOString();
+        // Definimos el rango: 30 días antes de toDate hasta "ahora" (para obtener el odómetro más reciente y restar)
+        const toDateObj = new Date(toDateVal + "T23:59:59Z");
+        const fromDateObj = new Date(toDateObj);
+        fromDateObj.setDate(fromDateObj.getDate() - 30); // 30 días de historial
 
-        api.call("Get", {
-            typeName: "Trip",
-            search: {
-                deviceSearch: { id: deviceId },
-                fromDate: "2015-01-01T00:00:00.000Z",
-                toDate: searchToDate,
-                resultsLimit: 100000
+        const now = new Date();
+        const searchToDate = now.toISOString();
+        const searchFromDate = fromDateObj.toISOString();
+
+        // MultiCall para obtener los diagnósticos de odómetro y los viajes
+        const calls = odometerDiagnostics.map(diagId => [
+            "Get",
+            {
+                typeName: "StatusData",
+                search: {
+                    deviceSearch: { id: deviceId },
+                    diagnosticSearch: { id: diagId },
+                    toDate: searchToDate,
+                    resultsLimit: 1,
+                    applyLatest: true
+                }
             }
-        }, (trips) => {
+        ]);
+
+        // Añadir la llamada de viajes: desde el inicio del historial hasta ahora
+        calls.push([
+            "Get",
+            {
+                typeName: "Trip",
+                search: {
+                    deviceSearch: { id: deviceId },
+                    fromDate: searchFromDate,
+                    toDate: searchToDate
+                }
+            }
+        ]);
+
+        api.multiCall(calls, (results) => {
             loadingOverlay.style.display = "none";
             btnConsultar.disabled = false;
 
-            if (!trips || trips.length === 0) {
-                distanciaValue.textContent = "0";
-                fechaFooter.textContent = formatDateReadable(toDate);
-                resultContainer.style.display = "block";
-                showError("No se encontraron viajes para esta unidad hasta la fecha seleccionada.");
-                return;
-            }
-
-            // 1. Sumar distancia total (Ya vienen en KM)
-            let totalKm = 0;
-            trips.forEach(trip => {
-                if (trip.distance) totalKm += trip.distance;
-            });
-
-            // 2. Agrupar por día
-            const dailyData = {};
-            trips.forEach(trip => {
-                if (trip.start && trip.distance) {
-                    const dateObj = new Date(trip.start);
-                    // Usar fecha local para agrupación
-                    const dStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
-                    if (!dailyData[dStr]) dailyData[dStr] = 0;
-                    dailyData[dStr] += trip.distance;
+            try {
+                // 1. Extraer lectura base de odómetro
+                const odoResults = results.slice(0, odometerDiagnostics.length)
+                                          .flat()
+                                          .filter(r => r && r.data !== undefined);
+                
+                if (odoResults.length === 0) {
+                    showError("No se encontraron lecturas de odómetro recientes para este vehículo.");
+                    return;
                 }
-            });
 
-            const sortedDates = Object.keys(dailyData).sort((a, b) => b.localeCompare(a));
-            const tbody = document.getElementById("daily-recorrido-tbody");
-            const labelPeriodo = document.getElementById("label-periodo");
-            
-            if (tbody) {
-                tbody.innerHTML = "";
-                sortedDates.forEach(date => {
-                    const tr = document.createElement("tr");
-                    const km = dailyData[date];
-                    tr.innerHTML = `
-                        <td class="date-td">${date}</td>
-                        <td class="dist-td" style="text-align: right;">${km.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
-                    `;
-                    tbody.appendChild(tr);
+                odoResults.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+                const latestOdoData = odoResults[0];
+                let currentOdoMeters = latestOdoData.data;
+                const odoDateTime = new Date(latestOdoData.dateTime);
+
+                // 2. Extraer viajes
+                const trips = results[results.length - 1] || [];
+                // Ordenar del más reciente al más antiguo
+                trips.sort((a, b) => new Date(b.stop || b.start) - new Date(a.stop || a.start));
+
+                // 3. Reconstruir historial hacia atrás
+                const history = [];
+                // Punto inicial (ahora)
+                history.push({
+                    x: odoDateTime.getTime(),
+                    y: currentOdoMeters / 1000
                 });
+
+                const dailyDistance = {};
+                let targetOdo = 0;
+                let foundTarget = false;
+
+                trips.forEach(trip => {
+                    const tripStart = new Date(trip.start);
+                    const tripDist = trip.distance || 0;
+                    
+                    // Restamos la distancia del viaje para obtener el odómetro ANTES del viaje
+                    currentOdoMeters -= tripDist;
+
+                    // Si el inicio del viaje es anterior o igual a la fecha límite "Hasta",
+                    // y no hemos marcado el targetOdo, este es nuestro valor de KPI
+                    if (!foundTarget && tripStart <= toDateObj) {
+                        targetOdo = (currentOdoMeters + tripDist) / 1000;
+                        foundTarget = true;
+                    }
+
+                    // Guardar punto para la gráfica
+                    history.push({
+                        x: tripStart.getTime(),
+                        y: currentOdoMeters / 1000
+                    });
+
+                    // Agrupar para la tabla (solo lo que está dentro del rango solicitado)
+                    if (tripStart <= toDateObj && tripStart >= fromDateObj) {
+                        const dStr = tripStart.toISOString().split('T')[0];
+                        dailyDistance[dStr] = (dailyDistance[dStr] || 0) + (tripDist / 1000);
+                    }
+                });
+
+                // Si nunca encontramos un viaje antes de toDate, el target es el acumulado actual remanente
+                if (!foundTarget) targetOdo = currentOdoMeters / 1000;
+
+                // 4. Actualizar UI
+                resultContainer.style.display = "block";
+                animateCount(distanciaValue, targetOdo);
+                fechaFooter.textContent = formatDateReadable(toDateVal);
+
+                // Tabla
+                const sortedDates = Object.keys(dailyDistance).sort((a, b) => b.localeCompare(a));
+                const tbody = document.getElementById("daily-recorrido-tbody");
+                const labelPeriodo = document.getElementById("label-periodo");
+
+                if (tbody) {
+                    tbody.innerHTML = "";
+                    sortedDates.forEach(date => {
+                        const tr = document.createElement("tr");
+                        const km = dailyDistance[date];
+                        tr.innerHTML = `
+                            <td class="date-td">${date}</td>
+                            <td class="dist-td" style="text-align: right;">${km.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+                if (labelPeriodo) labelPeriodo.textContent = `Últimos 30 días hasta la fecha`;
+
+                // Gráfica
+                renderChart(history);
+
+                if (window.lucide) lucide.createIcons();
+                setTimeout(() => {
+                    resultContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                }, 100);
+
+            } catch (err) {
+                console.error("Error processing data:", err);
+                showError("Error al procesar los datos del odómetro.");
             }
-
-            if (labelPeriodo && sortedDates.length > 0) {
-                labelPeriodo.textContent = `${sortedDates.length} días con registros`;
-            }
-
-            // Refrescar UI antes de renderizar la gráfica para que ApexCharts calcule bien el ancho
-            resultContainer.style.display = "block";
-            
-            // Renderizar Gráfica
-            renderChart(dailyData);
-
-            // Refrescar KPI y fecha
-            animateCount(distanciaValue, totalKm);
-            fechaFooter.textContent = formatDateReadable(toDate);
-
-            if (window.lucide) lucide.createIcons();
-
-            setTimeout(() => {
-                resultContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
-            }, 100);
-
         }, (err) => {
             loadingOverlay.style.display = "none";
             btnConsultar.disabled = false;
-            console.error("Error fetching trips:", err);
-            showError("Error al consultar los datos. Intente con un rango más pequeño si persiste.");
+            console.error("MultiCall Error:", err);
+            showError("Error de conexión con Geotab.");
         });
     };
 
