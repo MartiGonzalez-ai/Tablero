@@ -18,11 +18,8 @@
     --c-orange:     #f29300;  --c-orange-bg:  #fff0d9;  --c-orange-glow: rgba(242,147,0,0);
     --c-blue:       #003666;  --c-blue-bg:    #e6ebf0;  --c-blue-glow:   rgba(0,54,102,0);
     --c-red:        #cc0000;  --c-red-bg:     #fae6e6;  --c-red-glow:    rgba(204,0,0,0);
-    --c-purple:     #813896;  --c-purple-bg:  #f2ebf4;  --c-purple-glow: rgba(129,56,150,0);
     --c-green:      #3b753c;  --c-green-bg:   #ebf1ec;  --c-green-glow:  rgba(59,117,60,0);
     --c-cyan:       #00b1e1;  --c-cyan-bg:    #e6f7fb;  --c-cyan-glow:   rgba(0,177,225,0);
-    --c-teal:       #0d9488;  --c-teal-bg:    #ccfbf1;
-    --c-rose:       #e11d48;  --c-rose-bg:    #ffe4e6;
 
     /* Radio & sombras */
     --radius-sm: 4px;
@@ -339,10 +336,7 @@ body {
 .stat-card[data-color="cyan"]   { border-left: 3px solid var(--c-cyan); }
 .stat-card[data-color="green"]  { border-left: 3px solid var(--c-green); }
 .stat-card[data-color="blue"]   { border-left: 3px solid var(--c-blue); }
-.stat-card[data-color="purple"] { border-left: 3px solid var(--c-purple); }
 .stat-card[data-color="orange"] { border-left: 3px solid var(--c-orange); }
-.stat-card[data-color="teal"]   { border-left: 3px solid var(--c-teal); }
-.stat-card[data-color="rose"]   { border-left: 3px solid var(--c-rose); }
 
 /* Ícono */
 .stat-icon {
@@ -361,10 +355,7 @@ body {
 .stat-icon--cyan   { background: var(--c-cyan-bg);   color: var(--c-cyan); }
 .stat-icon--green  { background: var(--c-green-bg);  color: var(--c-green); }
 .stat-icon--blue   { background: var(--c-blue-bg);   color: var(--c-blue); }
-.stat-icon--purple { background: var(--c-purple-bg); color: var(--c-purple); }
 .stat-icon--orange { background: var(--c-orange-bg); color: var(--c-orange); }
-.stat-icon--teal   { background: var(--c-teal-bg);   color: var(--c-teal); }
-.stat-icon--rose   { background: var(--c-rose-bg);   color: var(--c-rose); }
 
 /* Texto KPI */
 .stat-body { flex: 1; min-width: 0; }
