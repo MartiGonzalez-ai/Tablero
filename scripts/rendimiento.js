@@ -1025,6 +1025,42 @@ geotab.addin.rendimiento = function () {
             allTrips = processTripsData(tripsRaw, fuelData, deviceMap, driverMap);
             filteredTrips = allTrips.slice();
 
+            // ── Enrich allRecords with trip-based distance (same source as KPIs & daily table) ──
+            // processStatusData calculates distKm from odometer delta which can be 0
+            // when Geotab returns only one odometer reading per device in the range.
+            // Using trip distances avoids that problem completely.
+            const tripDistByDevice = {};
+            allTrips.forEach(function (t) {
+                if (!t.deviceId) return;
+                if (!tripDistByDevice[t.deviceId]) tripDistByDevice[t.deviceId] = 0;
+                tripDistByDevice[t.deviceId] += (parseFloat(t.distance) || 0);
+            });
+            allRecords.forEach(function (r) {
+                const tripDist = tripDistByDevice[r.deviceId];
+                if (tripDist !== undefined && tripDist > 0) {
+                    r.distKm = tripDist;
+                    r.kmPerL = r.fuelUsed > 0 ? r.distKm / r.fuelUsed : 0;
+                }
+            });
+            // Also add records for devices that have trips but no StatusData fuel record
+            Object.keys(tripDistByDevice).forEach(function (devId) {
+                const alreadyInRecords = allRecords.some(function (r) { return r.deviceId === devId; });
+                if (!alreadyInRecords && tripDistByDevice[devId] > 0) {
+                    allRecords.push({
+                        deviceId: devId,
+                        deviceName: deviceMap[devId] || devId,
+                        fuelUsed: 0,
+                        distKm: tripDistByDevice[devId],
+                        kmPerL: 0,
+                        odoStart: 0, odoEnd: 0,
+                        dateStart: null, dateEnd: null,
+                        fuelReadingsCount: 0,
+                        odoReadingsCount: 0
+                    });
+                }
+            });
+            filteredRecords = allRecords.slice();
+
             console.log("[Rendimiento] Fuel StatusData records:", fuelData.length);
             console.log("[Rendimiento] Odometer StatusData records:", odoData.length);
             console.log("[Rendimiento] Trips raw:", tripsRaw.length);
