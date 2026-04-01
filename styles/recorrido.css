@@ -1,7 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════
-   RECORRIDO.CSS — Estilos Modernos V2 (Filtros Superiores)
-   ═══════════════════════════════════════════════════════════════ */
-
 :root {
     --header-height: 72px;
     --color-primary: #003666;
@@ -35,15 +31,10 @@ body {
 
 /* ═══════════ HEADER & FILTERS ═══════════ */
 .top-nav {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    position: sticky;
+    top: 1.5rem; /* Despegada de arriba */
+    margin: 1.5rem 2rem 0 2rem; /* Margen para que no toque bordes */
     height: var(--header-height);
-    background: var(--color-panel);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--color-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -156,7 +147,7 @@ body {
 
 /* ═══════════ MAIN CONTENT ═══════════ */
 .recorrido-container {
-    padding-top: calc(var(--header-height) + 60px); /* Aumentado sustancialmente */
+    padding-top: 3rem; /* Espacio desde la barra flotante */
     padding-left: 2rem;
     padding-right: 2rem;
     padding-bottom: 4rem;
