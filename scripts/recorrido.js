@@ -66,8 +66,10 @@ geotab.addin.recorrido = function () {
             chart: {
                 type: 'bar',
                 height: 350,
+                width: '100%',
                 toolbar: { show: false },
-                fontFamily: "'Inter', sans-serif"
+                fontFamily: "'Inter', sans-serif",
+                sparkline: { enabled: false }
             },
             colors: ['#00b1e1'],
             plotOptions: {
@@ -93,7 +95,8 @@ geotab.addin.recorrido = function () {
             },
             grid: {
                 borderColor: '#f1f5f9',
-                strokeDashArray: 4
+                strokeDashArray: 4,
+                padding: { left: 10, right: 10 }
             },
             tooltip: {
                 theme: 'light',
@@ -105,8 +108,11 @@ geotab.addin.recorrido = function () {
             chartDaily.destroy();
         }
 
-        chartDaily = new ApexCharts(document.querySelector("#chart-daily-recorrido"), options);
-        chartDaily.render();
+        const chartEl = document.querySelector("#chart-daily-recorrido");
+        if (chartEl) {
+            chartDaily = new ApexCharts(chartEl, options);
+            chartDaily.render();
+        }
     };
 
     // --- Data Loaders ---
@@ -212,11 +218,13 @@ geotab.addin.recorrido = function () {
                 labelPeriodo.textContent = `${sortedDates.length} días con registros`;
             }
 
+            // Refrescar UI antes de renderizar la gráfica para que ApexCharts calcule bien el ancho
+            resultContainer.style.display = "block";
+            
             // Renderizar Gráfica
             renderChart(dailyData);
 
-            // Refrescar UI (KPI)
-            resultContainer.style.display = "block";
+            // Refrescar KPI y fecha
             animateCount(distanciaValue, totalKm);
             fechaFooter.textContent = formatDateReadable(toDate);
 
