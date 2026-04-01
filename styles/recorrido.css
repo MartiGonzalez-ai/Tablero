@@ -1,8 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════
-   RECORRIDO.CSS — Estilos para el módulo de consulta de kilómetros
-   Geotab Add-In | Modern Aesthetic
-   ═══════════════════════════════════════════════════════════════ */
-
 :root {
     --color-primary-recorrido: #003666;
     --color-accent-recorrido-cyan: #00b1e1;
@@ -213,6 +208,91 @@
     border-left-color: var(--color-accent-recorrido-cyan);
     border-radius: 50%;
     animation: spin 1s linear infinite;
+}
+
+/* Estilos para la tabla diaria */
+.daily-table-container {
+    margin-top: 2rem;
+    animation: fadeIn 0.5s ease;
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-panel-border);
+}
+
+.table-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-primary-recorrido);
+}
+
+.label-periodo {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.table-scroll {
+    max-height: 400px;
+    overflow-y: auto;
+    border-radius: 12px;
+    border: 1px solid var(--color-panel-border);
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.daily-recorrido-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.daily-recorrido-table th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-panel-border);
+    z-index: 5;
+}
+
+.daily-recorrido-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    color: var(--color-text-main);
+}
+
+.daily-recorrido-table tr:last-child td {
+    border-bottom: none;
+}
+
+.daily-recorrido-table tr:hover td {
+    background: rgba(0, 177, 225, 0.04);
+}
+
+.date-td {
+    font-weight: 600;
+    font-family: monospace;
+}
+
+.dist-td {
+    font-weight: 700;
+    color: var(--color-accent-recorrido-cyan);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes spin {
