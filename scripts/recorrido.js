@@ -1,3 +1,10 @@
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * RECORRIDO.JS — Lógica para la consulta de kilómetros históricos
+ * Geotab Add-In | Modern ESM Logic
+ * ═══════════════════════════════════════════════════════════════
+ */
+
 "use strict";
 
 // Geotab API Initialization
@@ -156,14 +163,16 @@ geotab.addin.recorrido = function () {
         btnConsultar.disabled = true;
 
         // Prepare Search
-        // Usar final del día local para incluir el último día filtrado
-        const searchToDate = new Date(toDate + "T23:59:59").toISOString();
+        // Para incluir el día seleccionado completo, tomamos el inicio del día SIGUIENTE a la fecha límite
+        const dateLimit = new Date(toDate + "T00:00:00");
+        dateLimit.setDate(dateLimit.getDate() + 1);
+        const searchToDate = dateLimit.toISOString();
 
         api.call("Get", {
             typeName: "Trip",
             search: {
                 deviceSearch: { id: deviceId },
-                fromDate: "2015-01-01T00:00:00",
+                fromDate: "2015-01-01T00:00:00.000Z",
                 toDate: searchToDate,
                 resultsLimit: 100000
             }
