@@ -1,118 +1,349 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <meta name="description" content="Consulta de Recorrido Histórico - Geotab">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Recorrido por Unidad</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/Rendimiento.css">
-    <link rel="stylesheet" href="styles/recorrido.css">
-</head>
-<body>
-    <div id="app-recorrido">
-        <!-- ═══════════ HEADER ═══════════ -->
-        <header class="top-nav glass-panel">
-            <div class="nav-brand">
-                <i data-lucide="map-pin" width="28" height="28" stroke="var(--color-primary)" stroke-width="2.5"></i>
-                <h1>Recorrido Unitario</h1>
-            </div>
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * RECORRIDO.JS — Lógica para la consulta de kilómetros históricos
+ * Geotab Add-In | Modern ESM Logic
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+"use strict";
+
+// Geotab API Initialization
+geotab.addin.recorrido = function () {
+    let api;
+    let units = [];
+
+    // DOM Elements
+    const unitSelect = document.getElementById("unit-select-recorrido");
+    const dateUntilInput = document.getElementById("date-until");
+    const btnConsultar = document.getElementById("btn-consultar");
+    const resultContainer = document.getElementById("result-container");
+    const loadingOverlay = document.getElementById("loading-overlay");
+    const distanciaValue = document.getElementById("distancia-value");
+    const fechaFooter = document.getElementById("fecha-footer");
+    const errorToast = document.getElementById("error-toast");
+    const errorToastMsg = document.getElementById("error-toast-msg");
+    const odometerDiagnostics = [
+        "DiagnosticOdometerAdjustmentId",
+        "DiagnosticOdometerId",
+        "DiagnosticOBDOdometerReaderId",
+        "DiagnosticJ1939TotalVehicleDistanceId"
+    ];
+
+    let chartDaily;
+
+    // --- Helpers ---
+    const showError = (msg) => {
+        if (errorToastMsg) errorToastMsg.textContent = msg;
+        if (errorToast) {
+            errorToast.style.display = "flex";
+            setTimeout(() => { errorToast.style.display = "none"; }, 5000);
+        }
+    };
+
+    const formatDateReadable = (isoStr) => {
+        if (!isoStr) return "—";
+        const d = new Date(isoStr + "T00:00:00"); // Forzar interpretación local
+        return d.toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" });
+    };
+
+    const animateCount = (el, target) => {
+        const duration = 1200;
+        const start = performance.now();
+        const startVal = parseFloat(el.textContent.replace(/,/g, "")) || 0;
+        
+        const step = (now) => {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 4); // Quartic ease out
+            const current = startVal + (target - startVal) * eased;
             
-            <div class="filter-controls">
-                <div class="filter-group">
-                    <label for="unit-select-recorrido">Unidad</label>
-                    <select id="unit-select-recorrido" class="recorrido-input-top">
-                        <option value="">Cargando...</option>
-                    </select>
-                </div>
+            el.textContent = Math.round(current).toLocaleString("es-MX");
+            
+            if (progress < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    };
 
-                <div class="filter-group">
-                    <label for="date-until">Hasta</label>
-                    <input type="date" id="date-until" class="recorrido-input-top">
-                </div>
+    const renderChart = (dailyData) => {
+        if (!window.ApexCharts) return;
 
-                <button id="btn-consultar" class="btn-primary-top">
-                    <i data-lucide="search" width="16" height="16"></i>
-                    <span>Consultar</span>
-                </button>
-            </div>
+        const dates = Object.keys(dailyData).sort();
+        const seriesData = dates.map(d => parseFloat(dailyData[d].toFixed(1)));
 
-            <div class="nav-status">
-                <span class="status-dot"></span>
-                <span id="last-updated-time">Geotab API</span>
-            </div>
-        </header>
+        const options = {
+            series: [{
+                name: 'Distancia (km)',
+                data: seriesData
+            }],
+            chart: {
+                type: 'bar', // Volver a barras como antes
+                height: 350,
+                width: '100%',
+                toolbar: { show: false },
+                fontFamily: "'Inter', sans-serif"
+            },
+            colors: ['#00b1e1'],
+            plotOptions: {
+                bar: {
+                    borderRadius: 6,
+                    columnWidth: '55%',
+                }
+            },
+            dataLabels: { enabled: false },
+            xaxis: {
+                categories: dates,
+                labels: {
+                    style: { colors: '#64748b', fontSize: '10px' },
+                    rotate: -45
+                }
+            },
+            yaxis: {
+                labels: {
+                    style: { colors: '#64748b' },
+                    formatter: (val) => val.toFixed(0) + " km"
+                }
+            },
+            grid: {
+                borderColor: '#f1f5f9',
+                strokeDashArray: 4,
+                padding: { left: 10, right: 10 }
+            },
+            tooltip: {
+                theme: 'light',
+                y: { formatter: (val) => val.toFixed(1) + " km" }
+            }
+        };
 
-        <!-- ═══════════ MAIN CONTENT ═══════════ -->
-        <main class="recorrido-container">
-            <div id="result-container" class="recorrido-content-grid" style="display: none;">
-                <!-- KPI Card Principal -->
-                <div class="main-result-card glass-panel">
-                    <div class="result-icon-v2">
-                        <i data-lucide="route" width="40" height="40"></i>
-                    </div>
-                    <div class="result-details">
-                        <span class="result-label">Odómetro Estimado</span>
-                        <div class="result-value-big">
-                            <span id="distancia-value">0</span>
-                            <span class="unit">km</span>
-                        </div>
-                        <p class="result-meta">Lectura calculada al <span id="fecha-footer">—</span></p>
-                    </div>
-                </div>
+        if (chartDaily) {
+            chartDaily.destroy();
+        }
 
-                <!-- Nueva Gráfica de Barras Diaria -->
-                <div class="chart-container glass-panel">
-                    <div class="chart-header">
-                        <h3>Distancia Diaria (km)</h3>
-                    </div>
-                    <div id="chart-daily-recorrido" style="min-height: 350px;">
-                        <!-- ApexCharts renders here -->
-                    </div>
-                </div>
+        const chartEl = document.querySelector("#chart-daily-recorrido");
+        if (chartEl) {
+            chartDaily = new ApexCharts(chartEl, options);
+            chartDaily.render();
+        }
+    };
 
-                <!-- Nueva tabla de distancia por día -->
-                <div class="daily-table-container">
-                        <div class="table-header">
-                            <h3>Desglose por Día</h3>
-                            <span id="label-periodo" class="label-periodo"></span>
-                        </div>
-                        <div class="table-scroll">
-                            <table class="daily-recorrido-table">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th style="text-align: right;">Distancia (km)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="daily-recorrido-tbody">
-                                    <!-- Rows populated by JS -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+    // --- Data Loaders ---
+    const loadUnits = () => {
+        api.call("Get", {
+            typeName: "Device"
+        }, (result) => {
+            units = result || [];
+            unitSelect.innerHTML = '<option value="" disabled selected>Selecciona una unidad...</option>';
+            
+            // Sort by name
+            units.sort((a, b) => a.name.localeCompare(b.name));
 
-                <div id="loading-overlay" class="loading-overlay" style="display: none;">
-                    <div class="spinner"></div>
-                    <p>Calculando recorridos...</p>
-                </div>
-            </div>
-        </main>
+            units.forEach(device => {
+                const option = document.createElement("option");
+                option.value = device.id;
+                option.textContent = device.name;
+                unitSelect.appendChild(option);
+            });
+        }, (err) => {
+            console.error("Error loading devices:", err);
+            showError("No se pudieron cargar las unidades.");
+        });
+    };
 
-        <!-- Global Error Toast -->
-        <div class="error-toast" id="error-toast" style="display:none;">
-            <i data-lucide="alert-circle" width="16" height="16" stroke-width="2"></i>
-            <span id="error-toast-msg">Error al consultar los datos.</span>
-        </div>
-    </div>
+    const calculateDistance = () => {
+        const deviceId = unitSelect.value;
+        const toDateVal = dateUntilInput.value;
 
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="scripts/recorrido.js"></script>
-</body>
-</html>
+        if (!deviceId) {
+            showError("Por favor, selecciona una unidad.");
+            return;
+        }
+        if (!toDateVal) {
+            showError("Por favor, selecciona una fecha límite.");
+            return;
+        }
+
+        // Show loading
+        loadingOverlay.style.display = "flex";
+        btnConsultar.disabled = true;
+
+        // Definimos el rango: 30 días antes de toDate hasta "ahora" (para obtener el odómetro más reciente y restar)
+        const toDateObj = new Date(toDateVal + "T23:59:59Z");
+        const fromDateObj = new Date(toDateObj);
+        fromDateObj.setDate(fromDateObj.getDate() - 30); // 30 días de historial
+
+        const now = new Date();
+        const searchToDate = now.toISOString();
+        const searchFromDate = fromDateObj.toISOString();
+
+        // MultiCall para obtener los diagnósticos de odómetro y los viajes
+        const calls = odometerDiagnostics.map(diagId => [
+            "Get",
+            {
+                typeName: "StatusData",
+                search: {
+                    deviceSearch: { id: deviceId },
+                    diagnosticSearch: { id: diagId },
+                    toDate: searchToDate,
+                    resultsLimit: 1,
+                    applyLatest: true
+                }
+            }
+        ]);
+
+        // Añadir la llamada de viajes: desde el inicio del historial hasta ahora
+        calls.push([
+            "Get",
+            {
+                typeName: "Trip",
+                search: {
+                    deviceSearch: { id: deviceId },
+                    fromDate: searchFromDate,
+                    toDate: searchToDate
+                }
+            }
+        ]);
+
+        api.multiCall(calls, (results) => {
+            loadingOverlay.style.display = "none";
+            btnConsultar.disabled = false;
+
+            try {
+                // 1. Extraer lectura base de odómetro
+                const odoResults = results.slice(0, odometerDiagnostics.length)
+                                          .flat()
+                                          .filter(r => r && r.data !== undefined);
+                
+                if (odoResults.length === 0) {
+                    showError("No se encontraron lecturas de odómetro recientes para este vehículo.");
+                    return;
+                }
+
+                odoResults.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+                const latestOdoData = odoResults[0];
+                let currentOdoMeters = latestOdoData.data;
+                const odoDateTime = new Date(latestOdoData.dateTime);
+
+                // 2. Extraer viajes
+                const trips = results[results.length - 1] || [];
+                // Ordenar del más reciente al más antiguo
+                trips.sort((a, b) => new Date(b.stop || b.start) - new Date(a.stop || a.start));
+
+                // 3. Reconstruir historial hacia atrás
+                const history = [];
+                // Punto inicial (ahora)
+                history.push({
+                    x: odoDateTime.getTime(),
+                    y: currentOdoMeters / 1000
+                });
+
+                const dailyDistance = {};
+                let targetOdo = 0;
+                let foundTarget = false;
+
+                trips.forEach(trip => {
+                    const tripStart = new Date(trip.start);
+                    const tripDist = trip.distance || 0;
+                    
+                    // Restamos la distancia del viaje para obtener el odómetro ANTES del viaje
+                    currentOdoMeters -= tripDist;
+
+                    // Si el inicio del viaje es anterior o igual a la fecha límite "Hasta",
+                    // y no hemos marcado el targetOdo, este es nuestro valor de KPI
+                    if (!foundTarget && tripStart <= toDateObj) {
+                        targetOdo = (currentOdoMeters + tripDist) / 1000;
+                        foundTarget = true;
+                    }
+
+                    // Guardar punto para la gráfica
+                    history.push({
+                        x: tripStart.getTime(),
+                        y: currentOdoMeters / 1000
+                    });
+
+                    // Agrupar para la tabla (solo lo que está dentro del rango solicitado)
+                    if (tripStart <= toDateObj && tripStart >= fromDateObj) {
+                        const dStr = tripStart.toISOString().split('T')[0];
+                        dailyDistance[dStr] = (dailyDistance[dStr] || 0) + (tripDist / 1000);
+                    }
+                });
+
+                // Si nunca encontramos un viaje antes de toDate, el target es el acumulado actual remanente
+                if (!foundTarget) targetOdo = currentOdoMeters / 1000;
+
+                // 4. Actualizar UI
+                resultContainer.style.display = "block";
+                animateCount(distanciaValue, targetOdo);
+                fechaFooter.textContent = formatDateReadable(toDateVal);
+
+                // Tabla
+                const sortedDates = Object.keys(dailyDistance).sort((a, b) => b.localeCompare(a));
+                const tbody = document.getElementById("daily-recorrido-tbody");
+                const labelPeriodo = document.getElementById("label-periodo");
+
+                if (tbody) {
+                    tbody.innerHTML = "";
+                    sortedDates.forEach(date => {
+                        const tr = document.createElement("tr");
+                        const km = dailyDistance[date];
+                        tr.innerHTML = `
+                            <td class="date-td">${date}</td>
+                            <td class="dist-td" style="text-align: right;">${km.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+                if (labelPeriodo) labelPeriodo.textContent = `Últimos 30 días hasta la fecha`;
+
+                // Gráfica: Volver a usar dailyDistance (por día) en lugar de history (puntos cronológicos)
+                renderChart(dailyDistance);
+
+                if (window.lucide) lucide.createIcons();
+                setTimeout(() => {
+                    resultContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                }, 100);
+
+            } catch (err) {
+                console.error("Error processing data:", err);
+                showError("Error al procesar los datos del odómetro.");
+            }
+        }, (err) => {
+            loadingOverlay.style.display = "none";
+            btnConsultar.disabled = false;
+            console.error("MultiCall Error:", err);
+            showError("Error de conexión con Geotab.");
+        });
+    };
+
+    // --- Lifecycle ---
+    return {
+        initialize: function (_api, state, callback) {
+            api = _api;
+
+            // Set default date to today
+            if (dateUntilInput) {
+                dateUntilInput.value = new Date().toISOString().split('T')[0];
+            }
+
+            // Event Listeners
+            if (btnConsultar) {
+                btnConsultar.addEventListener("click", calculateDistance);
+            }
+
+            // Initialize Lucide
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+
+            // Load initial data
+            loadUnits();
+
+            callback();
+        },
+        focus: function (_api, state) {
+            api = _api;
+            // Refresh units list in case something changed
+            loadUnits();
+        },
+        blur: function () {
+            // Nothing needed on blur
+        }
+    };
+};
