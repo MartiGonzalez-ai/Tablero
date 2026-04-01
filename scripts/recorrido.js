@@ -166,14 +166,20 @@ geotab.addin.recorrido = function () {
 
         // Establecemos el punto final del reporte (el día seleccionado a las 23:59:59)
         const toDateObj = new Date(toDateVal + "T23:59:59Z");
-        const searchToDate = toDateObj.toISOString();
+        
+        // Punto inicial para historial (30 días antes de toDate)
+        const fromDateHistoric = new Date(toDateObj);
+        fromDateHistoric.setDate(fromDateHistoric.getDate() - 30);
 
-        // Establecemos el punto inicial para la gráfica (30 días antes)
-        const fromDateObj = new Date(toDateObj);
-        fromDateObj.setDate(fromDateObj.getDate() - 30);
-        const searchFromDate = fromDateObj.toISOString();
+        // --- Estrategia de Reconstrucción ---
+        // 1. Obtener odómetro ABSOLUTO actual (AHORA)
+        // 2. Obtener TODOS los viajes desde 'fromDateHistoric' hasta 'AHORA'
+        // 3. Restar todos los viajes posteriores a 'toDateObj' del odómetro actual para hallar el odómetro en 'toDate'
+        
+        const now = new Date();
+        const searchToDateToken = now.toISOString();
+        const searchFromDateToken = fromDateHistoric.toISOString();
 
-        // 1. Obtener la lectura de odómetro más reciente HASTA la fecha seleccionada
         const calls = odometerDiagnostics.map(diagId => [
             "Get",
             {
@@ -181,22 +187,22 @@ geotab.addin.recorrido = function () {
                 search: {
                     deviceSearch: { id: deviceId },
                     diagnosticSearch: { id: diagId },
-                    toDate: searchToDate,
+                    toDate: searchToDateToken,
                     resultsLimit: 1,
                     applyLatest: true
                 }
             }
         ]);
 
-        // 2. Obtener viajes para el periodo de la gráfica (30 días anteriores)
+        // Obtener todos los viajes desde el inicio del historial hasta ahora
         calls.push([
             "Get",
             {
                 typeName: "Trip",
                 search: {
                     deviceSearch: { id: deviceId },
-                    fromDate: searchFromDate,
-                    toDate: searchToDate
+                    fromDate: searchFromDateToken,
+                    toDate: searchToDateToken
                 }
             }
         ]);
@@ -206,48 +212,71 @@ geotab.addin.recorrido = function () {
             btnConsultar.disabled = false;
 
             try {
-                // Extraer odómetro base en la fecha 'toDate'
+                // A. Extraer lectura base de odómetro (la absoluta actual)
                 const odoResults = results.slice(0, odometerDiagnostics.length)
                                           .flat()
                                           .filter(r => r && r.data !== undefined);
                 
-                let odoAtTargetMeters = 0;
-                if (odoResults.length > 0) {
-                    odoResults.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-                    odoAtTargetMeters = odoResults[0].data;
+                if (odoResults.length === 0) {
+                    showError("No se encontraron lecturas de odómetro recientes para este vehículo.");
+                    return;
                 }
 
-                // Extraer viajes
+                odoResults.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+                const latestOdoData = odoResults[0];
+                let currentOdoMeters = latestOdoData.data;
+                const odoDateTime = new Date(latestOdoData.dateTime);
+
+                // B. Extraer viajes
                 const trips = results[results.length - 1] || [];
-                
-                // Agrupar por día para la tabla y la gráfica de barras
+                // Ordenar del más reciente al más antiguo
+                trips.sort((a, b) => new Date(b.stop || b.start) - new Date(a.stop || a.start));
+
+                // C. Reconstrucción lógica
+                // Restar viajes ocurridos DESPUÉS del odómetro pero ANTES del presente? 
+                // No, el 'odoDateTime' es el ancla. Si hay viajes DESPUÉS del ancla, el odómetro real ahora es mayor.
+                // Si hay viajes ANTES del ancla, para saber el pasado restamos.
+
                 const dailyDistanceData = {};
-                
-                // Inicializar los últimos 30 días con 0 por si no hay viajes
+                // Inicializar 30 días previos a toDate
                 for (let i = 0; i < 30; i++) {
                     const d = new Date(toDateObj);
                     d.setDate(d.getDate() - i);
-                    const dStr = d.toISOString().split('T')[0];
-                    dailyDistanceData[dStr] = 0;
+                    dailyDistanceData[d.toISOString().split('T')[0]] = 0;
                 }
 
+                let targetOdoMeters = currentOdoMeters;
+
                 trips.forEach(trip => {
-                    if (trip.start && trip.distance) {
-                        const tripStart = new Date(trip.start);
-                        const dStr = tripStart.toISOString().split('T')[0];
-                        // Solo sumar si está dentro de nuestro rango de reporte
-                        if (dailyDistanceData[dStr] !== undefined) {
-                            dailyDistanceData[dStr] += (trip.distance / 1000);
+                    const tripDist = trip.distance || 0;
+                    const tripStart = new Date(trip.start);
+                    const tripStop = new Date(trip.stop || trip.start);
+
+                    // 1. Si el viaje terminó ANTES de la lectura del odómetro, está incluido en el odómetro.
+                    //    Si queremos saber el valor ANTES de este viaje, restamos.
+                    if (tripStop <= odoDateTime) {
+                        // Si el viaje terminó DESPUÉS de nuestro toDateObj, afecta al cálculo del KPI
+                        if (tripStop > toDateObj) {
+                            targetOdoMeters -= tripDist;
                         }
+                    } else if (tripStart >= odoDateTime) {
+                        // Este viaje ocurrió DESPUÉS de la lectura. Si quisiéramos el odómetro 'ahora' sumaríamos,
+                        // pero queremos el odómetro en 'toDateObj' (que es pasado), así que simplemente no afecta
+                        // al cálculo inverso desde odoDateTime.
+                    }
+
+                    // 2. Poblar desglose diario (solo si está en el rango de los 30 días de interés)
+                    const dStr = tripStart.toISOString().split('T')[0];
+                    if (dailyDistanceData[dStr] !== undefined) {
+                        dailyDistanceData[dStr] += (tripDist / 1000);
                     }
                 });
 
                 // --- UI Update ---
                 resultContainer.style.display = "block";
                 
-                // KPI: Odómetro al final del periodo (convertido a KM)
-                const targetOdoKm = odoAtTargetMeters / 1000;
-                animateCount(distanciaValue, targetOdoKm);
+                // KPI: Odómetro al final del día seleccionado (en KM)
+                animateCount(distanciaValue, targetOdoMeters / 1000);
                 fechaFooter.textContent = formatDateReadable(toDateVal);
 
                 // Tabla
@@ -269,7 +298,7 @@ geotab.addin.recorrido = function () {
                 }
                 if (labelPeriodo) labelPeriodo.textContent = `Último periodo de 30 días`;
 
-                // Gráfica de Barras (Distancia Diaria)
+                // Gráfica de Barras
                 renderChart(dailyDistanceData);
 
                 if (window.lucide) lucide.createIcons();
@@ -279,7 +308,7 @@ geotab.addin.recorrido = function () {
 
             } catch (err) {
                 console.error("Error processing data:", err);
-                showError("No se pudieron procesar los datos de odómetro. Verifique el vehículo.");
+                showError("No se pudieron reconstruir los datos de odómetro satisfactoriamente.");
             }
         }, (err) => {
             loadingOverlay.style.display = "none";
