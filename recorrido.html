@@ -74,6 +74,27 @@
                             <p class="result-footer">Distancia acumulada hasta el <span id="fecha-footer">—</span></p>
                         </div>
                     </div>
+
+                    <!-- Nueva tabla de distancia por día -->
+                    <div class="daily-table-container">
+                        <div class="table-header">
+                            <h3>Desglose por Día</h3>
+                            <span id="label-periodo" class="label-periodo"></span>
+                        </div>
+                        <div class="table-scroll">
+                            <table class="daily-recorrido-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th style="text-align: right;">Distancia (km)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="daily-recorrido-tbody">
+                                    <!-- Rows populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="loading-overlay" class="loading-overlay" style="display: none;">
