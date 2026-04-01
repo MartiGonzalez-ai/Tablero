@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odómetro Real | Geotab Master Dashboard</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./styles/odometro.css">
+    
+    <!-- Dependencies -->
+    <!-- mg-api-js: Geotab API Standard Library -->
+    <script src="https://cdn.jsdelivr.net/npm/mg-api-js@1.0.0/api.js"></script>
+    <!-- ApexCharts: Interactive Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- Lucide: Modern Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+    <header class="dashboard-header">
+        <h1>Control de Odómetro</h1>
+        <p>Seguimiento detallado de kilometraje real desde la unidad</p>
+    </header>
+
+    <div class="container">
+
+        <!-- 1. LOGIN SECTION -->
+        <div id="login-section" class="card">
+            <div class="card-title">
+                <i data-lucide="shield-check" style="color: #104B7D;"></i>
+                <span>Acceso Geotab SDK</span>
+            </div>
+            <div id="login-alert" class="alert"></div>
+            
+            <div class="form-group">
+                <label>Servidor (ej. my.geotab.com)</label>
+                <input type="text" id="server" class="form-input" value="my.geotab.com">
+            </div>
+            <div class="form-group">
+                <label>Base de Datos</label>
+                <input type="text" id="database" class="form-input" placeholder="Nombre de la base">
+            </div>
+            <div class="form-group">
+                <label>Usuario / Email</label>
+                <input type="email" id="user" class="form-input" placeholder="usuario@ejemplo.com">
+            </div>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="password" class="form-input" placeholder="••••••••">
+            </div>
+            
+            <button class="btn btn-primary" id="btn-login" onclick="loginGeotab()">
+                <i data-lucide="log-in"></i>
+                Conectar con Geotab
+            </button>
+        </div>
+
+        <!-- 2. DASHBOARD MAIN (Hidden until Login) -->
+        <div id="dashboard-main" class="hidden">
+            
+            <!-- Control Panel -->
+            <div class="card">
+                <div class="card-title">
+                    <i data-lucide="settings" style="color: #00b1e1;"></i>
+                    <span>Panel de Control</span>
+                </div>
+                <div id="main-alert" class="alert"></div>
+                
+                <div class="control-grid">
+                    <div class="form-group">
+                        <label>Seleccionar Unidad</label>
+                        <select id="unit-select" class="form-input" disabled>
+                            <option>Cargando unidades...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Desde</label>
+                        <input type="date" id="fromDate" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Hasta</label>
+                        <input type="date" id="toDate" class="form-input">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: flex-end;">
+                        <button class="btn btn-secondary" id="btn-consultar" onclick="consultarOdometro()">
+                            <i data-lucide="search"></i>
+                            Consultar Datos
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Row -->
+            <div class="kpi-row">
+                <div class="kpi-card">
+                    <div class="kpi-label">Odómetro Actual</div>
+                    <div class="kpi-value" id="kpi-current-val">0.0 km</div>
+                    <div class="kpi-footer" id="kpi-current-footer">Sin datos</div>
+                </div>
+                <div class="kpi-card" style="border-left-color: #00b1e1;">
+                    <div class="kpi-label">Distancia del Periodo</div>
+                    <div class="kpi-value" id="kpi-traveled-val">0.0 km</div>
+                    <div class="kpi-footer">Cálculo entre Inicio y Fin</div>
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="card">
+                <div class="card-title">
+                    <i data-lucide="trending-up" style="color: #104B7D;"></i>
+                    <span>Evolución del Odómetro</span>
+                </div>
+                <div id="chart-area">
+                    <!-- ApexCharts will render here -->
+                    <div style="text-align: center; color: #94a3b8; padding: 40px;">
+                        Selecciona una unidad para ver la gráfica
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p style="color: #104B7D; font-weight: 600;">Comunicando con Geotab...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./scripts/odometro.js"></script>
+    <script>
+        // Init Lucide Icons
+        lucide.createIcons();
+    </script>
+
+</body>
+
+</html>
