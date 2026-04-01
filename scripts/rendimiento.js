@@ -317,23 +317,10 @@ geotab.addin.rendimiento = function () {
                 <td style="text-align:center;">
                     <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : "0.0 km/L"}</span>
                 </td>
-                <td style="text-align:right;">${t.workDistance.toFixed(1)} km</td>
-                <td style="text-align:right;">${formatDuration(t.workDrivingDuration)}</td>
-                <td style="text-align:right;">${t.afterHoursDistance.toFixed(1)} km</td>
-                <td style="text-align:right;">${formatDuration(t.afterHoursDrivingDuration)}</td>
                 <td style="font-size:0.7rem; color:var(--color-text-muted);">${t.stopPoint}</td>
                 <td>
                     ${t.isCurrent ? '<span class="eff-badge eff-average" style="background:#e6f7fb; color:#00b1e1; border-color:#00b1e1;">En curso</span>' : '<span style="color:var(--color-text-muted); font-size:0.7rem;">Finalizado</span>'}
                 </td>
-                <td style="text-align:right;">${formatDuration(t.workStopDuration)}</td>
-                <td style="text-align:right;">${formatDuration(t.afterHoursStopDuration)}</td>
-                <td style="text-align:right;">
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(t.nextTripStart)}</span>
-                        <span class="date-time">${formatTimeShort(t.nextTripStart)}</span>
-                    </div>
-                </td>
-                <td style="font-family:monospace; font-size:0.7rem; color:var(--color-text-muted);">${t.id}</td>
             `;
             tbody.appendChild(tr);
         });
