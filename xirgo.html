@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="Xirgo Panel - Geotab Add-in">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Xirgo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent body scroll, let iframe or its container handle it */
+        }
+        
+        #app-xirgo {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: var(--color-bg-main);
+        }
+
+        .xirgo-viewport {
+            flex: 1;
+            width: 100%;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .iframe-container {
+            flex: 1;
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            background: #fff;
+            border: 1px solid var(--color-panel-border);
+            position: relative;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        /* Glass refinement for the header */
+        .top-nav.glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .nav-brand i {
+            color: #22c55e; /* Match Xirgo green */
+        }
+    </style>
+</head>
+<body>
+    <div id="app-xirgo">
+        <!-- ═══════════ HEADER ═══════════ -->
+        <header class="top-nav glass-panel">
+            <div class="nav-brand">
+                <i data-lucide="layout" width="28" height="28" stroke="currentColor" stroke-width="2.5"></i>
+                <h1>Xirgo Portal</h1>
+            </div>
+            
+            <div class="nav-status">
+                <span class="status-dot" style="background: #22c55e;"></span>
+                <span id="last-updated-time">Acceso Externo</span>
+            </div>
+        </header>
+
+        <!-- ═══════════ MAIN CONTENT ═══════════ -->
+        <main class="xirgo-viewport">
+            <div class="iframe-container">
+                <iframe 
+                    src="https://xirgo.app.em2m.net/login" 
+                    title="Xirgo Login"
+                    allow="geolocation; microphone; camera; midi; encrypted-media;"
+                    loading="lazy">
+                </iframe>
+            </div>
+        </main>
+    </div>
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
