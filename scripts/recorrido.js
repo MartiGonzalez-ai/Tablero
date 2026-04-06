@@ -76,12 +76,12 @@ geotab.addin.recorrido = function () {
 
         const options = {
             series: [{
-                name: 'Distancia (km)',
+                name: 'Distancia Diaria (km)',
                 data: seriesData
             }],
             chart: {
-                type: 'bar', // Volver a barras como antes
-                height: 350,
+                type: 'bar',
+                height: 300,
                 width: '100%',
                 toolbar: { show: false },
                 fontFamily: "'Inter', sans-serif"
@@ -89,8 +89,8 @@ geotab.addin.recorrido = function () {
             colors: ['#00b1e1'],
             plotOptions: {
                 bar: {
-                    borderRadius: 6,
-                    columnWidth: '55%',
+                    borderRadius: 4,
+                    columnWidth: '60%',
                 }
             },
             dataLabels: { enabled: false },
@@ -104,13 +104,12 @@ geotab.addin.recorrido = function () {
             yaxis: {
                 labels: {
                     style: { colors: '#64748b' },
-                    formatter: (val) => val.toFixed(0) + " km"
+                    formatter: (val) => val.toFixed(1) + " km"
                 }
             },
             grid: {
                 borderColor: '#f1f5f9',
-                strokeDashArray: 4,
-                padding: { left: 10, right: 10 }
+                strokeDashArray: 4
             },
             tooltip: {
                 theme: 'light',
@@ -118,14 +117,75 @@ geotab.addin.recorrido = function () {
             }
         };
 
-        if (chartDaily) {
-            chartDaily.destroy();
-        }
-
+        if (chartDaily) chartDaily.destroy();
         const chartEl = document.querySelector("#chart-daily-recorrido");
         if (chartEl) {
             chartDaily = new ApexCharts(chartEl, options);
             chartDaily.render();
+        }
+    };
+
+    let chartOdoTrend;
+    const renderOdoTrendChart = (odoData) => {
+        if (!window.ApexCharts) return;
+
+        const dates = Object.keys(odoData).sort();
+        const seriesData = dates.map(d => parseFloat(odoData[d].toFixed(1)));
+
+        const options = {
+            series: [{
+                name: 'Odómetro (km)',
+                data: seriesData
+            }],
+            chart: {
+                type: 'line',
+                height: 350,
+                width: '100%',
+                toolbar: { show: false },
+                fontFamily: "'Inter', sans-serif"
+            },
+            stroke: {
+                curve: 'smooth',
+                width: 3,
+                colors: ['#10b981']
+            },
+            colors: ['#10b981'],
+            dataLabels: { enabled: false },
+            markers: {
+                size: 4,
+                colors: ['#10b981'],
+                strokeColors: '#fff',
+                strokeWidth: 2,
+                hover: { size: 6 }
+            },
+            xaxis: {
+                categories: dates,
+                labels: {
+                    style: { colors: '#64748b', fontSize: '10px' },
+                    rotate: -45
+                }
+            },
+            yaxis: {
+                labels: {
+                    style: { colors: '#64748b' },
+                    formatter: (val) => val.toLocaleString("es-MX") + " km"
+                }
+            },
+            grid: {
+                borderColor: '#f1f5f9',
+                strokeDashArray: 4
+            },
+            tooltip: {
+                theme: 'light',
+                y: { formatter: (val) => val.toLocaleString("es-MX") + " km" }
+            }
+        };
+
+        if (chartOdoTrend) chartOdoTrend.destroy();
+        const chartTrendEl = document.querySelector("#chart-odo-trend");
+        if (chartTrendEl) {
+            chartOdoTrend = new ApexCharts(chartTrendEl, options);
+            chartOdoTrend.render();
         }
     };
 
@@ -302,18 +362,21 @@ geotab.addin.recorrido = function () {
                     tbody.innerHTML = "";
                     sortedDatesForTable.forEach(date => {
                         const tr = document.createElement("tr");
-                        const km = dailyOdoData[date];
+                        const dist = dailyDistanceData[date];
+                        const odo = dailyOdoData[date];
                         tr.innerHTML = `
                             <td class="date-td">${date}</td>
-                            <td class="dist-td" style="text-align: right;">${km.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
+                            <td class="dist-td" style="text-align: right; color: var(--color-primary); font-weight: 600;">${dist.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
+                            <td class="odo-td" style="text-align: right; font-weight: 700;">${odo.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
                         `;
                         tbody.appendChild(tr);
                     });
                 }
-                if (labelPeriodo) labelPeriodo.textContent = `Último periodo de 30 días`;
+                if (labelPeriodo) labelPeriodo.textContent = `Detalle de odómetro y distancia por día`;
 
-                // Gráfica (Mantenemos visualización de distancia diaria en la gráfica para mayor claridad del esfuerzo diario)
+                // Gráficas
                 renderChart(dailyDistanceData);
+                renderOdoTrendChart(dailyOdoData);
 
                 if (window.lucide) lucide.createIcons();
                 setTimeout(() => {
