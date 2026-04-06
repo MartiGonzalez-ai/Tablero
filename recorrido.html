@@ -65,6 +65,16 @@
                     </div>
                 </div>
 
+                <!-- Simulación del Odómetro Total (Línea) -->
+                <div class="chart-container glass-panel trend-chart-container">
+                    <div class="chart-header">
+                        <h3>Tendencia del Odómetro Total (km)</h3>
+                    </div>
+                    <div id="chart-odo-trend" style="min-height: 350px;">
+                        <!-- ApexCharts Line renders here -->
+                    </div>
+                </div>
+
                 <!-- Nueva Gráfica de Barras Diaria -->
                 <div class="chart-container glass-panel">
                     <div class="chart-header">
@@ -86,6 +96,7 @@
                                 <thead>
                                     <tr>
                                         <th>Fecha</th>
+                                        <th style="text-align: right;">Distancia (km)</th>
                                         <th style="text-align: right;">Odómetro (km)</th>
                                     </tr>
                                 </thead>
