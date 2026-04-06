@@ -46,6 +46,11 @@ geotab.addin.recorrido = function () {
         return d.toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" });
     };
 
+    const getLocalDateString = (date) => {
+        const d = new Date(date);
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
+    };
+
     const animateCount = (el, target) => {
         const duration = 1200;
         const start = performance.now();
@@ -164,8 +169,8 @@ geotab.addin.recorrido = function () {
         loadingOverlay.style.display = "flex";
         btnConsultar.disabled = true;
 
-        // Establecemos el punto final del reporte (el día seleccionado a las 23:59:59)
-        const toDateObj = new Date(toDateVal + "T23:59:59Z");
+        // Establecemos el punto final del reporte (el día seleccionado a las 23:59:59 tiempo local)
+        const toDateObj = new Date(toDateVal + "T23:59:59"); 
         
         // Punto inicial para historial (30 días antes de toDate)
         const fromDateHistoric = new Date(toDateObj);
@@ -242,7 +247,7 @@ geotab.addin.recorrido = function () {
                 for (let i = 0; i < 30; i++) {
                     const d = new Date(toDateObj);
                     d.setDate(d.getDate() - i);
-                    dailyDistanceData[d.toISOString().split('T')[0]] = 0;
+                    dailyDistanceData[getLocalDateString(d)] = 0;
                 }
 
                 let targetOdoMeters = currentOdoMeters;
@@ -265,11 +270,24 @@ geotab.addin.recorrido = function () {
                         // al cálculo inverso desde odoDateTime.
                     }
 
-                    // 2. Poblar desglose diario (solo si está en el rango de los 30 días de interés)
-                    const dStr = tripStart.toISOString().split('T')[0];
+                    // 2. Poblar desglose diario (usando fecha local para evitar desfases de zona horaria)
+                    const dStr = getLocalDateString(tripStart);
                     if (dailyDistanceData[dStr] !== undefined) {
                         dailyDistanceData[dStr] += (tripDist / 1000);
                     }
+                });
+
+                // D. Reconstrucción de Odómetro Acumulado por día
+                const dailyOdoData = {};
+                const sortedDatesAsc = Object.keys(dailyDistanceData).sort((a, b) => a.localeCompare(b));
+                const reversedDates = [...sortedDatesAsc].reverse(); // Recientes primero (el seleccionado es el primero)
+
+                let currentRunningOdo = targetOdoMeters / 1000;
+
+                reversedDates.forEach((date) => {
+                    dailyOdoData[date] = currentRunningOdo;
+                    // El odómetro del día anterior es el actual menos lo que se recorrió hoy
+                    currentRunningOdo -= dailyDistanceData[date];
                 });
 
                 // --- UI Update ---
@@ -280,15 +298,15 @@ geotab.addin.recorrido = function () {
                 fechaFooter.textContent = formatDateReadable(toDateVal);
 
                 // Tabla
-                const sortedDates = Object.keys(dailyDistanceData).sort((a, b) => b.localeCompare(a));
+                const sortedDatesForTable = Object.keys(dailyOdoData).sort((a, b) => b.localeCompare(a));
                 const tbody = document.getElementById("daily-recorrido-tbody");
                 const labelPeriodo = document.getElementById("label-periodo");
 
                 if (tbody) {
                     tbody.innerHTML = "";
-                    sortedDates.forEach(date => {
+                    sortedDatesForTable.forEach(date => {
                         const tr = document.createElement("tr");
-                        const km = dailyDistanceData[date];
+                        const km = dailyOdoData[date];
                         tr.innerHTML = `
                             <td class="date-td">${date}</td>
                             <td class="dist-td" style="text-align: right;">${km.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
@@ -298,7 +316,7 @@ geotab.addin.recorrido = function () {
                 }
                 if (labelPeriodo) labelPeriodo.textContent = `Último periodo de 30 días`;
 
-                // Gráfica de Barras
+                // Gráfica (Mantenemos visualización de distancia diaria en la gráfica para mayor claridad del esfuerzo diario)
                 renderChart(dailyDistanceData);
 
                 if (window.lucide) lucide.createIcons();
