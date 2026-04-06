@@ -229,7 +229,7 @@ geotab.addin.recorrido = function () {
 
                 odoResults.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
                 const latestOdoData = odoResults[0];
-                let currentOdoMeters = latestOdoData.data;
+                let currentOdoKms = latestOdoData.data / 1000;
                 const odoDateTime = new Date(latestOdoData.dateTime);
 
                 // B. Extraer viajes
@@ -238,9 +238,8 @@ geotab.addin.recorrido = function () {
                 trips.sort((a, b) => new Date(b.stop || b.start) - new Date(a.stop || a.start));
 
                 // C. Reconstrucción lógica
-                // Restar viajes ocurridos DESPUÉS del odómetro pero ANTES del presente? 
-                // No, el 'odoDateTime' es el ancla. Si hay viajes DESPUÉS del ancla, el odómetro real ahora es mayor.
-                // Si hay viajes ANTES del ancla, para saber el pasado restamos.
+                // Usamos el odómetro base (en KM) y ajustamos según los viajes ocurridos
+                // entre la lectura de anclaje (odoDateTime) y la fecha de interés (toDateObj).
 
                 const dailyDistanceData = {};
                 // Inicializar 30 días previos a toDate
@@ -250,39 +249,36 @@ geotab.addin.recorrido = function () {
                     dailyDistanceData[getLocalDateString(d)] = 0;
                 }
 
-                let targetOdoMeters = currentOdoMeters;
+                let targetOdoKms = currentOdoKms;
 
                 trips.forEach(trip => {
-                    const tripDist = trip.distance || 0;
+                    const tripDist = trip.distance || 0; // Se asume KM basándose en historial rendimiento.js
                     const tripStart = new Date(trip.start);
                     const tripStop = new Date(trip.stop || trip.start);
 
-                    // 1. Si el viaje terminó ANTES de la lectura del odómetro, está incluido en el odómetro.
-                    //    Si queremos saber el valor ANTES de este viaje, restamos.
-                    if (tripStop <= odoDateTime) {
-                        // Si el viaje terminó DESPUÉS de nuestro toDateObj, afecta al cálculo del KPI
-                        if (tripStop > toDateObj) {
-                            targetOdoMeters -= tripDist;
-                        }
-                    } else if (tripStart >= odoDateTime) {
-                        // Este viaje ocurrió DESPUÉS de la lectura. Si quisiéramos el odómetro 'ahora' sumaríamos,
-                        // pero queremos el odómetro en 'toDateObj' (que es pasado), así que simplemente no afecta
-                        // al cálculo inverso desde odoDateTime.
+                    // 1. Ajustar el Odómetro al final de la 'fechaObjetivo' (toDateObj)
+                    // Si el viaje terminó ANTES del anclaje pero DESPUÉS del objetivo -> restamos para ir al pasado.
+                    if (tripStop <= odoDateTime && tripStop > toDateObj) {
+                        targetOdoKms -= tripDist;
+                    } 
+                    // Si el viaje terminó DESPUÉS del anclaje pero ANTES del objetivo -> sumamos para ir al futuro.
+                    else if (tripStop > odoDateTime && tripStop <= toDateObj) {
+                        targetOdoKms += tripDist;
                     }
 
                     // 2. Poblar desglose diario (usando fecha local para evitar desfases de zona horaria)
                     const dStr = getLocalDateString(tripStart);
                     if (dailyDistanceData[dStr] !== undefined) {
-                        dailyDistanceData[dStr] += (tripDist / 1000);
+                        dailyDistanceData[dStr] += tripDist;
                     }
                 });
 
-                // D. Reconstrucción de Odómetro Acumulado por día
+                // D. Reconstrucción de Odómetro Acumulado por día (Historial para la tabla)
                 const dailyOdoData = {};
                 const sortedDatesAsc = Object.keys(dailyDistanceData).sort((a, b) => a.localeCompare(b));
                 const reversedDates = [...sortedDatesAsc].reverse(); // Recientes primero (el seleccionado es el primero)
 
-                let currentRunningOdo = targetOdoMeters / 1000;
+                let currentRunningOdo = targetOdoKms;
 
                 reversedDates.forEach((date) => {
                     dailyOdoData[date] = currentRunningOdo;
@@ -294,7 +290,7 @@ geotab.addin.recorrido = function () {
                 resultContainer.style.display = "block";
                 
                 // KPI: Odómetro al final del día seleccionado (en KM)
-                animateCount(distanciaValue, targetOdoMeters / 1000);
+                animateCount(distanciaValue, targetOdoKms);
                 fechaFooter.textContent = formatDateReadable(toDateVal);
 
                 // Tabla
