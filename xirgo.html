@@ -11,57 +11,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/main.css">
     <style>
-        :root {
-            --nav-height: 72px;
-        }
-
         body, html {
             height: 100%;
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background: var(--color-bg-main);
+            background: #fff;
         }
         
         #app-xirgo {
-            display: flex;
-            flex-direction: column;
             width: 100%;
             height: 100%;
-        }
-
-        /* Reusing project header style but ensuring it's sticky/fixed */
-        .top-nav {
-            flex-shrink: 0;
-            height: var(--nav-height);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 2rem;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--color-panel-border);
-            z-index: 100;
-        }
-
-        .xirgo-main {
-            flex: 1;
-            width: 100%;
-            height: calc(100% - var(--nav-height));
-            padding: 1.5rem;
-            display: flex;
-            box-sizing: border-box;
         }
 
         .iframe-container {
             width: 100%;
             height: 100%;
-            border-radius: var(--radius-xl);
+            border: none;
             overflow: hidden;
-            box-shadow: var(--shadow-lg);
-            background: #fff;
-            border: 1px solid var(--color-panel-border);
             display: flex;
         }
 
@@ -71,37 +38,18 @@
             border: none;
             flex: 1;
         }
-
-        .nav-brand i {
-            color: #22c55e;
-        }
     </style>
 </head>
 <body>
     <div id="app-xirgo">
-        <!-- ═══════════ HEADER ═══════════ -->
-        <header class="top-nav">
-            <div class="nav-brand">
-                <i data-lucide="layout" width="28" height="28" stroke="currentColor" stroke-width="2.5"></i>
-                <h1>Xirgo Portal</h1>
-            </div>
-            
-            <div class="nav-status">
-                <span class="status-dot" style="background: #22c55e;"></span>
-                <span id="last-updated-time">Acceso Externo</span>
-            </div>
-        </header>
-
         <!-- ═══════════ MAIN CONTENT ═══════════ -->
-        <main class="xirgo-main">
-            <div class="iframe-container">
-                <iframe 
-                    src="https://xirgo.app.em2m.net/login" 
-                    title="Xirgo Login"
-                    allow="geolocation; microphone; camera; midi; encrypted-media; storage-access"
-                    loading="lazy">
-                </iframe>
-            </div>
+        <main class="iframe-container">
+            <iframe 
+                src="https://xirgo.app.em2m.net/login" 
+                title="Xirgo Login"
+                allow="geolocation; microphone; camera; midi; encrypted-media; storage-access"
+                loading="lazy">
+            </iframe>
         </main>
     </div>
 
