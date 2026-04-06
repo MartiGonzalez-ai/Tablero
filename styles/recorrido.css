@@ -357,8 +357,13 @@ body {
 }
 
 .dist-td {
-    font-weight: 800;
+    font-weight: 700;
     color: var(--color-accent);
+}
+
+.odo-td {
+    font-weight: 700;
+    color: var(--color-primary);
 }
 
 /* Loading Overlay */
