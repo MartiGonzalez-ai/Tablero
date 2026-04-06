@@ -1,50 +1,21 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <meta name="description" content="Xirgo Panel - Geotab Add-in">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Xirgo</title>
-    <style>
-        /* Deshabilitar márgenes y establecer altura basada en el viewport real */
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            /* Force a physical height so Geotab's iframe auto-resizer expands the wrapper */
-            min-height: 850px;
-            background-color: #ffffff;
-        }
-        
-        #app-xirgo {
-            width: 100%;
-            height: 100%;
-            min-height: 850px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        iframe {
-            display: block;
-            width: 100%;
-            flex: 1;
-            border: none;
-            min-height: 850px;
-        }
-    </style>
 </head>
-<body>
-    <div id="app-xirgo">
+<body style="margin: 0; padding: 0;">
+    <!-- Inline styles to bypass Geotab potentially stripping <style> tags -->
+    <div id="app-xirgo" style="width: 100%; min-height: 850px; height: 850px; display: flex; flex-direction: column; background: #ffffff;">
         <iframe 
             src="https://xirgo.app.em2m.net/login" 
             title="Xirgo Login"
             allow="geolocation; microphone; camera; midi; encrypted-media; storage-access"
-            loading="lazy">
+            loading="lazy"
+            style="width: 100%; height: 100%; border: none; flex-grow: 1; min-height: 850px;">
         </iframe>
     </div>
 
-    <!-- Geotab Add-in Lifecycle Initialization -->
     <script>
         geotab.addin.xirgo = function() {
             return {
@@ -59,13 +30,6 @@
                 }
             };
         };
-    </script>
-
-    <!-- Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
     </script>
 </body>
 </html>
