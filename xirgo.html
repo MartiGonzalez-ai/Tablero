@@ -6,59 +6,57 @@
     <meta name="description" content="Xirgo Panel - Geotab Add-in">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Xirgo</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* Zero out everything to avoid global CSS interference */
-        * {
+        /* Deshabilitar márgenes y establecer altura basada en el viewport real */
+        html, body {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-
-        html, body {
             width: 100%;
-            height: 100%;
+            height: 100vh;
             overflow: hidden;
             background-color: #ffffff;
         }
         
         #app-xirgo {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
             width: 100%;
-            height: 100%;
-        }
-
-        .iframe-container {
-            width: 100%;
-            height: 100%;
-            border: none;
+            height: 100vh;
+            display: block;
         }
 
         iframe {
             display: block;
             width: 100%;
-            height: 100%;
+            height: 100vh;
             border: none;
         }
     </style>
 </head>
 <body>
     <div id="app-xirgo">
-        <main class="iframe-container">
-            <iframe 
-                src="https://xirgo.app.em2m.net/login" 
-                title="Xirgo Login"
-                allow="geolocation; microphone; camera; midi; encrypted-media; storage-access"
-                loading="lazy">
-            </iframe>
-        </main>
+        <iframe 
+            src="https://xirgo.app.em2m.net/login" 
+            title="Xirgo Login"
+            allow="geolocation; microphone; camera; midi; encrypted-media; storage-access"
+            loading="lazy">
+        </iframe>
     </div>
+
+    <!-- Geotab Add-in Lifecycle Initialization -->
+    <script>
+        geotab.addin.xirgo = function() {
+            return {
+                initialize: function(api, state, callback) {
+                    callback();
+                },
+                focus: function() {
+                    // Geotab gives focus to the add-in
+                },
+                blur: function() {
+                    // Geotab removes focus from the add-in
+                }
+            };
+        };
+    </script>
 
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
