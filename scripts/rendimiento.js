@@ -630,10 +630,6 @@ geotab.addin.rendimiento = function () {
         }
         if (emptyEl) emptyEl.style.display = "none";
 
-        sortedDates.forEach(dateStr => {
-            dailyData[dateStr].acumulado = 0; // Default, will update async
-        });
-
         // Sort descending so most recent is on top
         const reversedDates = [...sortedDates].reverse();
 
@@ -656,64 +652,136 @@ geotab.addin.rendimiento = function () {
                 </td>
                 <td style="text-align:right; font-weight:600; color:var(--c-blue);">${day.fuel.toFixed(2)} L</td>
                 <td style="text-align:center;">
-                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : ((day.dist >= 0 || day.fuel >= 0) ? "0.0 km/L" : "—")}</span>
+                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : ((day.dist >= 0 || day.fuel >= 0) ? "0.0 km/L" : "---")}</span>
                 </td>
             `;
             tbody.appendChild(tr);
         });
 
-        // Asynchronously fetch the interpolated Odometer at 23:59:59 of each day for accurate fleet tracking
+        // Reconstruccion de Odometro por dia (igual que recorrido.js)
+        // Estrategia: obtener el odometro absoluto mas reciente como ancla,
+        // luego reconstruir hacia atras restando la distancia recorrida cada dia.
         if (typeof api !== "undefined") {
-            const devicesToQuery = selectedUnitId !== "all" ? [selectedUnitId] : (typeof deviceMap !== "undefined" ? Object.keys(deviceMap) : []);
-            const calls = [];
-            const callMap = [];
+            const odometerDiagnostics = [
+                "DiagnosticOdometerAdjustmentId",
+                "DiagnosticOdometerId",
+                "DiagnosticOBDOdometerReaderId",
+                "DiagnosticJ1939TotalVehicleDistanceId"
+            ];
 
-            sortedDates.forEach(dateStr => {
-                const tzEnd = new Date(dateStr + "T23:59:59").toISOString();
+            const devicesToQuery = selectedUnitId !== "all"
+                ? [selectedUnitId]
+                : (typeof deviceMap !== "undefined" ? Object.keys(deviceMap) : []);
+
+            if (devicesToQuery.length > 0) {
+                // Llamadas para obtener la ultima lectura de odometro por dispositivo
+                const anchorCalls = [];
+                const anchorCallMap = [];
+
                 devicesToQuery.forEach(devId => {
-                    calls.push(["Get", {
-                        typeName: "StatusData",
-                        search: {
-                            diagnosticSearch: { id: "DiagnosticOdometerId" },
-                            deviceSearch: { id: devId },
-                            fromDate: tzEnd,
-                            toDate: tzEnd
-                        }
-                    }]);
-                    callMap.push({ dateStr, devId });
+                    odometerDiagnostics.forEach(diagId => {
+                        anchorCalls.push(["Get", {
+                            typeName: "StatusData",
+                            search: {
+                                deviceSearch: { id: devId },
+                                diagnosticSearch: { id: diagId },
+                                resultsLimit: 1,
+                                applyLatest: true
+                            }
+                        }]);
+                        anchorCallMap.push({ devId, diagId });
+                    });
                 });
-            });
 
-            if (calls.length > 0 && calls.length <= 15000) {
-                api.multiCall(calls, function (results) {
-                    const dailyOdoSum = {};
-                    results.forEach((res, i) => {
-                        const cellInfo = callMap[i];
-                        if (res && res.length > 0) {
-                            if (!dailyOdoSum[cellInfo.dateStr]) dailyOdoSum[cellInfo.dateStr] = 0;
-                            dailyOdoSum[cellInfo.dateStr] += res[0].data;
+                api.multiCall(anchorCalls, function (anchorResults) {
+                    // 1. Lectura de odometro mas reciente por dispositivo (metros -> km)
+                    const latestOdoPerDev = {};
+
+                    anchorResults.forEach((res, i) => {
+                        if (!res || res.length === 0) return;
+                        const reading = res[0];
+                        if (reading.data === undefined) return;
+                        const { devId } = anchorCallMap[i];
+                        const readingDate = new Date(reading.dateTime);
+                        const odoKm = reading.data / 1000;
+
+                        if (!latestOdoPerDev[devId] || readingDate > latestOdoPerDev[devId].dateTime) {
+                            latestOdoPerDev[devId] = { odoKm, dateTime: readingDate };
                         }
                     });
 
+                    // 2. Inicializar acumuladores
+                    sortedDates.forEach(dateStr => {
+                        dailyData[dateStr].acumulado = 0;
+                        dailyData[dateStr]._devCount = 0;
+                    });
+
+                    // 3. Para cada dispositivo, reconstruir el odometro diario hacia atras
+                    devicesToQuery.forEach(devId => {
+                        const anchor = latestOdoPerDev[devId];
+                        if (!anchor) return;
+
+                        // Viajes de este dispositivo ordenados del mas reciente al mas antiguo
+                        const deviceTrips = (filteredTrips || [])
+                            .filter(t => t.deviceId === devId)
+                            .sort((a, b) => new Date(b.stop || b.start) - new Date(a.stop || a.start));
+
+                        // Distancia recorrida por dia para este dispositivo
+                        const devDailyDist = {};
+                        sortedDates.forEach(d => { devDailyDist[d] = 0; });
+                        deviceTrips.forEach(trip => {
+                            if (!trip.start) return;
+                            const dStr = trip.start.slice(0, 10);
+                            if (devDailyDist[dStr] !== undefined) {
+                                devDailyDist[dStr] += (parseFloat(trip.distance) || 0);
+                            }
+                        });
+
+                        // Partir del ancla y ajustar viajes posteriores
+                        let runningOdo = anchor.odoKm;
+                        deviceTrips.forEach(trip => {
+                            const tripStop = new Date(trip.stop || trip.start);
+                            if (tripStop > anchor.dateTime) {
+                                runningOdo -= (parseFloat(trip.distance) || 0);
+                            }
+                        });
+
+                        // runningOdo = odometro al FINAL del ultimo dia del rango.
+                        // Recorrer de mas reciente a mas antiguo asignando el odometro de cada dia.
+                        const reversedForDev = [...sortedDates].reverse();
+
+                        reversedForDev.forEach(dateStr => {
+                            dailyData[dateStr].acumulado += runningOdo;
+                            dailyData[dateStr]._devCount += 1;
+                            runningOdo -= devDailyDist[dateStr];
+                        });
+                    });
+
+                    // 4. Actualizar celdas del DOM
                     sortedDates.forEach(dateStr => {
                         const el = document.getElementById("odo-" + dateStr);
-                        if (el) {
-                            const val = dailyOdoSum[dateStr];
-                            if (val !== undefined && val !== null) {
-                                dailyData[dateStr].acumulado = val / 1000;
-                                el.textContent = (val / 1000).toFixed(1) + " km";
-                            } else {
-                                el.textContent = "—";
-                            }
+                        if (!el) return;
+                        const day = dailyData[dateStr];
+                        if (day._devCount > 0) {
+                            el.textContent = day.acumulado.toLocaleString("es-MX", {
+                                minimumFractionDigits: 1,
+                                maximumFractionDigits: 1
+                            }) + " km";
+                        } else {
+                            el.textContent = "---";
                         }
                     });
+
                 }, function (e) {
-                    console.error("Error fetching exact odometers:", e);
+                    console.error("Error fetching anchor odometers:", e);
+                    sortedDates.forEach(dateStr => {
+                        const el = document.getElementById("odo-" + dateStr);
+                        if (el) el.textContent = "---";
+                    });
                 });
             }
         }
-
-        return { dailyData, sortedDates };
+                return { dailyData, sortedDates };
     };
 
     // ─── Reset UI ─────────────────────────────────────────────────────────────
