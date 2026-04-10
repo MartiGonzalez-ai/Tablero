@@ -669,9 +669,18 @@ geotab.addin.rendimiento = function () {
                 "DiagnosticJ1939TotalVehicleDistanceId"
             ];
 
+            // El odometro acumulado solo tiene sentido para una unidad especifica.
+            // En modo "Todas las Unidades" no se puede sumar el odometro absoluto de N vehiculos.
+            if (selectedUnitId === "all") {
+                sortedDates.forEach(dateStr => {
+                    const el = document.getElementById("odo-" + dateStr);
+                    if (el) el.textContent = "---";
+                });
+            }
+
             const devicesToQuery = selectedUnitId !== "all"
                 ? [selectedUnitId]
-                : (typeof deviceMap !== "undefined" ? Object.keys(deviceMap) : []);
+                : [];
 
             if (devicesToQuery.length > 0) {
                 // Llamadas para obtener la ultima lectura de odometro por dispositivo
@@ -685,6 +694,7 @@ geotab.addin.rendimiento = function () {
                             search: {
                                 deviceSearch: { id: devId },
                                 diagnosticSearch: { id: diagId },
+                                toDate: new Date().toISOString(),
                                 resultsLimit: 1,
                                 applyLatest: true
                             }
