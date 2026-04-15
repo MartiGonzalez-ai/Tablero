@@ -10,6 +10,7 @@ geotab.addin.rendimiento = function () {
     let filteredRecords = [];
     let rawStatusData = [];    // Raw StatusData for the raw table
     let selectedUnitId = "all"; // "all" or specific device ID
+    let trendGrouping = "day";  // "day", "week", "month"
     let deviceMap = {};        // Global device map
 
     // Chart instances
@@ -884,11 +885,46 @@ geotab.addin.rendimiento = function () {
         const dailyResult = renderDailyTable();
         const { dailyData, sortedDates } = dailyResult || { dailyData: {}, sortedDates: [] };
 
-        const trendSeries = sortedDates.map(date => {
-            const day = dailyData[date];
-            const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
-            return { x: date, y: parseFloat(eff.toFixed(1)) };
-        });
+        let trendSeries = [];
+
+        if (trendGrouping === 'day') {
+            trendSeries = sortedDates.map(date => {
+                const day = dailyData[date];
+                const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
+                return { x: date, y: parseFloat(eff.toFixed(1)) };
+            });
+        } else if (trendGrouping === 'week') {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const d = new Date(dateStr + "T12:00:00");
+                const day = d.getDay(); // 0(Sun) to 6(Sat)
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                const monday = new Date(d.setDate(diff));
+                const weekKey = monday.getFullYear() + "-" + String(monday.getMonth() + 1).padStart(2, '0') + "-" + String(monday.getDate()).padStart(2, '0');
+                
+                if (!grouped[weekKey]) grouped[weekKey] = { dist: 0, fuel: 0 };
+                grouped[weekKey].dist += (dailyData[dateStr].dist || 0);
+                grouped[weekKey].fuel += (dailyData[dateStr].fuel || 0);
+            });
+            Object.keys(grouped).sort().forEach(weekKey => {
+                const g = grouped[weekKey];
+                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
+                trendSeries.push({ x: weekKey, y: parseFloat(eff.toFixed(1)) });
+            });
+        } else if (trendGrouping === 'month') {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const monthKey = dateStr.substring(0, 7) + "-01";
+                if (!grouped[monthKey]) grouped[monthKey] = { dist: 0, fuel: 0 };
+                grouped[monthKey].dist += (dailyData[dateStr].dist || 0);
+                grouped[monthKey].fuel += (dailyData[dateStr].fuel || 0);
+            });
+            Object.keys(grouped).sort().forEach(monthKey => {
+                const g = grouped[monthKey];
+                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
+                trendSeries.push({ x: monthKey, y: parseFloat(eff.toFixed(1)) });
+            });
+        }
 
         const optTrendDaily = {
             ...commonOptions,
@@ -910,7 +946,7 @@ geotab.addin.rendimiento = function () {
             colors: [cCyan],
             xaxis: {
                 type: 'datetime',
-                labels: { style: { colors: textMuted, fontSize: '11px' }, format: 'dd MMM' },
+                labels: { style: { colors: textMuted, fontSize: '11px' }, format: trendGrouping === 'month' ? 'MMM yyyy' : 'dd MMM' },
                 axisBorder: { show: false },
                 axisTicks: { show: false }
             },
@@ -1349,6 +1385,21 @@ geotab.addin.rendimiento = function () {
                 unitSelect.addEventListener("change", function () {
                     selectedUnitId = unitSelect.value;
                     applyUnitFilter();
+                });
+            }
+
+            // Trend grouping buttons
+            const trendBtns = document.getElementById("trend-timeframe-btns");
+            if (trendBtns) {
+                trendBtns.querySelectorAll(".btn-range").forEach(function(btn) {
+                    btn.addEventListener("click", function() {
+                        trendBtns.querySelectorAll(".btn-range").forEach(b => b.classList.remove("active"));
+                        btn.classList.add("active");
+                        trendGrouping = btn.dataset.group;
+                        if (filteredRecords) {
+                            renderCharts(filteredRecords);
+                        }
+                    });
                 });
             }
 
