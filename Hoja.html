@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Enertrak - Reporte de Equipos | Control de Flota</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-blue: #003756;
+            --secondary-color: #00839A;
+            --accent-green: #29A94B;
+            --brand-green: #29A94B;
+            --bg-body: #f0f2f5;
+            --surface: #ffffff;
+            --text-main: #1a202c;
+            --text-muted: #718096;
+            --border-color: #e2e8f0;
+            --status-instalado: #29A94B;
+            --status-pendientes: #ff9800;
+            --status-desinstalados: #e53935;
+            --status-reubicados: #00839A;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            padding: 40px 20px;
+            line-height: 1.5;
+        }
+
+        .print-layout-table {
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            border-collapse: collapse;
+        }
+
+        .invoice-box {
+            width: 100%;
+            background: white;
+            position: relative;
+        }
+
+        .header {
+            background: var(--primary-blue);
+            color: white;
+            padding: 25px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 20px;
+            border-bottom: 6px solid var(--accent-green);
+        }
+
+        .contact-info {
+            text-align: right;
+            font-size: 13px;
+            line-height: 1.5;
+            font-weight: 300;
+            color: white;
+        }
+
+        .company-logo {
+            max-height: 65px;
+            width: auto;
+            display: block;
+        }
+
+        .details-section {
+            padding: 30px 40px 20px 40px;
+        }
+
+        .client-info h2 {
+            color: var(--primary-blue);
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .client-info .client-id {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 25px;
+            display: inline-block;
+            background: #f0f0f0;
+            padding: 4px 16px;
+            border-radius: 30px;
+            font-weight: 500;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .equipment-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            background: #f7fafc;
+            border-radius: 16px;
+            padding: 15px;
+            margin-top: 15px;
+            gap: 12px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 10px 5px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #718096;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        .stat-card.instalados .stat-number {
+            color: var(--status-instalado);
+        }
+
+        .stat-card.pendientes .stat-number {
+            color: var(--status-pendientes);
+        }
+
+        .stat-card.desinstalados .stat-number {
+            color: var(--status-desinstalados);
+        }
+
+        .modern-table-container {
+            padding: 0 40px 40px 40px;
+        }
+
+        .table-header-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .table-header-title h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-blue);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .print-date {
+            color: #718096;
+            font-size: 13px;
+            font-weight: 500;
+            background: white;
+            padding: 6px 16px;
+            border-radius: 50px;
+            border: 1px solid var(--border-color);
+        }
+
+        .modern-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 16px;
+            margin-top: -16px;
+        }
+
+        .modern-table thead th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modern-table thead th div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .modern-table thead th svg {
+            flex-shrink: 0;
+            opacity: 0.8;
+        }
+
+        .modern-table thead th:first-child {
+            width: 6px;
+            padding: 12px 0;
+        }
+
+        .modern-table tbody {
+            background: white;
+            border-radius: 12px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .modern-table tbody:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Barra de color mediante celda rowspan */
+        .status-bar {
+            width: 6px;
+            padding: 0 !important;
+            margin: 0;
+            border-radius: 12px 0 0 12px;
+        }
+
+        .status-instalado {
+            background-color: var(--status-instalado);
+        }
+
+        .status-pendiente {
+            background-color: var(--status-pendientes);
+        }
+
+        .status-desinstalado {
+            background-color: var(--status-desinstalados);
+        }
+
+        .status-reubicado {
+            background-color: var(--status-reubicados);
+        }
+
+        /* Estilos de filas */
+        .modern-table tr.main-row td {
+            padding: 24px 16px 8px 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .modern-table td.status-bar {
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+            border-left: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            min-width: 6px;
+        }
+
+        .modern-table tr.main-row td:last-child {
+            border-top-right-radius: 12px;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .modern-table tr.comment-row td {
+            padding: 0 16px 20px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modern-table tr.comment-row td[colspan] {
+            border-left: none;
+            /* Quitamos el borde izquierdo que choca con la barra */
+        }
+
+        .modern-table tr.comment-row td:last-child {
+            border-bottom-right-radius: 12px;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .comment-container {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #718096;
+        }
+
+        .comment-container strong {
+            color: #1a202c;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-instalado {
+            background: #e6fffa;
+            color: #2c7a7b;
+        }
+
+        .badge-desinstalado {
+            background: #fff5f5;
+            color: #c53030;
+        }
+
+        .badge-reubicado {
+            background: #ebf8ff;
+            color: #2b6cb0;
+        }
+
+        .badge-pendiente {
+            background: #fffaf0;
+            color: #b7791f;
+        }
+
+        .text-bold {
+            font-weight: 700;
+            color: #1f2d3d;
+        }
+
+        .text-small {
+            font-size: 11px;
+            color: #7c8b9c;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .mono-text {
+            font-family: 'SF Mono', 'Consolas', monospace;
+            background: #f4f6f9;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            color: #c62828;
+        }
+
+        .separator-pipe {
+            color: #cbd5e1;
+            font-size: 14px;
+            font-weight: 300;
+        }
+
+        /* Barra superior de acciones */
+        .actions-toolbar {
+            background: white;
+            padding: 16px 40px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .actions-toolbar .upload-label {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--primary-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .btn-action {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-upload {
+            background: var(--accent-green);
+            color: white;
+            box-shadow: 0 4px 12px rgba(41, 169, 75, 0.25);
+        }
+
+        .btn-upload:hover {
+            background: #249341;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(41, 169, 75, 0.35);
+        }
+
+        .btn-print {
+            background: var(--primary-blue);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 55, 86, 0.25);
+        }
+
+        .btn-print:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 131, 154, 0.35);
+        }
+
+        .no-print {
+            display: flex;
+        }
+
+        /* Impresión */
+        @media print {
+            @page {
+                margin: 0;
+                size: letter;
+            }
+
+            body,
+            html {
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+
+            .no-print,
+            .print-btn-container,
+            .actions-toolbar {
+                display: none !important;
+            }
+
+            .header {
+                background: var(--primary-blue) !important;
+                padding: 12px 25px;
+                border-bottom: 6px solid var(--accent-green) !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .print-footer {
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .footer-line-green {
+                background-color: var(--accent-green);
+                height: 5px;
+                width: 100%;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .footer-line-blue {
+                background-color: var(--primary-blue);
+                height: 5px;
+                width: 100%;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .invoice-box {
+                padding: 0 25px;
+            }
+
+            .badge,
+            .stat-card,
+            .client-id,
+            .status-bar {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .modern-table tbody {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .equipment-stats {
+                display: flex;
+                flex-direction: row;
+                gap: 8px;
+            }
+
+            .stat-number {
+                font-size: 20px;
+            }
+
+            .stat-label {
+                font-size: 8px;
+            }
+
+            .details-section {
+                padding: 10px 0;
+            }
+
+            .modern-table-container {
+                padding: 0;
+            }
+
+            .modern-table tr.main-row td {
+                padding: 10px 6px 4px 10px;
+            }
+
+            .modern-table tr.comment-row td {
+                padding: 0 6px 10px 10px;
+            }
+
+            .comment-container {
+                padding: 6px 10px;
+                font-size: 10px;
+                gap: 12px;
+            }
+
+            .table-header-title h2 {
+                font-size: 18px;
+            }
+
+            .print-footer {
+                display: flex;
+            }
+        }
+
+        .print-footer {
+            display: none;
+        }
+
+        @media print {
+            .print-footer {
+                display: flex;
+            }
+        }
+
+        @media screen and (max-width: 750px) {
+            .actions-toolbar {
+                flex-direction: column;
+                padding: 15px 20px;
+                gap: 15px;
+            }
+
+            .toolbar-left,
+            .toolbar-right {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .toolbar-right {
+                flex-direction: column;
+            }
+
+            .btn-action,
+            .file-input-wrapper {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 20px;
+            }
+
+            .contact-info {
+                text-align: center;
+            }
+
+            .details-section {
+                padding: 20px;
+            }
+
+            .modern-table-container {
+                padding: 0 20px 30px 20px;
+                overflow-x: auto;
+            }
+
+            .modern-table {
+                min-width: 700px;
+            }
+
+            .equipment-stats {
+                flex-direction: column;
+            }
+        }
+
+        /* Estilos del Modal Inicial */
+        .initial-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 31, 48, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.4s ease, visibility 0.4s;
+        }
+
+        .initial-modal-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .initial-modal-content {
+            background: white;
+            padding: 50px 40px;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            animation: modalSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-icon {
+            width: 80px;
+            height: 80px;
+            background: #ebf8ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            color: var(--secondary-color);
+        }
+
+        .modal-icon svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .initial-modal-content h1 {
+            color: var(--primary-blue);
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .initial-modal-content p {
+            color: var(--text-muted);
+            font-size: 16px;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+
+        .modal-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            padding: 40px 20px;
+            background: #f8fafc;
+            transition: all 0.2s ease;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .modal-upload-area:hover {
+            border-color: var(--accent-green);
+            background: #f0fdf4;
+        }
+
+        .modal-upload-area .upload-label-text {
+            display: block;
+            font-weight: 600;
+            color: var(--primary-blue);
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .modal-upload-area .upload-sub-text {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .modal-upload-area input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        @media print {
+            .initial-modal-overlay {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Modal Inicial -->
+    <div id="initialModal" class="initial-modal-overlay no-print">
+        <div class="initial-modal-content">
+            <div class="modal-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+            </div>
+            <h1>Reporte de Flota</h1>
+            <p>Para visualizar el informe detallado de equipos, por favor selecciona el archivo de Excel con los datos
+                actualizados de la flota.</p>
+
+            <div class="modal-upload-area">
+                <span class="upload-label-text">Haz clic aquí o arrastra tu archivo Excel</span>
+                <span class="upload-sub-text">Formatos permitidos: .xlsx, .xls, .csv</span>
+                <input type="file" id="modal-excel-upload" accept=".xlsx, .xls, .csv">
+            </div>
+        </div>
+    </div>
+    <div class="actions-toolbar no-print">
+        <div class="toolbar-left">
+            <span class="upload-label">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="3" y1="9" x2="21" y2="9"></line>
+                    <line x1="9" y1="21" x2="9" y2="9"></line>
+                </svg>
+                Reporte de instalaciones
+            </span>
+        </div>
+        <div class="toolbar-right">
+            <div class="file-input-wrapper">
+                <div class="btn-action btn-upload">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Actualizar Excel
+                </div>
+                <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv">
+            </div>
+
+            <button class="btn-action btn-print" onclick="window.print()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Imprimir / Guardar PDF
+            </button>
+        </div>
+    </div>
+
+    <table class="print-layout-table">
+        <thead>
+            <tr>
+                <td>
+                    <header class="header">
+                        <div class="company-info">
+                            <img src="img/logo.png" alt="Enertrak Logo" class="company-logo"
+                                onerror="this.style.display='none'">
+                        </div>
+                        <div class="contact-info">
+                            <strong>CONTACTO</strong><br>
+                            Calle 12 Ote. 339-x 35, Chichí Suárez, 97306 Mérida, Yucatán.<br>
+                            Tel. +52 (999) 930 7100<br>
+                            soporte: wf@enertrak.mx
+                        </div>
+                    </header>
+                </td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <div class="invoice-box">
+                        <section class="details-section">
+                            <div class="client-info">
+                                <h2>DELTA GAS SURESTE</h2>
+                                <div class="client-id">ID CLIENTE: 00001</div>
+                            </div>
+                            <div class="equipment-stats">
+                                <div class="stat-card pendientes">
+                                    <div class="stat-number">5</div>
+                                    <div class="stat-label">Unidades Pendientes</div>
+                                </div>
+                                <div class="stat-card desinstalados">
+                                    <div class="stat-number">21</div>
+                                    <div class="stat-label">Equipos Ext. Desinstalados</div>
+                                </div>
+                                <div class="stat-card instalados">
+                                    <div class="stat-number">33</div>
+                                    <div class="stat-label">Equipos Instalados</div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div class="modern-table-container">
+                            <!-- APARTADO DE PENDIENTES -->
+                            <div id="pending-section">
+                                <div class="table-header-title">
+                                    <h2>PENDIENTES <span>|</span> Equipos por Instalar</h2>
+                                    <span class="print-date"></span>
+                                </div>
+                                <table class="modern-table">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path
+                                                            d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z">
+                                                        </path>
+                                                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                                                    </svg>ECO</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path
+                                                            d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                                                        <circle cx="7" cy="17" r="2" />
+                                                        <path d="M9 17h6" />
+                                                        <circle cx="17" cy="17" r="2" />
+                                                    </svg>VEHÍCULO</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <rect x="2" y="5" width="20" height="14" rx="2" />
+                                                        <path d="M16 10h2" />
+                                                        <path d="M16 14h2" />
+                                                        <circle cx="8" cy="11" r="2" />
+                                                        <path d="M5 15a3 3 0 0 1 6 0" />
+                                                    </svg>PLACAS</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path d="M3 5v14M8 5v14M11 5v14M13 5v14M16 5v14M21 5v14" />
+                                                    </svg>VIN</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <rect x="4" y="4" width="16" height="16" rx="2" />
+                                                        <rect x="9" y="9" width="6" height="6" />
+                                                        <path
+                                                            d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2" />
+                                                    </svg>EQUIPO / SERIE</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                                    </svg>ESTADO</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                                    </svg>FECHA</div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="main-row">
+                                            <td class="status-bar status-pendiente" rowspan="2"></td>
+                                            <td class="text-bold">DGP-054</td>
+                                            <td><span class="text-bold">Hino 300</span><span
+                                                    class="text-small">2014</span></td>
+                                            <td>YR2475S</td>
+                                            <td>JHFUU10H7BK003229</td>
+                                            <td><span class="text-bold">GO9</span><span
+                                                    class="text-small">G95V8CPATPC4</span></td>
+                                            <td><span class="badge badge-pendiente">PENDIENTE</span></td>
+                                            <td class="text-bold">14/04/2026</td>
+                                        </tr>
+                                        <tr class="comment-row">
+                                            <td colspan="7">
+                                                <div class="comment-container">
+                                                    <span>Comentario: <strong>Espera de instalación de nuevo
+                                                            equipo</strong></span>
+                                                    <span class="separator-pipe">|</span>
+                                                    <span>Serie anterior: <span class="mono-text">—</span></span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- SECCIÓN PRINCIPAL POR GRUPOS -->
+                            <div id="main-groups-container">
+                                <div class="table-header-title">
+                                    <h2>PIPAS <span>|</span> Estado de Equipos por Unidad</h2>
+                                    <span class="print-date"></span>
+                                </div>
+                                <table class="modern-table">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path
+                                                            d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z">
+                                                        </path>
+                                                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                                                    </svg>ECO</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path
+                                                            d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                                                        <circle cx="7" cy="17" r="2" />
+                                                        <path d="M9 17h6" />
+                                                        <circle cx="17" cy="17" r="2" />
+                                                    </svg>VEHÍCULO</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <rect x="2" y="5" width="20" height="14" rx="2" />
+                                                        <path d="M16 10h2" />
+                                                        <path d="M16 14h2" />
+                                                        <circle cx="8" cy="11" r="2" />
+                                                        <path d="M5 15a3 3 0 0 1 6 0" />
+                                                    </svg>PLACAS</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path d="M3 5v14M8 5v14M11 5v14M13 5v14M16 5v14M21 5v14" />
+                                                    </svg>VIN</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <rect x="4" y="4" width="16" height="16" rx="2" />
+                                                        <rect x="9" y="9" width="6" height="6" />
+                                                        <path
+                                                            d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2" />
+                                                    </svg>EQUIPO / SERIE</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                                    </svg>ESTADO</div>
+                                            </th>
+                                            <th>
+                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                                    </svg>FECHA</div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <!-- VEHÍCULO 2 DESINSTALADO -->
+                                    <tbody>
+                                        <tr class="main-row">
+                                            <td class="status-bar status-desinstalado" rowspan="2"></td>
+                                            <td class="text-bold">DGP-052</td>
+                                            <td><span class="text-bold">Hino 300</span><span
+                                                    class="text-small">2012</span></td>
+                                            <td>YR2476D</td>
+                                            <td>JHFUU10H7BK003283</td>
+                                            <td><span class="text-bold">GO9</span><span
+                                                    class="text-small">G95V8CPATPC2</span></td>
+                                            <td><span class="badge badge-desinstalado">DESINSTALADO</span></td>
+                                            <td class="text-bold">14/04/2026</td>
+                                        </tr>
+                                        <tr class="comment-row">
+                                            <td colspan="7">
+                                                <div class="comment-container">
+                                                    <span>Comentario: <strong>Equipo retirado - pendiente
+                                                            reasignación</strong></span>
+                                                    <span class="separator-pipe">|</span>
+                                                    <span>Serie desinstalada: <span
+                                                            class="mono-text">WY4302I00953</span></span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <!-- VEHÍCULO 3 REUBICADO -->
+                                    <tbody>
+                                        <tr class="main-row">
+                                            <td class="status-bar status-reubicado" rowspan="2"></td>
+                                            <td class="text-bold">DGP-053</td>
+                                            <td><span class="text-bold">Hino 300</span><span
+                                                    class="text-small">2013</span></td>
+                                            <td>YR2475A</td>
+                                            <td>JHFUU10H7BK003248</td>
+                                            <td><span class="text-bold">GO9</span><span
+                                                    class="text-small">G95V8CPATPC3</span></td>
+                                            <td><span class="badge badge-reubicado">REUBICADO</span></td>
+                                            <td class="text-bold">14/04/2026</td>
+                                        </tr>
+                                        <tr class="comment-row">
+                                            <td colspan="7">
+                                                <div class="comment-container">
+                                                    <span>Comentario: <strong>Transferido a otra unidad</strong></span>
+                                                    <span class="separator-pipe">|</span>
+                                                    <span>Serie anterior: <span
+                                                            class="mono-text">WY4302I00953</span></span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <!-- EJEMPLO: VEHÍCULO 1 INSTALADO -->
+                                    <tbody>
+                                        <tr class="main-row">
+                                            <td class="status-bar status-instalado" rowspan="2"></td>
+                                            <td class="text-bold">DGP-051</td>
+                                            <td><span class="text-bold">Hino 300</span><span
+                                                    class="text-small">2011</span></td>
+                                            <td>YR2475D</td>
+                                            <td>JHFUU10H7BK003983</td>
+                                            <td><span class="text-bold">GO9</span><span
+                                                    class="text-small">G95V8CPATPC1</span></td>
+                                            <td><span class="badge badge-instalado">INSTALADO</span></td>
+                                            <td class="text-bold">14/04/2026</td>
+                                        </tr>
+                                        <tr class="comment-row">
+                                            <td colspan="7">
+                                                <div class="comment-container">
+                                                    <span>Comentario: <strong>Sin observaciones</strong></span>
+                                                    <span class="separator-pipe">|</span>
+                                                    <span>Serie anterior: <span class="mono-text">—</span></span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <!-- VEHÍCULO 5 INSTALADO -->
+                                    <tbody>
+                                        <tr class="main-row">
+                                            <td class="status-bar status-instalado" rowspan="2"></td>
+                                            <td class="text-bold">DGP-055</td>
+                                            <td><span class="text-bold">Hino 300</span><span
+                                                    class="text-small">2016</span></td>
+                                            <td>YR2375D</td>
+                                            <td>JHFUU10H7BK003230</td>
+                                            <td><span class="text-bold">GO9</span><span
+                                                    class="text-small">G95V8CPATPC5</span></td>
+                                            <td><span class="badge badge-instalado">INSTALADO</span></td>
+                                            <td class="text-bold">14/04/2026</td>
+                                        </tr>
+                                        <tr class="comment-row">
+                                            <td colspan="7">
+                                                <div class="comment-container">
+                                                    <span>Comentario: <strong>Operación normal, telemetría
+                                                            activa</strong></span>
+                                                    <span class="separator-pipe">|</span>
+                                                    <span>Serie anterior: <span class="mono-text">—</span></span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                </td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td>
+                    <div class="print-footer">
+                        <div class="footer-line-green"></div>
+                        <div class="footer-line-blue"></div>
+                    </div>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+
+
+
+    <script>
+        function getFormattedDate() {
+            const hoy = new Date();
+            // Formato: DD/MM/YYYY, HH:MM:SS ZZZ
+            return hoy.toLocaleString('es-MX', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                timeZoneName: 'short'
+            });
+        }
+
+        function actualizarFecha() {
+            const fechaStr = getFormattedDate();
+            const elements = document.querySelectorAll('.print-date');
+            elements.forEach(el => el.innerText = `Impresión: ${fechaStr}`);
+        }
+        actualizarFecha();
+
+        // Lógica de carga de Excel
+        function processExcel(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const getCell = (addr) => sheet[addr] ? sheet[addr].v : null;
+
+                const clientId = getCell('B1');
+                const clientName = getCell('B2');
+                const installed = getCell('B3');
+                const pending = getCell('B4');
+                const uninstalled = getCell('B5');
+
+                if (!clientId || !clientName || installed === null || pending === null || uninstalled === null) {
+                    alert('Error: Las celdas B1..B5 deben contener datos del cliente y totales.');
+                    return;
+                }
+
+                document.querySelector('.client-info h2').innerText = clientName;
+                document.querySelector('.client-id').innerText = `ID CLIENTE: ${clientId}`;
+                document.querySelector('.stat-card.instalados .stat-number').innerText = installed;
+                document.querySelector('.stat-card.pendientes .stat-number').innerText = pending;
+                document.querySelector('.stat-card.desinstalados .stat-number').innerText = uninstalled;
+
+                const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 'A', range: 9 });
+                if (!rawRows.length) { alert('No hay datos a partir de fila 10'); return; }
+
+                const statusMap = {
+                    'PENDIENTE': 'pendiente', 'PENDIENTES': 'pendiente',
+                    'DESINSTALADO': 'desinstalado', 'DESINSTALADA': 'desinstalado',
+                    'DESINSTALADOS': 'desinstalado', 'DESINSTALADAS': 'desinstalado',
+                    'REUBICADO': 'reubicado', 'REUBICADA': 'reubicado',
+                    'REUBICADOS': 'reubicado', 'REUBICADAS': 'reubicado',
+                    'REHUBICADO': 'reubicado', 'REHUBICADA': 'reubicado',
+                    'REHUBICADOS': 'reubicado', 'REHUBICADAS': 'reubicado',
+                    'INSTALADO': 'instalado', 'INSTALADA': 'instalado',
+                    'INSTALADOS': 'instalado', 'INSTALADAS': 'instalado'
+                };
+
+                const statusPriority = {
+                    'pendiente': 1,
+                    'desinstalado': 2,
+                    'reubicado': 3,
+                    'instalado': 4
+                };
+
+                // Separar Pendientes de los demás
+                const pendingRows = [];
+                const groups = {};
+
+                rawRows.forEach(row => {
+                    const s = (row.J || 'PENDIENTE').toUpperCase();
+                    const key = statusMap[s] || 'pendiente';
+                    if (key === 'pendiente') {
+                        pendingRows.push(row);
+                    } else {
+                        const type = row.A || 'SIN TIPO';
+                        if (!groups[type]) groups[type] = [];
+                        groups[type].push(row);
+                    }
+                });
+
+                const container = document.querySelector('.modern-table-container');
+                container.innerHTML = '';
+
+                const renderSection = (title, rows) => {
+                    if (rows.length === 0) return;
+
+                    // Ordenar filas (por estado y luego por ECO)
+                    rows.sort((a, b) => {
+                        const keyA = statusMap[(a.J || 'PENDIENTE').toUpperCase()] || 'pendiente';
+                        const keyB = statusMap[(b.J || 'PENDIENTE').toUpperCase()] || 'pendiente';
+                        const pA = statusPriority[keyA] || 99;
+                        const pB = statusPriority[keyB] || 99;
+                        if (pA !== pB) return pA - pB;
+                        return String(a.B || '').localeCompare(String(b.B || ''), undefined, { numeric: true, sensitivity: 'base' });
+                    });
+
+                    const headerDiv = document.createElement('div');
+                    headerDiv.className = 'table-header-title';
+                    headerDiv.innerHTML = `<h2>${title.toUpperCase()}</h2><span class="print-date">Impresión: ${getFormattedDate()}</span>`;
+                    container.appendChild(headerDiv);
+
+                    const table = document.createElement('table');
+                    table.className = 'modern-table';
+                    table.innerHTML = `<thead><tr>
+                        <th></th>
+                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>ECO</div></th>
+                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>VEHÍCULO</div></th>
+                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 10h2"/><path d="M16 14h2"/><circle cx="8" cy="11" r="2"/><path d="M5 15a3 3 0 0 1 6 0"/></svg>PLACAS</div></th>
+                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14M8 5v14M11 5v14M13 5v14M16 5v14M21 5v14"/></svg>VIN</div></th>
+                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>EQUIPO / SERIE</div></th>
+                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>ESTADO</div></th>
+                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>FECHA</div></th>
+                    </tr></thead>`;
+
+                    rows.forEach(row => {
+                        const rawStatus = (row.J || 'PENDIENTE').toUpperCase();
+                        const statusKey = statusMap[rawStatus] || 'pendiente';
+                        const statusClass = statusKey;
+
+                        const tbody = document.createElement('tbody');
+                        tbody.innerHTML = `
+                            <tr class="main-row">
+                                <td class="status-bar status-${statusClass}" rowspan="2"></td>
+                                <td class="text-bold">${row.B || '—'}</td>
+                                <td><span class="text-bold">${row.C || ''} ${row.D || ''}</span><span class="text-small">${row.E || ''}</span></td>
+                                <td>${row.F || '—'}</td>
+                                <td>${row.G || '—'}</td>
+                                <td><span class="text-bold">${row.H || ''}</span><span class="text-small">${row.I || '—'}</span></td>
+                                <td><span class="badge badge-${statusClass}">${rawStatus}</span></td>
+                                <td class="text-bold">${row.N || '—'}</td>
+                            </tr>
+                            <tr class="comment-row">
+                                <td colspan="7">
+                                    <div class="comment-container">
+                                        <span>Comentario: <strong>${row.K || 'Sin observaciones'}</strong></span>
+                                        <span class="separator-pipe">|</span>
+                                        <span>Serie anterior: <span class="mono-text">${row.M || '—'}</span></span>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                        table.appendChild(tbody);
+                    });
+                    container.appendChild(table);
+                };
+
+                // 1. Renderizar sección de Pendientes si existen
+                if (pendingRows.length) {
+                    renderSection('PENDIENTES | Equipos por Instalar', pendingRows);
+                }
+
+                // 2. Renderizar el resto de grupos
+                Object.keys(groups).sort().forEach(typeName => {
+                    renderSection(`${typeName} | Estado de Equipos por Unidad`, groups[typeName]);
+                });
+
+                // Ocultar modal inicial si existe
+                const modal = document.getElementById('initialModal');
+                if (modal) {
+                    modal.classList.add('hidden');
+                }
+
+                alert('¡Datos actualizados!');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        const uploadInput = document.getElementById('excel-upload');
+        if (uploadInput) {
+            uploadInput.addEventListener('change', function (e) {
+                processExcel(e.target.files[0]);
+            });
+        }
+
+        const modalUploadInput = document.getElementById('modal-excel-upload');
+        if (modalUploadInput) {
+            modalUploadInput.addEventListener('change', function (e) {
+                processExcel(e.target.files[0]);
+            });
+        }
+    </script>
+</body>
+
+</html>
