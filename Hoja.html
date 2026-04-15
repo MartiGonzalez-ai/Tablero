@@ -1215,7 +1215,7 @@
                 document.querySelector('.stat-card.pendientes .stat-number').innerText = pending;
                 document.querySelector('.stat-card.desinstalados .stat-number').innerText = uninstalled;
 
-                const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 'A', range: 9 });
+                const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 'A', range: 9, raw: false });
                 if (!rawRows.length) { alert('No hay datos a partir de fila 10'); return; }
 
                 const statusMap = {
