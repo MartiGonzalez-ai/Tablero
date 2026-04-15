@@ -894,6 +894,14 @@ geotab.addin.rendimiento = function () {
                 return { x: date, y: parseFloat(eff.toFixed(1)) };
             });
         } else if (trendGrouping === 'week') {
+            const getWeekNumber = function(d) {
+                const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                const dayNum = date.getUTCDay() || 7;
+                date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+                const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+                return Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+            };
+
             const grouped = {};
             sortedDates.forEach(dateStr => {
                 const d = new Date(dateStr + "T12:00:00");
@@ -909,7 +917,9 @@ geotab.addin.rendimiento = function () {
             Object.keys(grouped).sort().forEach(weekKey => {
                 const g = grouped[weekKey];
                 const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
-                trendSeries.push({ x: weekKey, y: parseFloat(eff.toFixed(1)) });
+                const d = new Date(weekKey + "T12:00:00");
+                const weekNum = getWeekNumber(d);
+                trendSeries.push({ x: "Semana " + weekNum, y: parseFloat(eff.toFixed(1)) });
             });
         } else if (trendGrouping === 'month') {
             const grouped = {};
@@ -922,7 +932,10 @@ geotab.addin.rendimiento = function () {
             Object.keys(grouped).sort().forEach(monthKey => {
                 const g = grouped[monthKey];
                 const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
-                trendSeries.push({ x: monthKey, y: parseFloat(eff.toFixed(1)) });
+                const d = new Date(monthKey + "T12:00:00");
+                const label = d.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
+                const capitalized = label.charAt(0).toUpperCase() + label.slice(1);
+                trendSeries.push({ x: capitalized, y: parseFloat(eff.toFixed(1)) });
             });
         }
 
@@ -945,8 +958,8 @@ geotab.addin.rendimiento = function () {
             },
             colors: [cCyan],
             xaxis: {
-                type: 'datetime',
-                labels: { style: { colors: textMuted, fontSize: '11px' }, format: trendGrouping === 'month' ? 'MMM yyyy' : 'dd MMM' },
+                type: trendGrouping === 'day' ? 'datetime' : 'category',
+                labels: { style: { colors: textMuted, fontSize: '11px' }, format: 'dd MMM' },
                 axisBorder: { show: false },
                 axisTicks: { show: false }
             },
