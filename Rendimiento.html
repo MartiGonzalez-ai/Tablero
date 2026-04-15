@@ -138,10 +138,15 @@
             <!-- Fila 1: Tendencia de rendimiento (full width) -->
             <div class="chart-row">
                 <div class="chart-card glass-panel col-span-3">
-                    <div class="panel-header">
+                    <div class="panel-header" style="justify-content: space-between;">
                         <div class="panel-title-group">
                             <i data-lucide="trending-up" width="16" height="16" stroke-width="2"></i>
                             <span>Tendencia de Rendimiento Flota (km/L)</span>
+                        </div>
+                        <div class="date-range-group" id="trend-timeframe-btns" style="margin: 0; padding: 2px;">
+                            <button class="btn-range active" data-group="day" style="padding: 4px 12px; font-size: 0.75rem;">Día</button>
+                            <button class="btn-range" data-group="week" style="padding: 4px 12px; font-size: 0.75rem;">Semana</button>
+                            <button class="btn-range" data-group="month" style="padding: 4px 12px; font-size: 0.75rem;">Mes</button>
                         </div>
                     </div>
                     <div id="chart-eff-unit" class="chart-container"></div>
