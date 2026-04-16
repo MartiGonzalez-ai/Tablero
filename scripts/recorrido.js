@@ -1,3 +1,9 @@
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * RECORRIDO.JS — Lógica para la consulta de kilómetros históricos
+ * Geotab Add-In | Modern ESM Logic
+ * ═══════════════════════════════════════════════════════════════
+ */
 
 "use strict";
 
@@ -6,6 +12,7 @@ geotab.addin.recorrido = function () {
     let api;
     let units = [];
     let trendGrouping = "day";
+    let dailyGrouping = "day";
     let lastOdoData = {};
     let lastDistanceData = {};
     let selectedPeriod = "month"; // Default period
@@ -69,12 +76,114 @@ geotab.addin.recorrido = function () {
     const renderChart = (dailyData) => {
         if (!window.ApexCharts) return;
 
-        const dates = Object.keys(dailyData).sort();
-        const seriesData = dates.map(d => parseFloat(dailyData[d].toFixed(1)));
+        const sortedDates = Object.keys(dailyData).sort();
+        let seriesData = [];
+
+        const getWeekNumber = function (d) {
+            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            const dayNum = date.getUTCDay() || 7;
+            date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+            return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+        };
+
+        if (dailyGrouping === "day") {
+            seriesData = sortedDates.map(d => ({
+                x: d,
+                y: parseFloat(dailyData[d].toFixed(1))
+            }));
+        } else if (dailyGrouping === "week") {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const d = new Date(dateStr + "T12:00:00");
+                const day = d.getDay();
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                const monday = new Date(d.setDate(diff));
+                const weekKey = monday.getFullYear() + "-" + String(monday.getMonth() + 1).padStart(2, '0') + "-" + String(monday.getDate()).padStart(2, '0');
+                if (!grouped[weekKey]) grouped[weekKey] = 0;
+                grouped[weekKey] += dailyData[dateStr];
+            });
+            Object.keys(grouped).sort().forEach(weekKey => {
+                const d = new Date(weekKey + "T12:00:00");
+                const weekNum = getWeekNumber(d);
+                seriesData.push({ x: "Semana " + weekNum, y: parseFloat(grouped[weekKey].toFixed(1)) });
+            });
+        } else if (dailyGrouping === "month") {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const monthKey = dateStr.substring(0, 7) + "-01";
+                if (!grouped[monthKey]) grouped[monthKey] = 0;
+                grouped[monthKey] += dailyData[dateStr];
+            });
+            Object.keys(grouped).sort().forEach(monthKey => {
+                const d = new Date(monthKey + "T12:00:00");
+                const label = d.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
+                const capitalized = label.charAt(0).toUpperCase() + label.slice(1);
+                seriesData.push({ x: capitalized, y: parseFloat(grouped[monthKey].toFixed(1)) });
+            });
+        } else if (dailyGrouping === "bimester") {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const month = parseInt(dateStr.substring(5, 7));
+                const year = dateStr.substring(0, 4);
+                const bimesterStartMonth = Math.floor((month - 1) / 2) * 2 + 1;
+                const bKey = year + "-" + String(bimesterStartMonth).padStart(2, '0') + "-01";
+                if (!grouped[bKey]) grouped[bKey] = 0;
+                grouped[bKey] += dailyData[dateStr];
+            });
+            Object.keys(grouped).sort().forEach(key => {
+                const d1 = new Date(key + "T12:00:00");
+                const d2 = new Date(d1); d2.setMonth(d2.getMonth() + 1);
+                const l1 = d1.toLocaleDateString("es-MX", { month: "short" });
+                const l2 = d2.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
+                const label = l1.charAt(0).toUpperCase() + l1.slice(1) + " - " + l2.charAt(0).toUpperCase() + l2.slice(1);
+                seriesData.push({ x: label, y: parseFloat(grouped[key].toFixed(1)) });
+            });
+        } else if (dailyGrouping === "trimester") {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const month = parseInt(dateStr.substring(5, 7));
+                const year = dateStr.substring(0, 4);
+                const trimesterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
+                const tKey = year + "-" + String(trimesterStartMonth).padStart(2, '0') + "-01";
+                if (!grouped[tKey]) grouped[tKey] = 0;
+                grouped[tKey] += dailyData[dateStr];
+            });
+            Object.keys(grouped).sort().forEach(key => {
+                const d = new Date(key + "T12:00:00");
+                const q = Math.floor(d.getMonth() / 3) + 1;
+                seriesData.push({ x: "T" + q + " " + d.getFullYear(), y: parseFloat(grouped[key].toFixed(1)) });
+            });
+        } else if (dailyGrouping === "6months") {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const month = parseInt(dateStr.substring(5, 7));
+                const year = dateStr.substring(0, 4);
+                const semesterStartMonth = Math.floor((month - 1) / 6) * 6 + 1;
+                const sKey = year + "-" + String(semesterStartMonth).padStart(2, '0') + "-01";
+                if (!grouped[sKey]) grouped[sKey] = 0;
+                grouped[sKey] += dailyData[dateStr];
+            });
+            Object.keys(grouped).sort().forEach(key => {
+                const d = new Date(key + "T12:00:00");
+                const sem = d.getMonth() < 6 ? "1er Sem" : "2do Sem";
+                seriesData.push({ x: sem + " " + d.getFullYear(), y: parseFloat(grouped[key].toFixed(1)) });
+            });
+        } else if (dailyGrouping === "year") {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const yearKey = dateStr.substring(0, 4) + "-01-01";
+                if (!grouped[yearKey]) grouped[yearKey] = 0;
+                grouped[yearKey] += dailyData[dateStr];
+            });
+            Object.keys(grouped).sort().forEach(key => {
+                seriesData.push({ x: key.substring(0, 4), y: parseFloat(grouped[key].toFixed(1)) });
+            });
+        }
 
         const options = {
             series: [{
-                name: 'Distancia Diaria (km)',
+                name: 'Distancia (km)',
                 data: seriesData
             }],
             chart: {
@@ -91,13 +200,19 @@ geotab.addin.recorrido = function () {
                     columnWidth: '55%',
                 }
             },
-            dataLabels: { enabled: false },
+            dataLabels: { 
+                enabled: dailyGrouping !== "day",
+                formatter: (val) => val.toLocaleString("es-MX", { maximumFractionDigits: 1 }),
+                style: { fontSize: '10px', colors: ['#fff'] }
+            },
             xaxis: {
-                categories: dates,
+                type: 'category',
+                categories: seriesData.map(p => p.x),
                 labels: {
                     style: { colors: '#64748b', fontSize: '10px' },
                     rotate: -45,
                     formatter: function(value) {
+                        if (dailyGrouping !== 'day') return value;
                         if (!value) return "";
                         const d = new Date(value + "T12:00:00");
                         if (isNaN(d.getTime())) return value;
@@ -630,6 +745,16 @@ geotab.addin.recorrido = function () {
                     trendGrouping = e.target.value;
                     if (Object.keys(lastOdoData).length > 0) {
                         renderOdoTrendChart(lastOdoData, lastDistanceData);
+                    }
+                });
+            }
+
+            const timeframeSelectDaily = document.getElementById("trend-timeframe-select-daily");
+            if (timeframeSelectDaily) {
+                timeframeSelectDaily.addEventListener("change", function(e) {
+                    dailyGrouping = e.target.value;
+                    if (Object.keys(lastDistanceData).length > 0) {
+                        renderChart(lastDistanceData);
                     }
                 });
             }
