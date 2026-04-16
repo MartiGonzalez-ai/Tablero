@@ -362,6 +362,21 @@
             font-weight: 300;
         }
 
+        /* REDUCCIÓN DE TAMAÑO PARA LAS COLUMNAS ECO Y VEHÍCULO */
+        .modern-table td:nth-child(2),
+        .modern-table td:nth-child(3) {
+            font-size: 13px;
+        }
+
+        .modern-table td:nth-child(2) .text-bold,
+        .modern-table td:nth-child(3) .text-bold {
+            font-size: 13px;
+        }
+
+        .modern-table .text-small {
+            font-size: 10px;
+        }
+
         /* Barra superior de acciones */
         .actions-toolbar {
             background: white;
@@ -943,12 +958,10 @@
                                         <tr class="main-row">
                                             <td class="status-bar status-pendiente" rowspan="2"></td>
                                             <td class="text-bold">DGP-054</td>
-                                            <td><span class="text-bold">Hino 300</span><span
-                                                    class="text-small">2014</span></td>
+                                            <td><span class="text-bold">Hino 300</span><span class="text-small">2014</span></td>
                                             <td>YR2475S</td>
                                             <td>JHFUU10H7BK003229</td>
-                                            <td><span class="text-bold">GO9</span><span
-                                                    class="text-small">G95V8CPATPC4</span></td>
+                                            <td><span class="text-bold">GO9</span><span class="text-small">G95V8CPATPC4</span></td>
                                             <td><span class="badge badge-pendiente">PENDIENTE</span></td>
                                             <td class="text-bold">14/04/2026</td>
                                         </tr>
@@ -1050,12 +1063,10 @@
                                         <tr class="main-row">
                                             <td class="status-bar status-desinstalado" rowspan="2"></td>
                                             <td class="text-bold">DGP-052</td>
-                                            <td><span class="text-bold">Hino 300</span><span
-                                                    class="text-small">2012</span></td>
+                                            <td><span class="text-bold">Hino 300</span><span class="text-small">2012</span></td>
                                             <td>YR2476D</td>
                                             <td>JHFUU10H7BK003283</td>
-                                            <td><span class="text-bold">GO9</span><span
-                                                    class="text-small">G95V8CPATPC2</span></td>
+                                            <td><span class="text-bold">GO9</span><span class="text-small">G95V8CPATPC2</span></td>
                                             <td><span class="badge badge-desinstalado">DESINSTALADO</span></td>
                                             <td class="text-bold">14/04/2026</td>
                                         </tr>
@@ -1076,12 +1087,10 @@
                                         <tr class="main-row">
                                             <td class="status-bar status-reubicado" rowspan="2"></td>
                                             <td class="text-bold">DGP-053</td>
-                                            <td><span class="text-bold">Hino 300</span><span
-                                                    class="text-small">2013</span></td>
+                                            <td><span class="text-bold">Hino 300</span><span class="text-small">2013</span></td>
                                             <td>YR2475A</td>
                                             <td>JHFUU10H7BK003248</td>
-                                            <td><span class="text-bold">GO9</span><span
-                                                    class="text-small">G95V8CPATPC3</span></td>
+                                            <td><span class="text-bold">GO9</span><span class="text-small">G95V8CPATPC3</span></td>
                                             <td><span class="badge badge-reubicado">REUBICADO</span></td>
                                             <td class="text-bold">14/04/2026</td>
                                         </tr>
@@ -1101,12 +1110,10 @@
                                         <tr class="main-row">
                                             <td class="status-bar status-instalado" rowspan="2"></td>
                                             <td class="text-bold">DGP-051</td>
-                                            <td><span class="text-bold">Hino 300</span><span
-                                                    class="text-small">2011</span></td>
+                                            <td><span class="text-bold">Hino 300</span><span class="text-small">2011</span></td>
                                             <td>YR2475D</td>
                                             <td>JHFUU10H7BK003983</td>
-                                            <td><span class="text-bold">GO9</span><span
-                                                    class="text-small">G95V8CPATPC1</span></td>
+                                            <td><span class="text-bold">GO9</span><span class="text-small">G95V8CPATPC1</span></td>
                                             <td><span class="badge badge-instalado">INSTALADO</span></td>
                                             <td class="text-bold">14/04/2026</td>
                                         </tr>
@@ -1125,12 +1132,10 @@
                                         <tr class="main-row">
                                             <td class="status-bar status-instalado" rowspan="2"></td>
                                             <td class="text-bold">DGP-055</td>
-                                            <td><span class="text-bold">Hino 300</span><span
-                                                    class="text-small">2016</span></td>
+                                            <td><span class="text-bold">Hino 300</span><span class="text-small">2016</span></td>
                                             <td>YR2375D</td>
                                             <td>JHFUU10H7BK003230</td>
-                                            <td><span class="text-bold">GO9</span><span
-                                                    class="text-small">G95V8CPATPC5</span></td>
+                                            <td><span class="text-bold">GO9</span><span class="text-small">G95V8CPATPC5</span></td>
                                             <td><span class="badge badge-instalado">INSTALADO</span></td>
                                             <td class="text-bold">14/04/2026</td>
                                         </tr>
@@ -1148,6 +1153,7 @@
                                 </table>
                             </div>
                         </div>
+                    </div>
                 </td>
             </tr>
         </tbody>
@@ -1164,67 +1170,64 @@
     </table>
 
     <script>
-        // Función para formatear fechas correctamente (DD/MM/YYYY)
-        function formatExcelDate(value) {
+        // Función robusta para convertir cualquier valor de fecha a DD/MM/YYYY
+        function parseExcelDate(value) {
             if (!value || value === '—') return '—';
             
-            // Si ya es un objeto Date de JavaScript
-            if (value instanceof Date) {
+            // 1. Si es un objeto Date nativo
+            if (value instanceof Date && !isNaN(value)) {
                 const day = value.getDate().toString().padStart(2, '0');
                 const month = (value.getMonth() + 1).toString().padStart(2, '0');
                 const year = value.getFullYear();
                 return `${day}/${month}/${year}`;
             }
             
-            // Si es un número (serial de Excel)
+            // 2. Si es un número (serial de Excel)
             if (typeof value === 'number' && !isNaN(value)) {
-                // Excel serial: días desde el 1/1/1900 (con error de 1900 leap year)
                 const excelEpoch = new Date(1899, 11, 30); // 30/12/1899
-                const daysOffset = value;
-                const date = new Date(excelEpoch.getTime() + daysOffset * 86400000);
+                const date = new Date(excelEpoch.getTime() + value * 86400000);
                 const day = date.getDate().toString().padStart(2, '0');
                 const month = (date.getMonth() + 1).toString().padStart(2, '0');
                 const year = date.getFullYear();
-                return `${day}/${month}/${year}`;
+                if (year > 1900 && year < 2100) {
+                    return `${day}/${month}/${year}`;
+                }
+                return '—';
             }
             
-            // Si es una cadena de texto
+            // 3. Si es una cadena de texto
             if (typeof value === 'string') {
-                // Intentar detectar formatos comunes: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD
+                value = value.trim();
                 let parts = value.split(/[\/\-\.]/);
                 if (parts.length === 3) {
-                    // Si el primer segmento es mayor a 12, probablemente es día
                     let day, month, year;
                     if (parseInt(parts[0]) > 12) {
-                        // Formato DD/MM/YYYY o DD-MM-YYYY
                         day = parts[0].padStart(2, '0');
                         month = parts[1].padStart(2, '0');
                         year = parts[2];
                     } else if (parseInt(parts[1]) > 12) {
-                        // Formato MM/DD/YYYY (mes en primera posición)
                         day = parts[1].padStart(2, '0');
                         month = parts[0].padStart(2, '0');
                         year = parts[2];
                     } else {
-                        // Ambos son ≤12, asumimos que el original estaba en DD/MM/YYYY (preferencia)
                         day = parts[0].padStart(2, '0');
                         month = parts[1].padStart(2, '0');
                         year = parts[2];
                     }
-                    // Validar que el año tenga 4 dígitos
                     if (year.length === 2) year = '20' + year;
-                    return `${day}/${month}/${year}`;
+                    const d = parseInt(day);
+                    const m = parseInt(month);
+                    if (d >= 1 && d <= 31 && m >= 1 && m <= 12) {
+                        return `${day}/${month}/${year}`;
+                    }
                 }
-                // Si no se pudo parsear, devolver el valor original
                 return value;
             }
-            
             return '—';
         }
 
         function getFormattedDate() {
             const hoy = new Date();
-            // Formato: DD/MM/YYYY, HH:MM:SS ZZZ
             return hoy.toLocaleString('es-MX', {
                 year: 'numeric',
                 month: '2-digit',
@@ -1239,42 +1242,60 @@
 
         function actualizarFecha() {
             const fechaStr = getFormattedDate();
-            const elements = document.querySelectorAll('.print-date');
-            elements.forEach(el => el.innerText = `Impresión: ${fechaStr}`);
+            document.querySelectorAll('.print-date').forEach(el => el.innerText = `Impresión: ${fechaStr}`);
         }
         actualizarFecha();
 
-        // Lógica de carga de Excel
         function processExcel(file) {
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function (evt) {
+            reader.onload = function(evt) {
                 const data = new Uint8Array(evt.target.result);
-                const workbook = XLSX.read(data, { type: 'array', cellDates: true }); // cellDates para obtener objetos Date
+                const workbook = XLSX.read(data, { type: 'array' });
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const getCell = (addr) => sheet[addr] ? sheet[addr].v : null;
-
-                const clientId = getCell('B1');
-                const clientName = getCell('B2');
-                const installed = getCell('B3');
-                const pending = getCell('B4');
-                const uninstalled = getCell('B5');
-
+                
+                const getCellValue = (addr) => {
+                    const cell = sheet[addr];
+                    return cell ? cell.v : null;
+                };
+                
+                const clientId = getCellValue('B1');
+                const clientName = getCellValue('B2');
+                const installed = getCellValue('B3');
+                const pending = getCellValue('B4');
+                const uninstalled = getCellValue('B5');
+                
                 if (!clientId || !clientName || installed === null || pending === null || uninstalled === null) {
                     alert('Error: Las celdas B1..B5 deben contener datos del cliente y totales.');
                     return;
                 }
-
+                
                 document.querySelector('.client-info h2').innerText = clientName;
                 document.querySelector('.client-id').innerText = `ID CLIENTE: ${clientId}`;
                 document.querySelector('.stat-card.instalados .stat-number').innerText = installed;
                 document.querySelector('.stat-card.pendientes .stat-number').innerText = pending;
                 document.querySelector('.stat-card.desinstalados .stat-number').innerText = uninstalled;
-
-                // Leer desde fila 10 (índice 9 en cero)
-                const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 'A', range: 9, raw: false, defval: '' });
-                if (!rawRows.length) { alert('No hay datos a partir de fila 10'); return; }
-
+                
+                const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:Z1000');
+                const startRow = 9;
+                const rows = [];
+                for (let R = startRow; R <= range.e.r; R++) {
+                    const row = [];
+                    for (let C = range.s.c; C <= range.e.c; C++) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                        const cell = sheet[cellAddress];
+                        row.push(cell ? cell.v : '');
+                    }
+                    if (row.every(cell => cell === '' || cell === null || cell === undefined)) continue;
+                    rows.push(row);
+                }
+                
+                if (!rows.length) {
+                    alert('No hay datos a partir de la fila 10.');
+                    return;
+                }
+                
+                const colMap = { A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, I: 8, J: 9, K: 10, L: 11, M: 12, N: 13 };
                 const statusMap = {
                     'PENDIENTE': 'pendiente', 'PENDIENTES': 'pendiente',
                     'DESINSTALADO': 'desinstalado', 'DESINSTALADA': 'desinstalado',
@@ -1286,21 +1307,31 @@
                     'INSTALADO': 'instalado', 'INSTALADA': 'instalado',
                     'INSTALADOS': 'instalado', 'INSTALADAS': 'instalado'
                 };
-
-                const statusPriority = {
-                    'pendiente': 1,
-                    'desinstalado': 2,
-                    'reubicado': 3,
-                    'instalado': 4
-                };
-
-                // Separar Pendientes de los demás
+                const statusPriority = { 'pendiente': 1, 'desinstalado': 2, 'reubicado': 3, 'instalado': 4 };
+                
+                const dataRows = rows.map(row => ({
+                    A: row[colMap.A] || '',
+                    B: row[colMap.B] || '',
+                    C: row[colMap.C] || '',
+                    D: row[colMap.D] || '',
+                    E: row[colMap.E] || '',
+                    F: row[colMap.F] || '',
+                    G: row[colMap.G] || '',
+                    H: row[colMap.H] || '',
+                    I: row[colMap.I] || '',
+                    J: row[colMap.J] || 'PENDIENTE',
+                    K: row[colMap.K] || '',
+                    L: row[colMap.L] || '',
+                    M: row[colMap.M] || '',
+                    N: row[colMap.N] || ''
+                }));
+                
                 const pendingRows = [];
                 const groups = {};
-
-                rawRows.forEach(row => {
-                    const s = (row.J || 'PENDIENTE').toUpperCase();
-                    const key = statusMap[s] || 'pendiente';
+                
+                dataRows.forEach(row => {
+                    const rawStatus = (row.J || 'PENDIENTE').toString().toUpperCase();
+                    const key = statusMap[rawStatus] || 'pendiente';
                     if (key === 'pendiente') {
                         pendingRows.push(row);
                     } else {
@@ -1309,31 +1340,29 @@
                         groups[type].push(row);
                     }
                 });
-
+                
                 const container = document.querySelector('.modern-table-container');
                 container.innerHTML = '';
-
+                
                 const renderSection = (title, rows) => {
                     if (rows.length === 0) return;
-
-                    // Ordenar filas (por estado y luego por ECO)
+                    
                     rows.sort((a, b) => {
-                        const keyA = statusMap[(a.J || 'PENDIENTE').toUpperCase()] || 'pendiente';
-                        const keyB = statusMap[(b.J || 'PENDIENTE').toUpperCase()] || 'pendiente';
+                        const keyA = statusMap[(a.J || 'PENDIENTE').toString().toUpperCase()] || 'pendiente';
+                        const keyB = statusMap[(b.J || 'PENDIENTE').toString().toUpperCase()] || 'pendiente';
                         const pA = statusPriority[keyA] || 99;
                         const pB = statusPriority[keyB] || 99;
                         if (pA !== pB) return pA - pB;
-                        return String(a.B || '').localeCompare(String(b.B || ''), undefined, { numeric: true, sensitivity: 'base' });
+                        return String(a.B || '').localeCompare(String(b.B || ''), undefined, { numeric: true });
                     });
-
+                    
                     const headerDiv = document.createElement('div');
                     headerDiv.className = 'table-header-title';
                     headerDiv.innerHTML = `<h2>${title.toUpperCase()}</h2><span class="print-date">Impresión: ${getFormattedDate()}</span>`;
                     container.appendChild(headerDiv);
-
+                    
                     const table = document.createElement('table');
                     table.className = 'modern-table';
-                    // Cabecera con el ícono correcto para EQUIPO / SERIE
                     table.innerHTML = `<thead><tr>
                         <th></th>
                         <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>ECO</div></th>
@@ -1344,15 +1373,13 @@
                         <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>ESTADO</div></th>
                         <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>FECHA</div></th>
                     </tr></thead>`;
-
+                    
                     rows.forEach(row => {
-                        const rawStatus = (row.J || 'PENDIENTE').toUpperCase();
+                        const rawStatus = (row.J || 'PENDIENTE').toString().toUpperCase();
                         const statusKey = statusMap[rawStatus] || 'pendiente';
                         const statusClass = statusKey;
-
-                        // Formatear fecha correctamente
-                        const fechaFormateada = formatExcelDate(row.N);
-
+                        const fechaFormateada = parseExcelDate(row.N);
+                        
                         const tbody = document.createElement('tbody');
                         tbody.innerHTML = `
                             <tr class="main-row">
@@ -1379,41 +1406,21 @@
                     });
                     container.appendChild(table);
                 };
-
-                // 1. Renderizar sección de Pendientes si existen
-                if (pendingRows.length) {
-                    renderSection('PENDIENTES | Equipos por Instalar', pendingRows);
-                }
-
-                // 2. Renderizar el resto de grupos
+                
+                if (pendingRows.length) renderSection('PENDIENTES | Equipos por Instalar', pendingRows);
                 Object.keys(groups).sort().forEach(typeName => {
                     renderSection(`${typeName} | Estado de Equipos por Unidad`, groups[typeName]);
                 });
-
-                // Ocultar modal inicial si existe
+                
                 const modal = document.getElementById('initialModal');
-                if (modal) {
-                    modal.classList.add('hidden');
-                }
-
+                if (modal) modal.classList.add('hidden');
                 alert('¡Datos actualizados correctamente!');
             };
             reader.readAsArrayBuffer(file);
         }
-
-        const uploadInput = document.getElementById('excel-upload');
-        if (uploadInput) {
-            uploadInput.addEventListener('change', function (e) {
-                processExcel(e.target.files[0]);
-            });
-        }
-
-        const modalUploadInput = document.getElementById('modal-excel-upload');
-        if (modalUploadInput) {
-            modalUploadInput.addEventListener('change', function (e) {
-                processExcel(e.target.files[0]);
-            });
-        }
+        
+        document.getElementById('excel-upload')?.addEventListener('change', e => processExcel(e.target.files[0]));
+        document.getElementById('modal-excel-upload')?.addEventListener('change', e => processExcel(e.target.files[0]));
     </script>
 </body>
 
