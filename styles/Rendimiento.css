@@ -936,3 +936,75 @@ body {
 
     .nav-controls { flex-wrap: wrap; }
 }
+/* ── Botones de Exportación ── */
+.btn-download-pdf {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    background: var(--c-red);
+    border: none;
+    color: #fff;
+    font-family: var(--font);
+    font-size: .8rem;
+    font-weight: 700;
+    padding: .45rem 1rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all .2s ease;
+    box-shadow: 0 4px 12px rgba(204, 0, 0, 0.2);
+}
+
+.btn-download-pdf:hover {
+    background: #b30000;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(204, 0, 0, 0.3);
+}
+
+.btn-download-pdf:active {
+    transform: translateY(0);
+}
+
+.btn-export-excel {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    background: #1d6f42; /* Excel Green */
+    border: none;
+    color: #fff;
+    font-family: var(--font);
+    font-size: .72rem;
+    font-weight: 700;
+    padding: .35rem .75rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.btn-export-excel:hover {
+    background: #145532;
+    filter: brightness(1.1);
+}
+
+.btn-export-excel svg {
+    opacity: 0.9;
+}
+
+/* Ocultar elementos en la exportación a PDF */
+.no-print {
+    display: none !important;
+}
+
+@media print {
+    .nav-controls, .table-controls, .btn-refresh, .btn-download-pdf, .btn-export-excel, .search-input {
+        display: none !important;
+    }
+    
+    .glass-panel {
+        box-shadow: none !important;
+        border: 1px solid #eee !important;
+    }
+    
+    body {
+        background: #fff !important;
+    }
+}
