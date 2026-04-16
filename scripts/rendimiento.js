@@ -166,7 +166,6 @@ geotab.addin.rendimiento = function () {
         return perfRecords;
     };
 
-    // ─── Render summary KPIs ─────────────────────────────────────────────────
     const renderSummary = (records, trips) => {
         const totalDist = (trips || []).reduce((s, t) => s + (parseFloat(t.distance) || 0), 0);
         const totalFuel = (records || []).reduce((s, r) => s + (parseFloat(r.fuelUsed) || 0), 0);
@@ -185,47 +184,9 @@ geotab.addin.rendimiento = function () {
 
         const totalBadge = document.getElementById("stat-total-badge");
         if (totalBadge) totalBadge.textContent = isCustomRange ? "rango personalizado" : `últimos ${selectedDays} días`;
-
-        const badgeRanking = document.getElementById("badge-ranking");
-        if (badgeRanking) {
-            badgeRanking.classList.remove("skeleton");
-            badgeRanking.textContent = `${unidades} unidades`;
-        }
     };
 
-    // ─── Render ranking ──────────────────────────────────────────────────────
-    const renderRanking = (records) => {
-        const sorted = [...records].filter(d => d.kmPerL > 0).sort((a, b) => b.kmPerL - a.kmPerL);
-        const maxKmPerL = sorted.length > 0 ? sorted[0].kmPerL : 1;
-        const ul = document.getElementById("ranking-list");
-        if (!ul) return;
-        ul.innerHTML = "";
 
-        if (sorted.length === 0) {
-            ul.innerHTML = `<li class="ranking-empty">Sin datos en el periodo seleccionado</li>`;
-            return;
-        }
-
-        sorted.forEach((item, idx) => {
-            const pct = Math.round((item.kmPerL / maxKmPerL) * 100);
-            const li = document.createElement("li");
-            li.className = "ranking-item";
-            li.innerHTML = `
-                <div class="ranking-pos">${idx + 1}</div>
-                <div class="ranking-info">
-                    <div class="ranking-name">${item.deviceName}</div>
-                    <div class="ranking-bar-wrap">
-                        <div class="ranking-bar" style="width:${pct}%"></div>
-                    </div>
-                </div>
-                <div class="ranking-stats">
-                    <span class="ranking-count">${item.kmPerL.toFixed(1)}</span>
-                    <span class="ranking-liters">km/L</span>
-                </div>
-            `;
-            ul.appendChild(li);
-        });
-    };
 
     // ─── Render performance table ────────────────────────────────────────────
     const renderTable = (records) => {
@@ -805,44 +766,6 @@ geotab.addin.rendimiento = function () {
         XLSX.writeFile(wb, filename + "_" + new Date().toISOString().slice(0,10) + ".xlsx");
     };
 
-    // ─── Download PDF ────────────────────────────────────────────────────────
-    const downloadPDF = () => {
-        const element = document.getElementById("app-rendimiento");
-        const btnPDF = document.getElementById("btn-download-pdf");
-        
-        // Feedback
-        const originalText = btnPDF.innerHTML;
-        btnPDF.innerHTML = '<i data-lucide="loader" width="18" height="18" class="spin"></i><span>...</span>';
-        if (window.lucide) lucide.createIcons();
-
-        const opt = {
-            margin:       [5, 5],
-            filename:     'Dashboard_Rendimiento_' + new Date().toISOString().slice(0,10) + '.pdf',
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { 
-                scale: 2, 
-                useCORS: true, 
-                letterRendering: true,
-                scrollY: 0
-            },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' },
-            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
-        };
-
-        // Hide controls temporarily via CSS class
-        const controls = document.querySelectorAll('.nav-controls, .table-controls, .btn-refresh, .btn-download-pdf, .search-input, .date-popover');
-        controls.forEach(el => el.style.visibility = 'hidden');
-
-        html2pdf().set(opt).from(element).save().then(() => {
-            controls.forEach(el => el.style.visibility = 'visible');
-            btnPDF.innerHTML = originalText;
-            if (window.lucide) lucide.createIcons();
-        }).catch(err => {
-            console.error("PDF Error:", err);
-            controls.forEach(el => el.style.visibility = 'visible');
-            btnPDF.innerHTML = originalText;
-            if (window.lucide) lucide.createIcons();
-        });
     };
 
     // ─── Reset UI ─────────────────────────────────────────────────────────────
@@ -1487,7 +1410,6 @@ geotab.addin.rendimiento = function () {
             console.log("[Rendimiento] Processed Trips:", allTrips.length);
 
             renderSummary(allRecords, allTrips);
-            renderRanking(allRecords);
             renderTable(filteredRecords);
             renderCharts(filteredRecords);
             renderTripsTable(filteredTrips);
@@ -1658,12 +1580,6 @@ geotab.addin.rendimiento = function () {
                     exportToExcel(tableId, tableName.replace(/\s+/g, '_'));
                 });
             });
-
-            // Download PDF Listener
-            const btnDownloadPDF = document.getElementById("btn-download-pdf");
-            if (btnDownloadPDF) {
-                btnDownloadPDF.addEventListener("click", downloadPDF);
-            }
 
             if (window.lucide) lucide.createIcons();
 
