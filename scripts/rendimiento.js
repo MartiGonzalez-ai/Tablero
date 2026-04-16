@@ -184,6 +184,46 @@ geotab.addin.rendimiento = function () {
 
         const totalBadge = document.getElementById("stat-total-badge");
         if (totalBadge) totalBadge.textContent = isCustomRange ? "rango personalizado" : `últimos ${selectedDays} días`;
+
+        const badgeRanking = document.getElementById("badge-ranking");
+        if (badgeRanking) {
+            badgeRanking.classList.remove("skeleton");
+            badgeRanking.textContent = `${unidades} unidades`;
+        }
+    };
+
+    // ─── Render ranking ──────────────────────────────────────────────────────
+    const renderRanking = (records) => {
+        const sorted = [...records].filter(d => d.kmPerL > 0).sort((a, b) => b.kmPerL - a.kmPerL);
+        const maxKmPerL = sorted.length > 0 ? sorted[0].kmPerL : 1;
+        const ul = document.getElementById("ranking-list");
+        if (!ul) return;
+        ul.innerHTML = "";
+
+        if (sorted.length === 0) {
+            ul.innerHTML = `<li class="ranking-empty">Sin datos en el periodo seleccionado</li>`;
+            return;
+        }
+
+        sorted.forEach((item, idx) => {
+            const pct = Math.round((item.kmPerL / maxKmPerL) * 100);
+            const li = document.createElement("li");
+            li.className = "ranking-item";
+            li.innerHTML = `
+                <div class="ranking-pos">${idx + 1}</div>
+                <div class="ranking-info">
+                    <div class="ranking-name">${item.deviceName}</div>
+                    <div class="ranking-bar-wrap">
+                        <div class="ranking-bar" style="width:${pct}%"></div>
+                    </div>
+                </div>
+                <div class="ranking-stats">
+                    <span class="ranking-count">${item.kmPerL.toFixed(1)}</span>
+                    <span class="ranking-liters">km/L</span>
+                </div>
+            `;
+            ul.appendChild(li);
+        });
     };
 
 
@@ -774,6 +814,12 @@ geotab.addin.rendimiento = function () {
             const el = document.getElementById(id);
             if (el) { el.textContent = "—"; el.classList.add("skeleton"); }
         });
+
+        const ul = document.getElementById("ranking-list");
+        if (ul) ul.innerHTML = Array(5).fill('<li class="ranking-skeleton"></li>').join("");
+
+        const badgeRanking = document.getElementById("badge-ranking");
+        if (badgeRanking) { badgeRanking.textContent = "—"; badgeRanking.classList.add("skeleton"); }
 
 
 
@@ -1406,6 +1452,7 @@ geotab.addin.rendimiento = function () {
             console.log("[Rendimiento] Processed Trips:", allTrips.length);
 
             renderSummary(allRecords, allTrips);
+            renderRanking(allRecords);
             renderTable(filteredRecords);
             renderCharts(filteredRecords);
             renderTripsTable(filteredTrips);
