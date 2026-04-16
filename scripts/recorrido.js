@@ -1,3 +1,10 @@
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * RECORRIDO.JS — Lógica para la consulta de kilómetros históricos
+ * Geotab Add-In | Modern ESM Logic
+ * ═══════════════════════════════════════════════════════════════
+ */
+
 "use strict";
 
 // Geotab API Initialization
@@ -77,16 +84,16 @@ geotab.addin.recorrido = function () {
             }],
             chart: {
                 type: 'bar',
-                height: 300,
+                height: 260,
                 width: '100%',
                 toolbar: { show: false },
                 fontFamily: "'Inter', sans-serif"
             },
-            colors: ['#00b1e1'],
+            colors: ['#003666'], // Geotab Blue
             plotOptions: {
                 bar: {
-                    borderRadius: 4,
-                    columnWidth: '60%',
+                    borderRadius: 3,
+                    columnWidth: '55%',
                 }
             },
             dataLabels: { enabled: false },
@@ -94,17 +101,26 @@ geotab.addin.recorrido = function () {
                 categories: dates,
                 labels: {
                     style: { colors: '#64748b', fontSize: '10px' },
-                    rotate: -45
-                }
+                    rotate: -45,
+                    formatter: function(value) {
+                        if (!value) return "";
+                        const d = new Date(value + "T12:00:00");
+                        if (isNaN(d.getTime())) return value;
+                        const label = d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+                        return label.charAt(0).toUpperCase() + label.slice(1);
+                    }
+                },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
             },
             yaxis: {
                 labels: {
-                    style: { colors: '#64748b' },
-                    formatter: (val) => val.toFixed(1) + " km"
+                    style: { colors: '#64748b', fontSize: '10px' },
+                    formatter: (val) => val.toFixed(0) + " km"
                 }
             },
             grid: {
-                borderColor: '#f1f5f9',
+                borderColor: '#eaecf0',
                 strokeDashArray: 4
             },
             tooltip: {
@@ -243,32 +259,47 @@ geotab.addin.recorrido = function () {
                 data: trendSeries
             }],
             chart: {
-                type: 'line',
-                height: 350,
+                type: 'area',
+                height: 260,
                 width: '100%',
                 toolbar: { show: false },
-                fontFamily: "'Inter', sans-serif"
+                fontFamily: "'Inter', sans-serif",
+                zoom: { enabled: false }
             },
             stroke: {
                 curve: 'smooth',
-                width: 3,
-                colors: ['#10b981']
+                width: 2.5
             },
-            colors: ['#10b981'],
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.35,
+                    opacityTo: 0.05,
+                    stops: [0, 100],
+                    colorStops: [
+                        { offset: 0, color: "#00b1e1", opacity: 0.35 },
+                        { offset: 100, color: "#00b1e1", opacity: 0 }
+                    ]
+                }
+            },
+            colors: ["#00b1e1"],
             dataLabels: {
                 enabled: trendGrouping !== "day",
-                formatter: (val) => val.toLocaleString("es-MX"),
-                style: { fontSize: '10px', colors: ['#10b981'] }
+                formatter: (val) => Math.round(val).toLocaleString("es-MX"),
+                offsetY: -6,
+                style: { fontSize: '11px', fontWeight: '700', colors: ["#003666"] },
+                background: { enabled: true, foreColor: '#fff', borderRadius: 4, borderWidth: 0, opacity: 0.9 }
             },
             markers: {
-                size: 4,
-                colors: ['#10b981'],
-                strokeColors: '#fff',
+                size: trendGrouping === "day" ? 0 : 4,
+                colors: ['#fff'],
+                strokeColors: "#00b1e1",
                 strokeWidth: 2,
-                hover: { size: 6 }
+                hover: { size: 7 }
             },
             xaxis: {
-                type: trendGrouping === "day" ? "category" : "category",
+                type: "category",
                 categories: trendSeries.map(p => p.x),
                 labels: {
                     style: { colors: '#64748b', fontSize: '10px' },
@@ -281,21 +312,24 @@ geotab.addin.recorrido = function () {
                         const label = d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
                         return label.charAt(0).toUpperCase() + label.slice(1);
                     }
-                }
+                },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
             },
             yaxis: {
                 labels: {
-                    style: { colors: '#64748b' },
+                    style: { colors: '#64748b', fontSize: '10px' },
                     formatter: (val) => Math.round(val).toLocaleString("es-MX") + " km"
                 }
             },
             grid: {
-                borderColor: '#f1f5f9',
+                borderColor: '#eaecf0',
                 strokeDashArray: 4
             },
             tooltip: {
+                shared: true,
                 theme: 'light',
-                y: { formatter: (val) => val.toLocaleString("es-MX") + " km" }
+                y: { formatter: (val) => Math.round(val).toLocaleString("es-MX") + " km" }
             }
         };
 
