@@ -162,7 +162,7 @@ body {
 .recorrido-content-grid {
     display: flex;
     flex-direction: column;
-    gap: 4rem; /* Aumentado sustancialmente para 'despegar' elementos */
+    gap: 6rem; /* Aumentado para mayor separación visual */
     animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
