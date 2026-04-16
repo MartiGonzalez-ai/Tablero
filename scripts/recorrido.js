@@ -14,6 +14,7 @@ geotab.addin.recorrido = function () {
     let trendGrouping = "day";
     let lastOdoData = {};
     let lastDistanceData = {};
+    let selectedPeriod = "month"; // Default period
 
     // DOM Elements
     const unitSelect = document.getElementById("unit-select-recorrido");
@@ -364,16 +365,51 @@ geotab.addin.recorrido = function () {
         });
     };
 
+    const getSelectedRange = () => {
+        const toDate = new Date();
+        const fromDate = new Date();
+
+        if (selectedPeriod === "custom") {
+            const customVal = document.getElementById("date-until").value;
+            if (!customVal) return null;
+            const toD = new Date(customVal + "T23:59:59");
+            const fromD = new Date(toD);
+            fromD.setDate(fromD.getDate() - 30); // Default to 30 days history
+            return { from: fromD, to: toD };
+        }
+
+        if (selectedPeriod === "week") {
+            const day = toDate.getDay();
+            const diff = toDate.getDate() - day + (day === 0 ? -6 : 1);
+            fromDate.setDate(diff);
+        } else if (selectedPeriod === "month") {
+            fromDate.setDate(1);
+        } else if (selectedPeriod === "bimester") {
+            fromDate.setMonth(Math.floor(toDate.getMonth() / 2) * 2);
+            fromDate.setDate(1);
+        } else if (selectedPeriod === "trimester") {
+            fromDate.setMonth(Math.floor(toDate.getMonth() / 3) * 3);
+            fromDate.setDate(1);
+        } else if (selectedPeriod === "semester") {
+            fromDate.setMonth(Math.floor(toDate.getMonth() / 6) * 6);
+            fromDate.setDate(1);
+        }
+
+        fromDate.setHours(0, 0, 0, 0);
+        toDate.setHours(23, 59, 59, 999);
+        return { from: fromDate, to: toDate };
+    };
+
     const calculateDistance = () => {
         const deviceId = unitSelect.value;
-        const toDateVal = dateUntilInput.value;
+        const range = getSelectedRange();
 
         if (!deviceId) {
             showError("Por favor, selecciona una unidad.");
             return;
         }
-        if (!toDateVal) {
-            showError("Por favor, selecciona una fecha límite.");
+        if (!range) {
+            showError("Por favor, selecciona una fecha válida.");
             return;
         }
 
@@ -381,18 +417,14 @@ geotab.addin.recorrido = function () {
         loadingOverlay.style.display = "flex";
         btnConsultar.disabled = true;
 
-        // Establecemos el punto final del reporte (el día seleccionado a las 23:59:59 tiempo local)
-        const toDateObj = new Date(toDateVal + "T23:59:59"); 
-        
-        // Punto inicial para historial (30 días antes de toDate)
-        const fromDateHistoric = new Date(toDateObj);
-        fromDateHistoric.setDate(fromDateHistoric.getDate() - 30);
+        const toDateObj = range.to; 
+        const fromDateHistoric = range.from;
 
-        // --- Estrategia de Reconstrucción ---
-        // 1. Obtener odómetro ABSOLUTO actual (AHORA)
-        // 2. Obtener TODOS los viajes desde 'fromDateHistoric' hasta 'AHORA'
-        // 3. Restar todos los viajes posteriores a 'toDateObj' del odómetro actual para hallar el odómetro en 'toDate'
-        
+        // Number of days in the selected range (for the daily breakdown)
+        const diffTime = Math.abs(toDateObj - fromDateHistoric);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const historyDays = Math.max(diffDays, 1);
+
         const now = new Date();
         const searchToDateToken = now.toISOString();
         const searchFromDateToken = fromDateHistoric.toISOString();
@@ -454,8 +486,8 @@ geotab.addin.recorrido = function () {
                 // entre la lectura de anclaje (odoDateTime) y la fecha de interés (toDateObj).
 
                 const dailyDistanceData = {};
-                // Inicializar 30 días previos a toDate
-                for (let i = 0; i < 30; i++) {
+                // Initialize range days previos a toDate
+                for (let i = 0; i < historyDays; i++) {
                     const d = new Date(toDateObj);
                     d.setDate(d.getDate() - i);
                     dailyDistanceData[getLocalDateString(d)] = 0;
@@ -503,7 +535,10 @@ geotab.addin.recorrido = function () {
                 
                 // KPI: Odómetro al final del día seleccionado (en KM)
                 animateCount(distanciaValue, targetOdoKms);
-                fechaFooter.textContent = formatDateReadable(toDateVal);
+                const rangeDisplay = selectedPeriod === "custom" 
+                    ? formatDateReadable(document.getElementById("date-until").value)
+                    : formatDateReadable(getLocalDateString(toDateObj));
+                fechaFooter.textContent = rangeDisplay;
 
                 // Tabla
                 const sortedDatesForTable = Object.keys(dailyOdoData).sort((a, b) => b.localeCompare(a));
@@ -565,6 +600,27 @@ geotab.addin.recorrido = function () {
             if (btnConsultar) {
                 btnConsultar.addEventListener("click", calculateDistance);
             }
+
+            // Period Presets
+            const presetButtons = document.querySelectorAll("#period-presets .btn-range");
+            const customWrapper = document.getElementById("custom-date-wrapper");
+
+            presetButtons.forEach(btn => {
+                btn.addEventListener("click", function() {
+                    presetButtons.forEach(b => b.classList.remove("active"));
+                    this.classList.add("active");
+
+                    const period = this.getAttribute("data-period");
+                    if (period) {
+                        selectedPeriod = period;
+                        customWrapper.style.display = "none";
+                        calculateDistance();
+                    } else if (this.id === "btn-custom-range") {
+                        selectedPeriod = "custom";
+                        customWrapper.style.display = "block";
+                    }
+                });
+            });
 
             const timeframeSelectOdo = document.getElementById("trend-timeframe-select-odo");
             if (timeframeSelectOdo) {
