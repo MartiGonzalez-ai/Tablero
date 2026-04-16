@@ -1,9 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════
-   RENDIMIENTO.CSS  —  Estilos exclusivos del Dashboard de Rendimiento de Flota
-   Geotab Add-In | Inter font | Light Mode
-═══════════════════════════════════════════════════════════════ */
-
-/* ─── TOKENS ────────────────────────────────────────────────────────────────── */
 :root {
     /* Fondo */
     --color-bg-main:    #f0f2f5;
@@ -462,7 +456,7 @@ body {
 .main-content {
     flex: 1;
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 1fr;
     gap: 1rem;
     padding: 1rem 2rem 2rem;
     align-items: start;
@@ -537,100 +531,9 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   RANKING PANEL
-═══════════════════════════════════════════════════════════════ */
-.ranking-panel { min-height: 350px; }
-
-.ranking-list { list-style: none; padding: .75rem 0; }
-
-.ranking-item {
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-    padding: .6rem 1.25rem;
-    transition: background .15s;
-    cursor: default;
-}
-
-.ranking-item:hover { background: rgba(0,0,0,.02); }
-
-.ranking-pos {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #f1f5f9;
-    border: 1px solid var(--color-panel-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: .68rem;
-    font-weight: 800;
-    color: var(--color-text-muted);
-    flex-shrink: 0;
-}
-
-.ranking-item:nth-child(1) .ranking-pos { background: rgba(0,177,225,.2);   border-color: var(--c-cyan);   color: var(--c-cyan); }
-.ranking-item:nth-child(2) .ranking-pos { background: rgba(59,117,60,.15);  border-color: var(--c-green);  color: var(--c-green); }
-.ranking-item:nth-child(3) .ranking-pos { background: rgba(129,56,150,.15); border-color: var(--c-purple); color: var(--c-purple); }
-
-.ranking-info { flex: 1; min-width: 0; }
-
-.ranking-name {
-    font-size: .8rem;
-    font-weight: 600;
-    color: var(--color-text-main);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: .3rem;
-}
-
-.ranking-bar-wrap {
-    height: 4px;
-    background: #e2e8f0;
-    border-radius: 99px;
-    overflow: hidden;
-}
-
-.ranking-bar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--c-cyan), var(--c-green));
-    border-radius: 99px;
-    transition: width .6s cubic-bezier(.34,1.56,.64,1);
-}
-
-.ranking-stats {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    flex-shrink: 0;
-}
-
-.ranking-count {
-    font-size: 1rem;
-    font-weight: 800;
-    color: var(--c-cyan);
-    line-height: 1;
-}
-
-.ranking-liters {
-    font-size: .68rem;
-    color: var(--color-text-muted);
-    margin-top: .1rem;
-}
-
-.ranking-empty {
-    padding: 2rem 1.25rem;
-    text-align: center;
-    font-size: .82rem;
-    color: var(--color-text-muted);
-    font-style: italic;
-}
-
-/* ═══════════════════════════════════════════════════════════════
    TABLE PANEL — Detalle de Rendimiento
 ═══════════════════════════════════════════════════════════════ */
-.table-panel { min-height: 350px; }
+.table-panel { min-height: 400px; }
 
 .table-wrapper {
     overflow-x: auto;
@@ -642,6 +545,7 @@ body {
 /* Tabla de rendimiento */
 .perf-table {
     width: 100%;
+    min-width: 900px; /* Asegura scroll lateral si el contenedor es menor */
     border-collapse: collapse;
     font-size: .82rem;
 }
@@ -935,33 +839,6 @@ body {
     }
 
     .nav-controls { flex-wrap: wrap; }
-}
-/* ── Botones de Exportación ── */
-.btn-download-pdf {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    background: var(--c-red);
-    border: none;
-    color: #fff;
-    font-family: var(--font);
-    font-size: .8rem;
-    font-weight: 700;
-    padding: .45rem 1rem;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all .2s ease;
-    box-shadow: 0 4px 12px rgba(204, 0, 0, 0.2);
-}
-
-.btn-download-pdf:hover {
-    background: #b30000;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(204, 0, 0, 0.3);
-}
-
-.btn-download-pdf:active {
-    transform: translateY(0);
 }
 
 .btn-export-excel {
