@@ -795,6 +795,56 @@ geotab.addin.rendimiento = function () {
                 return { dailyData, sortedDates };
     };
 
+    // ─── Export to Excel ─────────────────────────────────────────────────────
+    const exportToExcel = (tableId, filename) => {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        
+        // Use SheetJS to convert table to workbook
+        const wb = XLSX.utils.table_to_book(table, { sheet: "Datos" });
+        XLSX.writeFile(wb, filename + "_" + new Date().toISOString().slice(0,10) + ".xlsx");
+    };
+
+    // ─── Download PDF ────────────────────────────────────────────────────────
+    const downloadPDF = () => {
+        const element = document.getElementById("app-rendimiento");
+        const btnPDF = document.getElementById("btn-download-pdf");
+        
+        // Feedback
+        const originalText = btnPDF.innerHTML;
+        btnPDF.innerHTML = '<i data-lucide="loader" width="18" height="18" class="spin"></i><span>...</span>';
+        if (window.lucide) lucide.createIcons();
+
+        const opt = {
+            margin:       [5, 5],
+            filename:     'Dashboard_Rendimiento_' + new Date().toISOString().slice(0,10) + '.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { 
+                scale: 2, 
+                useCORS: true, 
+                letterRendering: true,
+                scrollY: 0
+            },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' },
+            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        // Hide controls temporarily via CSS class
+        const controls = document.querySelectorAll('.nav-controls, .table-controls, .btn-refresh, .btn-download-pdf, .search-input, .date-popover');
+        controls.forEach(el => el.style.visibility = 'hidden');
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            controls.forEach(el => el.style.visibility = 'visible');
+            btnPDF.innerHTML = originalText;
+            if (window.lucide) lucide.createIcons();
+        }).catch(err => {
+            console.error("PDF Error:", err);
+            controls.forEach(el => el.style.visibility = 'visible');
+            btnPDF.innerHTML = originalText;
+            if (window.lucide) lucide.createIcons();
+        });
+    };
+
     // ─── Reset UI ─────────────────────────────────────────────────────────────
     const resetUI = () => {
         ["stat-rendimiento", "stat-distancia", "stat-combustible", "stat-unidades"].forEach(id => {
@@ -1599,6 +1649,23 @@ geotab.addin.rendimiento = function () {
             }
 
             btnRefresh.addEventListener("click", function () { loadData(); });
+
+            // Export Excel Listeners
+            document.querySelectorAll(".btn-export-excel").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    const tableId = btn.dataset.table;
+                    const tableName = btn.closest('.panel').querySelector('.panel-title-group span').textContent;
+                    exportToExcel(tableId, tableName.replace(/\s+/g, '_'));
+                });
+            });
+
+            // Download PDF Listener
+            const btnDownloadPDF = document.getElementById("btn-download-pdf");
+            if (btnDownloadPDF) {
+                btnDownloadPDF.addEventListener("click", downloadPDF);
+            }
+
+            if (window.lucide) lucide.createIcons();
 
             callback();
         },
