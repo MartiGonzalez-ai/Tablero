@@ -10,7 +10,7 @@ geotab.addin.rendimiento = function () {
     let filteredRecords = [];
     let rawStatusData = [];    // Raw StatusData for the raw table
     let selectedUnitId = "all"; // "all" or specific device ID
-    let trendGrouping = "day";  // "day", "week", "month"
+    let trendGrouping = "month";  // Default: month
     let deviceMap = {};        // Global device map
 
     // Chart instances
@@ -937,6 +937,79 @@ geotab.addin.rendimiento = function () {
                 const capitalized = label.charAt(0).toUpperCase() + label.slice(1);
                 trendSeries.push({ x: capitalized, y: parseFloat(eff.toFixed(1)) });
             });
+        } else if (trendGrouping === 'bimester') {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const month = parseInt(dateStr.substring(5, 7));
+                const year = dateStr.substring(0, 4);
+                const bimesterStartMonth = Math.floor((month - 1) / 2) * 2 + 1;
+                const bKey = year + "-" + String(bimesterStartMonth).padStart(2, '0') + "-01";
+                
+                if (!grouped[bKey]) grouped[bKey] = { dist: 0, fuel: 0 };
+                grouped[bKey].dist += (dailyData[dateStr].dist || 0);
+                grouped[bKey].fuel += (dailyData[dateStr].fuel || 0);
+            });
+            Object.keys(grouped).sort().forEach(key => {
+                const g = grouped[key];
+                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
+                const d1 = new Date(key + "T12:00:00");
+                const d2 = new Date(d1); d2.setMonth(d2.getMonth() + 1);
+                const l1 = d1.toLocaleDateString("es-MX", { month: "short" });
+                const l2 = d2.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
+                const label = l1.charAt(0).toUpperCase() + l1.slice(1) + " - " + l2.charAt(0).toUpperCase() + l2.slice(1);
+                trendSeries.push({ x: label, y: parseFloat(eff.toFixed(1)) });
+            });
+        } else if (trendGrouping === 'trimester') {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const month = parseInt(dateStr.substring(5, 7));
+                const year = dateStr.substring(0, 4);
+                const trimesterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
+                const tKey = year + "-" + String(trimesterStartMonth).padStart(2, '0') + "-01";
+                
+                if (!grouped[tKey]) grouped[tKey] = { dist: 0, fuel: 0 };
+                grouped[tKey].dist += (dailyData[dateStr].dist || 0);
+                grouped[tKey].fuel += (dailyData[dateStr].fuel || 0);
+            });
+            Object.keys(grouped).sort().forEach(key => {
+                const g = grouped[key];
+                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
+                const d = new Date(key + "T12:00:00");
+                const q = Math.floor(d.getMonth() / 3) + 1;
+                trendSeries.push({ x: "T" + q + " " + d.getFullYear(), y: parseFloat(eff.toFixed(1)) });
+            });
+        } else if (trendGrouping === '6months') {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const month = parseInt(dateStr.substring(5, 7));
+                const year = dateStr.substring(0, 4);
+                const semesterStartMonth = Math.floor((month - 1) / 6) * 6 + 1;
+                const sKey = year + "-" + String(semesterStartMonth).padStart(2, '0') + "-01";
+                
+                if (!grouped[sKey]) grouped[sKey] = { dist: 0, fuel: 0 };
+                grouped[sKey].dist += (dailyData[dateStr].dist || 0);
+                grouped[sKey].fuel += (dailyData[dateStr].fuel || 0);
+            });
+            Object.keys(grouped).sort().forEach(key => {
+                const g = grouped[key];
+                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
+                const d = new Date(key + "T12:00:00");
+                const sem = d.getMonth() < 6 ? "1er Sem" : "2do Sem";
+                trendSeries.push({ x: sem + " " + d.getFullYear(), y: parseFloat(eff.toFixed(1)) });
+            });
+        } else if (trendGrouping === 'year') {
+            const grouped = {};
+            sortedDates.forEach(dateStr => {
+                const yearKey = dateStr.substring(0, 4) + "-01-01";
+                if (!grouped[yearKey]) grouped[yearKey] = { dist: 0, fuel: 0 };
+                grouped[yearKey].dist += (dailyData[dateStr].dist || 0);
+                grouped[yearKey].fuel += (dailyData[dateStr].fuel || 0);
+            });
+            Object.keys(grouped).sort().forEach(key => {
+                const g = grouped[key];
+                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
+                trendSeries.push({ x: key.substring(0, 4), y: parseFloat(eff.toFixed(1)) });
+            });
         }
 
         const optTrendDaily = {
@@ -959,7 +1032,17 @@ geotab.addin.rendimiento = function () {
             colors: [cCyan],
             xaxis: {
                 type: trendGrouping === 'day' ? 'datetime' : 'category',
-                labels: { style: { colors: textMuted, fontSize: '11px' }, format: 'dd MMM' },
+                labels: { 
+                    style: { colors: textMuted, fontSize: '11px' }, 
+                    formatter: function(value, timestamp) {
+                        if (trendGrouping !== 'day') return value;
+                        if (!value) return "";
+                        const d = new Date(value);
+                        if (isNaN(d.getTime())) return value;
+                        const label = d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+                        return label.charAt(0).toUpperCase() + label.slice(1);
+                    }
+                },
                 axisBorder: { show: false },
                 axisTicks: { show: false }
             },
@@ -989,7 +1072,18 @@ geotab.addin.rendimiento = function () {
             fill: { opacity: [0.90, 1] },
             xaxis: {
                 categories: sortedDates,
-                labels: { style: { colors: textMuted, fontSize: '11px' }, rotate: -30, rotateAlways: true },
+                labels: { 
+                    style: { colors: textMuted, fontSize: '11px' }, 
+                    rotate: -30, 
+                    rotateAlways: true,
+                    formatter: function(value) {
+                        if (!value) return "";
+                        const d = new Date(value + "T12:00:00");
+                        if (isNaN(d.getTime())) return value;
+                        const label = d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+                        return label.charAt(0).toUpperCase() + label.slice(1);
+                    }
+                },
                 axisBorder: { show: false },
                 axisTicks: { show: false }
             },
@@ -1401,18 +1495,14 @@ geotab.addin.rendimiento = function () {
                 });
             }
 
-            // Trend grouping buttons
-            const trendBtns = document.getElementById("trend-timeframe-btns");
-            if (trendBtns) {
-                trendBtns.querySelectorAll(".btn-range").forEach(function(btn) {
-                    btn.addEventListener("click", function() {
-                        trendBtns.querySelectorAll(".btn-range").forEach(b => b.classList.remove("active"));
-                        btn.classList.add("active");
-                        trendGrouping = btn.dataset.group;
-                        if (filteredRecords) {
-                            renderCharts(filteredRecords);
-                        }
-                    });
+            // Trend grouping select
+            const trendSelect = document.getElementById("trend-timeframe-select");
+            if (trendSelect) {
+                trendSelect.addEventListener("change", function () {
+                    trendGrouping = trendSelect.value;
+                    if (filteredRecords) {
+                        renderCharts(filteredRecords);
+                    }
                 });
             }
 
