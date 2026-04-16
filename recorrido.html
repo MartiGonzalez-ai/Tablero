@@ -66,9 +66,12 @@
                 </div>
 
                 <!-- Simulación del Odómetro Total (Línea) -->
-                <div class="chart-container glass-panel trend-chart-container">
-                    <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3>Tendencia del Odómetro Total (km)</h3>
+                <div class="chart-card glass-panel trend-chart-container">
+                    <div class="panel-header" style="justify-content: space-between; display: flex; align-items: center;">
+                        <div class="panel-title-group">
+                            <i data-lucide="trending-up" width="16" height="16" stroke-width="2"></i>
+                            <span>Tendencia del Odómetro Total (km)</span>
+                        </div>
                         <div class="trend-filter-container">
                             <i data-lucide="calendar" width="14" height="14" stroke-width="2.5"></i>
                             <select id="trend-timeframe-select-odo" class="trend-select">
@@ -82,19 +85,18 @@
                             </select>
                         </div>
                     </div>
-                    <div id="chart-odo-trend" style="min-height: 350px;">
-                        <!-- ApexCharts Line renders here -->
-                    </div>
+                    <div id="chart-odo-trend" class="chart-container"></div>
                 </div>
 
                 <!-- Nueva Gráfica de Barras Diaria -->
-                <div class="chart-container glass-panel">
-                    <div class="chart-header">
-                        <h3>Distancia Diaria (km)</h3>
+                <div class="chart-card glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="bar-chart-2" width="16" height="16" stroke-width="2"></i>
+                            <span>Distancia Diaria (km)</span>
+                        </div>
                     </div>
-                    <div id="chart-daily-recorrido" style="min-height: 350px;">
-                        <!-- ApexCharts renders here -->
-                    </div>
+                    <div id="chart-daily-recorrido" class="chart-container"></div>
                 </div>
 
                 <!-- Nueva tabla de distancia por día -->
