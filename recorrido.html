@@ -119,10 +119,22 @@
 
                 <!-- Nueva Gráfica de Barras Diaria -->
                 <div class="chart-card glass-panel">
-                    <div class="panel-header">
+                    <div class="panel-header" style="justify-content: space-between; display: flex; align-items: center;">
                         <div class="panel-title-group">
                             <i data-lucide="bar-chart-2" width="16" height="16" stroke-width="2"></i>
                             <span>Distancia Diaria (km)</span>
+                        </div>
+                        <div class="trend-filter-container">
+                            <i data-lucide="calendar" width="14" height="14" stroke-width="2.5"></i>
+                            <select id="trend-timeframe-select-daily" class="trend-select">
+                                <option value="day" selected>Día</option>
+                                <option value="week">Semana</option>
+                                <option value="month">Mes</option>
+                                <option value="bimester">Bimestre</option>
+                                <option value="trimester">Trimestre</option>
+                                <option value="6months">6 Meses</option>
+                                <option value="year">Año</option>
+                            </select>
                         </div>
                     </div>
                     <div id="chart-daily-recorrido" class="chart-container"></div>
