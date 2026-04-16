@@ -63,18 +63,34 @@
         <!-- ═══════════ MAIN CONTENT ═══════════ -->
         <main class="recorrido-container">
             <div id="result-container" class="recorrido-content-grid" style="display: none;">
-                <!-- KPI Card Principal -->
-                <div class="main-result-card glass-panel">
-                    <div class="result-icon-v2">
-                        <i data-lucide="route" width="40" height="40"></i>
-                    </div>
-                    <div class="result-details">
-                        <span class="result-label">Odómetro Estimado</span>
-                        <div class="result-value-big">
-                            <span id="distancia-value">0</span>
-                            <span class="unit">km</span>
+                <!-- KPI Cards Summary -->
+                <div class="summary-strip" style="padding: 0; margin-bottom: -2rem;">
+                    <div class="stat-card" data-color="cyan" style="flex: 1; min-width: 250px;">
+                        <div class="stat-icon stat-icon--cyan">
+                            <i data-lucide="gauge"></i>
                         </div>
-                        <p class="result-meta">Lectura calculada al <span id="fecha-footer">—</span></p>
+                        <div class="stat-body">
+                            <div class="stat-label">Odómetro Estimado</div>
+                            <div class="stat-value">
+                                <span id="distancia-value">0</span>
+                                <span class="stat-value--sm">km</span>
+                            </div>
+                            <div class="stat-sub">Lectura al <span id="fecha-footer">—</span></div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" data-color="blue" style="flex: 1; min-width: 250px;">
+                        <div class="stat-icon stat-icon--blue">
+                            <i data-lucide="route" width="20" height="20"></i>
+                        </div>
+                        <div class="stat-body">
+                            <div class="stat-label">Distancia en Periodo</div>
+                            <div class="stat-value">
+                                <span id="distancia-periodo-value">0</span>
+                                <span class="stat-value--sm">km</span>
+                            </div>
+                            <div class="stat-sub">Trayecto acumulado</div>
+                        </div>
                     </div>
                 </div>
 
