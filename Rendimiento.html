@@ -143,10 +143,17 @@
                             <i data-lucide="trending-up" width="16" height="16" stroke-width="2"></i>
                             <span>Tendencia de Rendimiento Flota (km/L)</span>
                         </div>
-                        <div class="date-range-group" id="trend-timeframe-btns" style="margin: 0; padding: 2px;">
-                            <button class="btn-range active" data-group="day" style="padding: 4px 12px; font-size: 0.75rem;">Día</button>
-                            <button class="btn-range" data-group="week" style="padding: 4px 12px; font-size: 0.75rem;">Semana</button>
-                            <button class="btn-range" data-group="month" style="padding: 4px 12px; font-size: 0.75rem;">Mes</button>
+                        <div class="trend-filter-container">
+                            <i data-lucide="calendar" width="14" height="14" stroke-width="2.5"></i>
+                            <select id="trend-timeframe-select" class="trend-select">
+                                <option value="day">Día</option>
+                                <option value="week">Semana</option>
+                                <option value="month" selected>Mes</option>
+                                <option value="bimester">Bimestre</option>
+                                <option value="trimester">Trimestre</option>
+                                <option value="6months">6 Meses</option>
+                                <option value="year">Año</option>
+                            </select>
                         </div>
                     </div>
                     <div id="chart-eff-unit" class="chart-container"></div>
