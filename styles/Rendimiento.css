@@ -1,3 +1,9 @@
+/* ═══════════════════════════════════════════════════════════════
+   RENDIMIENTO.CSS  —  Estilos exclusivos del Dashboard de Rendimiento de Flota
+   Geotab Add-In | Inter font | Light Mode
+═══════════════════════════════════════════════════════════════ */
+
+/* ─── TOKENS ────────────────────────────────────────────────────────────────── */
 :root {
     /* Fondo */
     --color-bg-main:    #f0f2f5;
@@ -248,19 +254,25 @@ body {
 
 .btn-popover-apply:hover { filter: brightness(1.1); }
 
-/* ── Filtro de unidad ── */
-.unit-filter-group {
+/* ── Filtro de unidad y tendencia ── */
+.unit-filter-group, .trend-filter-container {
     display: flex;
     align-items: center;
-    gap: .4rem;
+    gap: .5rem;
     background: #fff;
     border: 1px solid var(--color-panel-border);
     border-radius: var(--radius-md);
-    padding: .35rem .75rem;
+    padding: .35rem .85rem;
     color: var(--color-text-muted);
+    transition: all .2s ease;
 }
 
-.unit-select {
+.unit-filter-group:hover, .trend-filter-container:hover {
+    border-color: var(--c-cyan);
+    box-shadow: 0 0 0 2px var(--c-cyan-glow);
+}
+
+.unit-select, .trend-select {
     background: transparent;
     border: none;
     color: var(--color-text-main);
@@ -269,6 +281,14 @@ body {
     font-weight: 600;
     cursor: pointer;
     outline: none;
+}
+
+.trend-filter-container {
+    background: var(--color-bg-surface);
+}
+
+.trend-select {
+    padding-right: .5rem;
 }
 
 /* ── Botón Refrescar ── */
