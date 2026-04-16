@@ -74,12 +74,6 @@
                     <span>Refrescar</span>
                 </button>
 
-                <!-- Download PDF -->
-                <button id="btn-download-pdf" class="btn-download-pdf" title="Descargar Dashboard en PDF">
-                    <i data-lucide="file-text" width="18" height="18" stroke-width="2.5"></i>
-                    <span>PDF</span>
-                </button>
-
                 <span class="last-updated" id="last-updated-time">Actualizado: --:--</span>
             </div>
         </header>
@@ -208,25 +202,7 @@
             <!-- ═══════════ MAIN CONTENT ═══════════ -->
             <main class="main-content">
 
-                <!-- Left: Ranking de unidades por rendimiento -->
-                <section class="panel glass-panel ranking-panel">
-                    <div class="panel-header">
-                        <div class="panel-title-group">
-                            <i data-lucide="award" width="16" height="16" stroke-width="2"></i>
-                            <span>Mejor Rendimiento</span>
-                        </div>
-                        <span class="panel-badge skeleton" id="badge-ranking">—</span>
-                    </div>
-                    <ul class="ranking-list" id="ranking-list">
-                        <li class="ranking-skeleton"></li>
-                        <li class="ranking-skeleton"></li>
-                        <li class="ranking-skeleton"></li>
-                        <li class="ranking-skeleton"></li>
-                        <li class="ranking-skeleton"></li>
-                    </ul>
-                </section>
-
-                <!-- Right: Tabla de rendimiento -->
+                <!-- Tabla de rendimiento -->
                 <section class="panel glass-panel table-panel">
                     <div class="panel-header">
                         <div class="panel-title-group">
@@ -419,7 +395,6 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="scripts/vendor.js"></script>
     <script src="scripts/rendimiento.js"></script>
 </body>
