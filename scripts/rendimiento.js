@@ -766,7 +766,7 @@ geotab.addin.rendimiento = function () {
         XLSX.writeFile(wb, filename + "_" + new Date().toISOString().slice(0,10) + ".xlsx");
     };
 
-    };
+
 
     // ─── Reset UI ─────────────────────────────────────────────────────────────
     const resetUI = () => {
@@ -775,11 +775,7 @@ geotab.addin.rendimiento = function () {
             if (el) { el.textContent = "—"; el.classList.add("skeleton"); }
         });
 
-        const ul = document.getElementById("ranking-list");
-        if (ul) ul.innerHTML = Array(5).fill('<li class="ranking-skeleton"></li>').join("");
 
-        const badgeRanking = document.getElementById("badge-ranking");
-        if (badgeRanking) { badgeRanking.textContent = "—"; badgeRanking.classList.add("skeleton"); }
 
         const tbody = document.getElementById("perf-tbody");
         if (tbody) tbody.innerHTML = Array(5).fill('<tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>').join("");
