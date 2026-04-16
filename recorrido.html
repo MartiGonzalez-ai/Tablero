@@ -30,8 +30,21 @@
                     </select>
                 </div>
 
-                <div class="filter-group">
-                    <label for="date-until">Hasta</label>
+                <!-- Date Range Presets -->
+                <div class="date-range-group" id="period-presets">
+                    <button class="btn-range" data-period="week">Esta semana</button>
+                    <button class="btn-range active" data-period="month">Este mes</button>
+                    <button class="btn-range" data-period="bimester">Bimestre</button>
+                    <button class="btn-range" data-period="trimester">Trimestre</button>
+                    <button class="btn-range" data-period="semester">6 meses</button>
+                    <button class="btn-range btn-range--custom" id="btn-custom-range">
+                        <i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i>
+                        Personalizado
+                    </button>
+                </div>
+
+                <!-- Hidden Custom Date Picker -->
+                <div id="custom-date-wrapper" style="display: none;">
                     <input type="date" id="date-until" class="recorrido-input-top">
                 </div>
 
