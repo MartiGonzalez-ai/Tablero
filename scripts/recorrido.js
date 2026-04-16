@@ -1,9 +1,3 @@
-/**
- * ═══════════════════════════════════════════════════════════════
- * RECORRIDO.JS — Lógica para la consulta de kilómetros históricos
- * Geotab Add-In | Modern ESM Logic
- * ═══════════════════════════════════════════════════════════════
- */
 
 "use strict";
 
@@ -535,6 +529,14 @@ geotab.addin.recorrido = function () {
                 
                 // KPI: Odómetro al final del día seleccionado (en KM)
                 animateCount(distanciaValue, targetOdoKms);
+                
+                // KPI: Distancia total recorrida en el periodo
+                const totalDistancePeriod = Object.values(dailyDistanceData).reduce((a, b) => a + b, 0);
+                const distanciaPeriodoValue = document.getElementById("distancia-periodo-value");
+                if (distanciaPeriodoValue) {
+                    animateCount(distanciaPeriodoValue, totalDistancePeriod);
+                }
+
                 const rangeDisplay = selectedPeriod === "custom" 
                     ? formatDateReadable(document.getElementById("date-until").value)
                     : formatDateReadable(getLocalDateString(toDateObj));
