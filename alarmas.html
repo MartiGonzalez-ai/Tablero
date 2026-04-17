@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="Dashboard de Alarmas y Excepciones - Geotab">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Dashboard de Alarmas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/vendor.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/alarmas.css">
+</head>
+
+<body>
+    <div id="app-alarmas">
+
+        <!-- ═══════════ HEADER ═══════════ -->
+        <header class="top-nav glass-panel">
+            <div class="nav-brand">
+                <i data-lucide="bell-ring" width="30" height="30" stroke="var(--c-red)" stroke-width="2"></i>
+                <div>
+                    <h1>Dashboard de Alarmas</h1>
+                    <span class="nav-subtitle">Monitoreo de Excepciones</span>
+                </div>
+            </div>
+
+            <div class="nav-controls">
+                <!-- Date Range Buttons -->
+                <div class="date-range-group" id="date-range-group">
+                    <button class="btn-range active" data-days="7" id="btn-7d">7 días</button>
+                    <button class="btn-range" data-days="15" id="btn-15d">15 días</button>
+                    <button class="btn-range" data-days="30" id="btn-30d">30 días</button>
+                    <button class="btn-range btn-range--custom" id="btn-custom">
+                        <i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i>
+                        Personalizado
+                    </button>
+                </div>
+
+                <!-- Custom Date Popover -->
+                <div class="date-popover glass-panel" id="date-popover">
+                    <div class="date-popover-header">Rango de Fechas</div>
+                    <div class="date-popover-fields">
+                        <div class="date-field">
+                            <label for="date-from">Desde</label>
+                            <input type="date" id="date-from" class="date-input">
+                        </div>
+                        <div class="date-field">
+                            <label for="date-to">Hasta</label>
+                            <input type="date" id="date-to" class="date-input">
+                        </div>
+                    </div>
+                    <div class="date-popover-footer">
+                        <button class="btn-popover-cancel" id="btn-date-cancel">Cancelar</button>
+                        <button class="btn-popover-apply" id="btn-date-apply">
+                            <i data-lucide="check" width="13" height="13" stroke-width="2.5"></i>
+                            Aplicar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Unit Filter -->
+                <div class="unit-filter-group" id="unit-filter-wrapper" style="display: flex; align-items: center; gap: 0.5rem; background: #fff; border: 1px solid var(--color-panel-border); border-radius: var(--radius-md); padding: 0 0.75rem;">
+                    <i data-lucide="truck" width="14" height="14" stroke-width="2.5"></i>
+                    <select id="unit-select" class="unit-select" style="border: none; padding: 0.45rem 0.5rem; font-family: var(--font); font-size: 0.8rem; font-weight: 600; outline: none; cursor: pointer;">
+                        <option value="all">Todas las Unidades</option>
+                    </select>
+                </div>
+
+                <!-- Refresh -->
+                <button id="btn-refresh" class="btn-refresh" title="Refrescar datos">
+                    <i data-lucide="refresh-cw" width="18" height="18" stroke-width="2.5"></i>
+                    <span>Refrescar</span>
+                </button>
+
+                <span class="last-updated" id="last-updated-time">Actualizado: --:--</span>
+            </div>
+        </header>
+
+        <!-- ═══════════ SUMMARY KPI STRIP ═══════════ -->
+        <section class="summary-strip">
+
+            <!-- Total Alamas -->
+            <div class="stat-card" data-color="rose">
+                <div class="stat-icon stat-icon--rose">
+                    <i data-lucide="alert-triangle" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Total de Alarmas</div>
+                    <div class="stat-value skeleton" id="stat-total-alarms">—</div>
+                    <div class="stat-sub" id="stat-period-badge">— días</div>
+                </div>
+            </div>
+
+            <!-- Regla más frecuente -->
+            <div class="stat-card" data-color="orange">
+                <div class="stat-icon stat-icon--orange">
+                    <i data-lucide="activity" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Regla más frecuente</div>
+                    <div class="stat-value stat-value--sm skeleton" id="stat-top-rule">—</div>
+                    <div class="stat-sub" id="stat-top-rule-count">0 activaciones</div>
+                </div>
+            </div>
+
+            <!-- Unidades con Alarmas -->
+            <div class="stat-card" data-color="purple">
+                <div class="stat-icon stat-icon--purple">
+                    <i data-lucide="truck" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Unidades Afectadas</div>
+                    <div class="stat-value skeleton" id="stat-affected-units">—</div>
+                    <div class="stat-sub">unidades con alertas</div>
+                </div>
+            </div>
+
+            <!-- Top Infractor -->
+            <div class="stat-card" data-color="blue">
+                <div class="stat-icon stat-icon--blue">
+                    <i data-lucide="user-x" stroke-width="2"></i>
+                </div>
+                <div class="stat-body">
+                    <div class="stat-label">Top Incidencias</div>
+                    <div class="stat-value stat-value--sm skeleton" id="stat-top-unit">—</div>
+                    <div class="stat-sub" id="stat-top-unit-count">0 alertas</div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ═══════════ CHARTS SECTION ═══════════ -->
+        <section class="charts-section">
+            <!-- Fila 1: Tendencia (Full Width) -->
+            <div class="chart-row">
+                <div class="chart-card glass-panel col-span-3">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="trending-up" width="16" height="16" stroke-width="2"></i>
+                            <span>Tendencia de Alarmas en el Tiempo</span>
+                        </div>
+                    </div>
+                    <div id="chart-alarm-trend" class="chart-container"></div>
+                </div>
+            </div>
+
+            <!-- Fila 2: Distribución por Regla y Ranking por Unidad -->
+            <div class="chart-row chart-row--2col">
+                <div class="chart-card glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="pie-chart" width="16" height="16" stroke-width="2"></i>
+                            <span>Distribución por Regla</span>
+                        </div>
+                    </div>
+                    <div id="chart-rule-dist" class="chart-container chart-container--sm"></div>
+                </div>
+
+                <div class="chart-card glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="bar-chart-3" width="16" height="16" stroke-width="2"></i>
+                            <span>Alarmas por Unidad (Top 10)</span>
+                        </div>
+                    </div>
+                    <div id="chart-unit-ranking" class="chart-container chart-container--sm"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ MAIN CONTENT ═══════════ -->
+        <main class="main-content" style="grid-template-columns: 1fr;">
+
+            <!-- Tabla de Alarmas -->
+            <section class="panel glass-panel table-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <i data-lucide="list" width="16" height="16" stroke-width="2"></i>
+                        <span>Detalle de Alertas Detectadas</span>
+                    </div>
+                    <div class="table-controls">
+                        <input type="text" id="search-input" class="search-input" placeholder="Buscar unidad o regla...">
+                        <button class="btn-export-excel" data-table="alarms-table" title="Exportar a Excel" style="display: flex; align-items: center; gap: 0.5rem; background: #ffffff; border: 1px solid var(--color-panel-border); border-radius: var(--radius-md); padding: 0.45rem 0.9rem; font-size: 0.8rem; font-weight: 600; cursor: pointer;">
+                            <i data-lucide="download" width="14" height="14"></i>
+                            Excel
+                        </button>
+                        <span class="panel-badge" id="badge-table">— alertas</span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="perf-table" id="alarms-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 2px solid var(--color-bg-main);">
+                                <th style="padding: 1rem;">Unidad</th>
+                                <th style="padding: 1rem;">Regla / Alarma</th>
+                                <th style="padding: 1rem;">Fecha y Hora Inicio</th>
+                                <th style="padding: 1rem;">Duración</th>
+                                <th style="padding: 1rem;">Ubicación (Stop Point)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alarms-tbody">
+                            <tr class="tr-skeleton">
+                                <td colspan="5"><div class="td-skel" style="height: 40px; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 400px 100%; animation: shimmer 2s infinite linear; margin: 10px; border-radius: 4px;"></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="table-empty" id="table-empty" style="display:none; flex-direction: column; align-items: center; padding: 3rem; color: var(--color-text-muted);">
+                        <i data-lucide="shield-check" width="60" height="60" stroke-width="1" style="color: var(--c-green); margin-bottom: 1rem;"></i>
+                        <p style="font-size: 1.1rem; font-weight: 500;">No hay alarmas registradas en este periodo.</p>
+                        <p style="font-size: 0.85rem;">¡Excelente trabajo! La flota opera sin incidentes.</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); backdrop-filter: blur(4px); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;">
+            <div class="spinner" style="width: 40px; height: 40px; border: 4px solid var(--color-bg-main); border-top-color: #e11d48; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+            <span style="font-weight: 600; color: var(--color-primary);">Cargando Alarmas...</span>
+        </div>
+
+        <!-- Error Toast -->
+        <div class="error-toast" id="error-toast" style="display:none; position: fixed; bottom: 2rem; right: 2rem; background: #fee2e2; border: 1px solid #fecaca; color: #b91c1c; padding: 1rem 1.5rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); align-items: center; gap: 0.75rem; z-index: 10000; animation: slideUp 0.3s ease-out;">
+            <i data-lucide="alert-circle" width="18" height="18"></i>
+            <span id="error-toast-msg">Error al cargar datos.</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="scripts/vendor.js"></script>
+    <script src="scripts/alarmas.js"></script>
+
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .stat-icon--rose { background: #ffe4e6; color: #e11d48; }
+        .stat-card[data-color="rose"] { border-left: 3px solid #e11d48; }
+        
+        /* Skeleton styling overrides */
+        .skeleton { color: transparent !important; background: #eee; border-radius: 4px; position: relative; overflow: hidden; }
+        .skeleton::after { content: ""; position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: shimmer 1.5s infinite; }
+    </style>
+</body>
+
+</html>
