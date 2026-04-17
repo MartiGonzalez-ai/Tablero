@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="Dashboard de Monitoreo de Aceite - Geotab">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Monitoreo de Aceite</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/Aceite.css">
+</head>
+
+<body>
+    <div id="app-aceite">
+        <!-- ═══════════ HEADER ═══════════ -->
+        <header class="top-nav glass-panel">
+            <div class="nav-brand">
+                <i data-lucide="droplet" width="28" height="28" stroke="var(--color-primary)" stroke-width="2.5"></i>
+                <h1>Monitoreo de Aceite</h1>
+            </div>
+
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label for="unit-select-aceite">Unidad</label>
+                    <select id="unit-select-aceite" class="aceite-input-top">
+                        <option value="all">Todas las Unidades (Resumen)</option>
+                    </select>
+                </div>
+
+                <!-- Date Range Presets -->
+                <div class="date-range-group" id="period-presets">
+                    <button class="btn-range" data-period="day">Hoy</button>
+                    <button class="btn-range" data-period="week">Esta semana</button>
+                    <button class="btn-range active" data-period="month">Este mes</button>
+                </div>
+
+                <button id="btn-consultar" class="btn-primary-top">
+                    <i data-lucide="search" width="16" height="16"></i>
+                    <span>Consultar</span>
+                </button>
+            </div>
+
+            <div class="nav-status">
+                <span class="status-dot"></span>
+                <span id="last-updated-time">Geotab API</span>
+            </div>
+        </header>
+
+        <!-- ═══════════ MAIN CONTENT ═══════════ -->
+        <main class="aceite-container">
+            <div id="result-container" class="aceite-content-grid" style="display: none;">
+                <!-- KPI Cards Summary -->
+                <div class="summary-strip" style="padding: 0; margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    
+                    <div class="stat-card" data-color="orange" style="flex: 1; min-width: 250px;">
+                        <div class="stat-icon stat-icon--orange">
+                            <i data-lucide="thermometer"></i>
+                        </div>
+                        <div class="stat-body">
+                            <div class="stat-label">Temp. Máxima (Periodo)</div>
+                            <div class="stat-value">
+                                <span id="temp-max-value">--</span>
+                                <span class="stat-value--sm">°C</span>
+                            </div>
+                            <div class="stat-sub" id="temp-max-unit">Seleccione unidad para detalle</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" data-color="blue" style="flex: 1; min-width: 250px;">
+                        <div class="stat-icon stat-icon--blue">
+                            <i data-lucide="gauge" width="20" height="20"></i>
+                        </div>
+                        <div class="stat-body">
+                            <div class="stat-label">Presión Promedio (Periodo)</div>
+                            <div class="stat-value">
+                                <span id="pressure-avg-value">--</span>
+                                <span class="stat-value--sm">kPa</span>
+                            </div>
+                            <div class="stat-sub" id="pressure-avg-unit">En operación</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" data-color="green" style="flex: 1; min-width: 250px;">
+                        <div class="stat-icon stat-icon--green">
+                            <i data-lucide="activity" width="20" height="20"></i>
+                        </div>
+                        <div class="stat-body">
+                            <div class="stat-label">Vida Útil Restante (Actual)</div>
+                            <div class="stat-value">
+                                <span id="oil-life-value">--</span>
+                                <span class="stat-value--sm">%</span>
+                            </div>
+                            <div class="stat-sub">Última lectura disponible</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" data-color="red" style="flex: 1; min-width: 250px;">
+                        <div class="stat-icon stat-icon--red">
+                            <i data-lucide="alert-triangle" width="20" height="20"></i>
+                        </div>
+                        <div class="stat-body">
+                            <div class="stat-label">Alarmas Relacionadas</div>
+                            <div class="stat-value">
+                                <span id="alarms-count-value">0</span>
+                                <span class="stat-value--sm">Eventos</span>
+                            </div>
+                            <div class="stat-sub">Fallas de Aceite en Periodo</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficas -->
+                <div class="charts-row" style="display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                    <!-- Tendencia de Temperatura -->
+                    <div class="chart-card glass-panel trend-chart-container" style="flex: 1; min-width: 400px;">
+                        <div class="panel-header" style="justify-content: space-between; display: flex; align-items: center;">
+                            <div class="panel-title-group">
+                                <i data-lucide="thermometer-sun" width="16" height="16" stroke-width="2"></i>
+                                <span>Tendencia de Temperatura de Aceite (°C)</span>
+                            </div>
+                        </div>
+                        <div id="chart-temp-trend" class="chart-container"></div>
+                    </div>
+
+                    <!-- Tendencia de Presión -->
+                    <div class="chart-card glass-panel" style="flex: 1; min-width: 400px;">
+                        <div class="panel-header" style="justify-content: space-between; display: flex; align-items: center;">
+                            <div class="panel-title-group">
+                                <i data-lucide="gauge" width="16" height="16" stroke-width="2"></i>
+                                <span>Tendencia de Presión de Aceite (kPa)</span>
+                            </div>
+                        </div>
+                        <div id="chart-pressure-trend" class="chart-container"></div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Alarmas / Fallas -->
+                <div class="daily-table-container">
+                    <div class="table-header">
+                        <h3>Registro de Alarmas y Fallas de Aceite</h3>
+                        <span id="label-periodo" class="label-periodo"></span>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="daily-recorrido-table" id="table-alarms">
+                            <thead>
+                                <tr>
+                                    <th>Unidad</th>
+                                    <th>Fecha y Hora</th>
+                                    <th>Descripción de Alarma</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alarms-tbody">
+                                <!-- Filas pobladas por JS -->
+                            </tbody>
+                        </table>
+                        <div id="alarms-empty" style="padding: 2rem; text-align: center; color: var(--color-text-muted); display: none;">
+                            No se encontraron alarmas de aceite en este periodo.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loading-overlay" class="loading-overlay" style="display: none;">
+                <div class="spinner-drops">
+                    <i data-lucide="droplet" class="drop-icon" width="32" height="32" fill="var(--color-primary)"></i>
+                </div>
+                <p>Consultando diagnósticos de aceite...</p>
+            </div>
+        </main>
+
+        <!-- Global Error Toast -->
+        <div class="error-toast" id="error-toast" style="display:none;">
+            <i data-lucide="alert-circle" width="16" height="16" stroke-width="2"></i>
+            <span id="error-toast-msg">Error al consultar los datos.</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="scripts/Aceite.js"></script>
+</body>
+
+</html>
