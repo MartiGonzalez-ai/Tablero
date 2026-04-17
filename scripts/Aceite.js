@@ -17,11 +17,30 @@ geotab.addin.aceite = function () {
     let lastUpdatedTime;
 
     // Diagnostics
-    const oilDiagnostics = [
+    const oilTempDiagIds = [
         "DiagnosticEngineOilTemperatureId",
-        "DiagnosticEngineOilPressureId", 
-        "DiagnosticEngineOilLifeRemainingId",
-        "DiagnosticEngineOilLevelId"
+        "DiagnosticObdEngineOilTemperatureId",
+        "DiagnosticJ1939EngineOilTemperature1Id",
+        "DiagnosticJ1939EngineOilTemperatureId"
+    ];
+    
+    const oilPresDiagIds = [
+        "DiagnosticEngineOilPressureId",
+        "DiagnosticObdEngineOilPressureId",
+        "DiagnosticJ1939EngineOilPressureId",
+        "Diagnostic1310729Id" // Legacy or specific mapped ID sometimes used for J1939 pressure
+    ];
+
+    const oilLifeDiagIds = [
+        "DiagnosticEngineOilLifeRemainingId"
+    ];
+
+    const oilDiagnostics = [
+        ...oilTempDiagIds, 
+        ...oilPresDiagIds, 
+        ...oilLifeDiagIds, 
+        "DiagnosticEngineOilLevelId", 
+        "DiagnosticJ1939EngineOilLevelId"
     ];
 
     const getDateRange = () => {
@@ -182,7 +201,7 @@ geotab.addin.aceite = function () {
 
         statusData.forEach(d => {
             // Temperature
-            if (d.diagnostic.id === "DiagnosticEngineOilTemperatureId") {
+            if (oilTempDiagIds.includes(d.diagnostic.id)) {
                 tempData.push(d);
                 if (d.data > maxTemp) {
                     maxTemp = d.data;
@@ -191,13 +210,13 @@ geotab.addin.aceite = function () {
                 }
             }
             // Pressure
-            if (d.diagnostic.id === "DiagnosticEngineOilPressureId") {
+            if (oilPresDiagIds.includes(d.diagnostic.id)) {
                 presData.push(d);
                 totalPres += d.data;
                 presCount++;
             }
             // Oil Life
-            if (d.diagnostic.id === "DiagnosticEngineOilLifeRemainingId") {
+            if (oilLifeDiagIds.includes(d.diagnostic.id)) {
                 if (latestLife === null || new Date(d.dateTime) > latestLife.date) {
                     latestLife = { val: d.data, date: new Date(d.dateTime) };
                 }
