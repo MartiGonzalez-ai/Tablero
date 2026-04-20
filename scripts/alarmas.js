@@ -12,22 +12,42 @@ geotab.addin.alarmas = function () {
     let customToDate = null;
     let isCustomRange = false;
     let selectedUnitId = "all";
-    
+
     // Data storage
     let exceptions = [];
     let rulesMap = {};
     let deviceMap = {};
-    
+
     // Chart instances
     let chartTrend = null;
     let chartRuleDist = null;
     let chartUnitRanking = null;
-    
+
+    // Configuration: Alarm Grouping
+    const ALARM_GROUPS = {
+        "Aceleración brusca": "Aceleración Brusca",
+        "Aceleración brusca (nuevo)": "Aceleración Brusca",
+        "Colisión grave": "Colisión",
+        "Colisión leve": "Colisión",
+        "Posible colisión (heredado)": "Colisión",
+        "Exceso de velocidad": "Exceso de velocidad",
+        "Exceso de velocidad (nuevo)": "Exceso de velocidad",
+        "Velocidad mayor a 80 km/h": "Exceso de velocidad",
+        "Frenado brusco": "Frenado Brusco",
+        "Frenado brusco (nuevo)": "Frenado Brusco",
+        "Giro brusco": "Giro Brusco",
+        "Giro brusco (nuevo)": "Giro Brusco"
+    };
+
+    const getGroupName = (ruleName) => {
+        return ALARM_GROUPS[ruleName] || ruleName;
+    };
+
     // DOM Elements
     let btnRefresh, lastUpdatedEl, loadingOverlay, errorToast, errorToastMsg, searchInput;
-    
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
-    
+
     const getDateRange = () => {
         if (isCustomRange && customFromDate && customToDate) {
             return { fromDate: customFromDate, toDate: customToDate };
@@ -88,7 +108,7 @@ geotab.addin.alarmas = function () {
     };
 
     // ─── Charts Initialization ──────────────────────────────────────────────
-    
+
     const initCharts = () => {
         // Trend Chart
         const trendOptions = {
@@ -186,45 +206,46 @@ geotab.addin.alarmas = function () {
     };
 
     // ─── Data Processing ────────────────────────────────────────────────────
-    
+
     const processData = (data) => {
         const total = data.length;
-        
-        // 1. Group by Rule
+
+        // 1. Group by Rule (Grouped)
         const ruleCounts = {};
         data.forEach(ex => {
-            const rName = rulesMap[ex.rule.id] ? rulesMap[ex.rule.id].name : "Regla Desconocida";
-            ruleCounts[rName] = (ruleCounts[rName] || 0) + 1;
+            const rawName = rulesMap[ex.rule.id] ? rulesMap[ex.rule.id].name : "Regla Desconocida";
+            const gName = getGroupName(rawName);
+            ruleCounts[gName] = (ruleCounts[gName] || 0) + 1;
         });
-        
-        const sortedRules = Object.entries(ruleCounts).sort((a,b) => b[1] - a[1]);
+
+        const sortedRules = Object.entries(ruleCounts).sort((a, b) => b[1] - a[1]);
         const topRule = sortedRules.length > 0 ? sortedRules[0] : ["N/A", 0];
-        
+
         // 2. Group by Device
         const deviceCounts = {};
         data.forEach(ex => {
             const dName = deviceMap[ex.device.id] || "Vehículo Desconocido";
             deviceCounts[dName] = (deviceCounts[dName] || 0) + 1;
         });
-        
-        const sortedDevices = Object.entries(deviceCounts).sort((a,b) => b[1] - a[1]);
+
+        const sortedDevices = Object.entries(deviceCounts).sort((a, b) => b[1] - a[1]);
         const topDevice = sortedDevices.length > 0 ? sortedDevices[0] : ["N/A", 0];
         const affectedCount = Object.keys(deviceCounts).length;
-        
+
         // 3. Group by Date (Trend)
         const dateCounts = {};
         data.forEach(ex => {
             const dateStr = ex.activeFrom.split('T')[0];
             dateCounts[dateStr] = (dateCounts[dateStr] || 0) + 1;
         });
-        
+
         const trendSeries = Object.entries(dateCounts)
             .map(([date, count]) => ({ x: new Date(date).getTime(), y: count }))
-            .sort((a,b) => a.x - b.x);
-            
+            .sort((a, b) => a.x - b.x);
+
         // 4. Update KPIs
         animateCount(document.getElementById("stat-total-alarms"), total);
-        
+
         const elTopRule = document.getElementById("stat-top-rule");
         if (elTopRule) {
             elTopRule.classList.remove("skeleton");
@@ -232,32 +253,32 @@ geotab.addin.alarmas = function () {
             elTopRule.title = topRule[0];
         }
         document.getElementById("stat-top-rule-count").textContent = `${topRule[1]} activaciones`;
-        
+
         animateCount(document.getElementById("stat-affected-units"), affectedCount);
-        
+
         const elTopUnit = document.getElementById("stat-top-unit");
         if (elTopUnit) {
             elTopUnit.classList.remove("skeleton");
             elTopUnit.textContent = topDevice[0];
         }
         document.getElementById("stat-top-unit-count").textContent = `${topDevice[1]} alertas`;
-        
+
         document.getElementById("stat-period-badge").textContent = isCustomRange ? "En rango personalizado" : `Últimos ${selectedDays} días`;
 
         // 5. Update Charts
         chartTrend.updateSeries([{ name: 'Alarmas', data: trendSeries }]);
-        
+
         const distSeries = sortedRules.slice(0, 6).map(r => r[1]);
         const distLabels = sortedRules.slice(0, 6).map(r => r[0]);
         chartRuleDist.updateOptions({ series: distSeries, labels: distLabels });
-        
+
         const rankSeries = sortedDevices.slice(0, 10).map(d => d[1]);
         const rankLabels = sortedDevices.slice(0, 10).map(d => d[0]);
         chartUnitRanking.updateOptions({
             series: [{ name: 'Alertas', data: rankSeries }],
             xaxis: { categories: rankLabels }
         });
-        
+
         // 6. Update Table
         renderTable(data);
     };
@@ -266,37 +287,39 @@ geotab.addin.alarmas = function () {
         const tbody = document.getElementById("alarms-tbody");
         const emptyEl = document.getElementById("table-empty");
         const badgeTable = document.getElementById("badge-table");
-        
+
         if (!tbody) return;
         tbody.innerHTML = "";
-        
+
         if (badgeTable) badgeTable.textContent = `${data.length} alertas`;
-        
+
         if (data.length === 0) {
             emptyEl.style.display = "flex";
             return;
         }
         emptyEl.style.display = "none";
-        
+
         // Sort newest first
-        const sorted = [...data].sort((a,b) => new Date(b.activeFrom) - new Date(a.activeFrom));
-        
+        const sorted = [...data].sort((a, b) => new Date(b.activeFrom) - new Date(a.activeFrom));
+
         sorted.forEach(ex => {
             const tr = document.createElement("tr");
             const dName = deviceMap[ex.device.id] || "Desconocido";
             const rInfo = rulesMap[ex.rule.id] || { name: "Regla Desconocida" };
-            
-            // Determine severity for badge (this is arbitrary logic for demonstration)
+            const gName = getGroupName(rInfo.name);
+
+            // Determine severity for badge based on Group or Rule Name
             let badgeClass = "rule-badge--info";
-            const ruleName = rInfo.name.toLowerCase();
-            if (ruleName.includes("velocidad") || ruleName.includes("frenado") || ruleName.includes("aceleración")) {
+            const compareName = gName.toLowerCase();
+            
+            if (compareName.includes("velocidad") || compareName.includes("frenado") || compareName.includes("aceleración")) {
                 badgeClass = "rule-badge--warning";
             }
-            if (ruleName.includes("accidente") || ruleName.includes("pánico")) {
+            if (compareName.includes("colisión") || compareName.includes("accidente") || compareName.includes("pánico")) {
                 badgeClass = "rule-badge--danger";
             }
 
-            const mapLink = ex.device && ex.device.id 
+            const mapLink = ex.device && ex.device.id
                 ? `<a href="#" class="location-link" onclick="console.log('Ver en mapa: ${ex.device.id}'); return false;">
                     <i data-lucide="map-pin" width="12" height="12"></i> Ver Mapa
                    </a>`
@@ -310,7 +333,10 @@ geotab.addin.alarmas = function () {
                     </div>
                 </td>
                 <td style="padding: 1rem;">
-                    <span class="rule-badge ${badgeClass}">${rInfo.name}</span>
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        <span class="rule-badge ${badgeClass}">${gName}</span>
+                        ${gName !== rInfo.name ? `<span style="font-size: 0.7rem; color: var(--color-text-muted); padding-left: 0.5rem;">${rInfo.name}</span>` : ''}
+                    </div>
                 </td>
                 <td style="padding: 1rem;">
                     <div class="date-cell">
@@ -323,18 +349,18 @@ geotab.addin.alarmas = function () {
             `;
             tbody.appendChild(tr);
         });
-        
+
         if (typeof lucide !== "undefined") lucide.createIcons();
     };
 
     // ─── Data Fetching ───────────────────────────────────────────────────────
-    
+
     const fetchData = () => {
         if (loadingOverlay) loadingOverlay.style.display = "flex";
-        
+
         const range = getDateRange();
         const calls = [];
-        
+
         // 1. Search Exceptions
         const exSearch = {
             fromDate: range.fromDate,
@@ -343,45 +369,45 @@ geotab.addin.alarmas = function () {
         if (selectedUnitId !== "all") {
             exSearch.deviceSearch = { id: selectedUnitId };
         }
-        
+
         calls.push(["Get", { typeName: "ExceptionEvent", search: exSearch }]);
-        
+
         // 2. Rules (to get names)
         calls.push(["Get", { typeName: "Rule" }]);
-        
+
         // 3. Devices (to get names)
-        calls.push(["Get", { typeName: "Device", search: { fromDate: new Date().toISOString() } }]);
-        
+        calls.push(["Get", { typeName: "Device" }]);
+
         api.multiCall(calls, function (results) {
             exceptions = results[0] || [];
             const rawRules = results[1] || [];
             const rawDevices = results[2] || [];
-            
+
             // Build maps
             rulesMap = {};
             rawRules.forEach(r => { rulesMap[r.id] = r; });
-            
+
             deviceMap = {};
             rawDevices.forEach(d => { deviceMap[d.id] = d.name; });
-            
+
             // Populate unit select if empty
             const select = document.getElementById("unit-select");
             if (select && select.options.length <= 1) {
-                rawDevices.sort((a,b) => a.name.localeCompare(b.name)).forEach(d => {
+                rawDevices.sort((a, b) => a.name.localeCompare(b.name)).forEach(d => {
                     const opt = document.createElement("option");
                     opt.value = d.id;
                     opt.textContent = d.name;
                     select.appendChild(opt);
                 });
             }
-            
+
             processData(exceptions);
-            
+
             const now = new Date();
             if (lastUpdatedEl) lastUpdatedEl.textContent = "Actualizado: " + now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
-            
+
             if (loadingOverlay) loadingOverlay.style.display = "none";
-            
+
         }, function (e) {
             console.error("Geotab API Error", e);
             showError("Hubo un error al consultar las alarmas de la flota.");
@@ -390,23 +416,27 @@ geotab.addin.alarmas = function () {
     };
 
     // ─── Export to Excel ─────────────────────────────────────────────────────
-    
+
     const exportToExcel = () => {
         if (!exceptions || exceptions.length === 0) {
             showError("No hay datos para exportar.");
             return;
         }
-        
-        const dataForExcel = exceptions.map(ex => ({
-            "Unidad": deviceMap[ex.device.id] || ex.device.id,
-            "Regla": rulesMap[ex.rule.id] ? rulesMap[ex.rule.id].name : ex.rule.id,
-            "Inicio": new Date(ex.activeFrom).toLocaleString("es-MX"),
-            "Fin": ex.activeTo ? new Date(ex.activeTo).toLocaleString("es-MX") : "En curso",
-            "Duración": ex.duration,
-            "ID de Regla": ex.rule.id,
-            "ID de Dispositivo": ex.device.id
-        }));
-        
+
+        const dataForExcel = exceptions.map(ex => {
+            const rawRuleName = rulesMap[ex.rule.id] ? rulesMap[ex.rule.id].name : ex.rule.id;
+            return {
+                "Unidad": deviceMap[ex.device.id] || ex.device.id,
+                "Grupo": getGroupName(rawRuleName),
+                "Regla Específica": rawRuleName,
+                "Inicio": new Date(ex.activeFrom).toLocaleString("es-MX"),
+                "Fin": ex.activeTo ? new Date(ex.activeTo).toLocaleString("es-MX") : "En curso",
+                "Duración": ex.duration,
+                "ID de Regla": ex.rule.id,
+                "ID de Dispositivo": ex.device.id
+            };
+        });
+
         const ws = XLSX.utils.json_to_sheet(dataForExcel);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Alarmas");
@@ -414,11 +444,11 @@ geotab.addin.alarmas = function () {
     };
 
     // ─── Lifecycle / Init ────────────────────────────────────────────────────
-    
+
     return {
         initialize: function (geotabApi, state, callback) {
             api = geotabApi;
-            
+
             // DOM References
             btnRefresh = document.getElementById("btn-refresh");
             lastUpdatedEl = document.getElementById("last-updated-time");
@@ -426,14 +456,14 @@ geotab.addin.alarmas = function () {
             errorToast = document.getElementById("error-toast");
             errorToastMsg = document.getElementById("error-toast-msg");
             searchInput = document.getElementById("search-input");
-            
+
             // Event Listeners
             if (btnRefresh) {
                 btnRefresh.addEventListener("click", () => {
                     fetchData();
                 });
             }
-            
+
             const rangeBtns = document.querySelectorAll(".btn-range");
             rangeBtns.forEach(btn => {
                 if (btn.id === "btn-custom") return;
@@ -445,7 +475,7 @@ geotab.addin.alarmas = function () {
                     fetchData();
                 });
             });
-            
+
             const unitSelect = document.getElementById("unit-select");
             if (unitSelect) {
                 unitSelect.addEventListener("change", (e) => {
@@ -453,40 +483,42 @@ geotab.addin.alarmas = function () {
                     fetchData();
                 });
             }
-            
+
             if (searchInput) {
                 searchInput.addEventListener("input", (e) => {
                     const term = e.target.value.toLowerCase();
                     const filtered = exceptions.filter(ex => {
                         const dName = (deviceMap[ex.device.id] || "").toLowerCase();
-                        const rName = (rulesMap[ex.rule.id] ? rulesMap[ex.rule.id].name : "").toLowerCase();
-                        return dName.includes(term) || rName.includes(term);
+                        const rInfo = rulesMap[ex.rule.id] || { name: "" };
+                        const rName = rInfo.name.toLowerCase();
+                        const gName = getGroupName(rInfo.name).toLowerCase();
+                        return dName.includes(term) || rName.includes(term) || gName.includes(term);
                     });
                     renderTable(filtered);
                 });
             }
-            
+
             const exportBtn = document.querySelector(".btn-export-excel");
             if (exportBtn) {
                 exportBtn.addEventListener("click", exportToExcel);
             }
-            
+
             // Custom Date Range Logic (Simplificado para este ejemplo)
             const btnCustom = document.getElementById("btn-custom");
             const popover = document.getElementById("date-popover");
             const btnCancel = document.getElementById("btn-date-cancel");
             const btnApply = document.getElementById("btn-date-apply");
-            
+
             if (btnCustom) {
                 btnCustom.addEventListener("click", () => {
                     popover.classList.toggle("open");
                 });
             }
-            
+
             if (btnCancel) {
                 btnCancel.addEventListener("click", () => popover.classList.remove("open"));
             }
-            
+
             if (btnApply) {
                 btnApply.addEventListener("click", () => {
                     const from = document.getElementById("date-from").value;
@@ -504,19 +536,19 @@ geotab.addin.alarmas = function () {
                     }
                 });
             }
-            
+
             // Initialize Viz
             initCharts();
-            
+
             if (callback) callback();
         },
-        
+
         focus: function (geotabApi, state) {
             api = geotabApi;
             if (typeof lucide !== "undefined") lucide.createIcons();
             fetchData();
         },
-        
+
         blur: function (geotabApi, state) {
             // Cleanup if needed
         }
