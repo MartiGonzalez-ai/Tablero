@@ -28,6 +28,7 @@
 }
 
 .kpi-card {
+    position: relative;
     display: flex;
     align-items: center;
     padding: 1.5rem;
@@ -35,6 +36,83 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     border-left: 4px solid #f59e0b; /* Amber accent */
 }
+
+/* ── Tooltip Styles ── */
+.kpi-help-trigger {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    color: #94a3b8;
+    cursor: help;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.kpi-help-trigger:hover {
+    color: #f59e0b;
+}
+
+.kpi-tooltip {
+    position: absolute;
+    top: calc(100% + 5px);
+    right: 0;
+    width: 250px;
+    background: white;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    text-align: left;
+}
+
+.kpi-help-trigger:hover .kpi-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.tooltip-title {
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 0.5rem;
+}
+
+.tooltip-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tooltip-list li {
+    font-size: 0.8rem;
+    color: #64748b;
+    padding: 0.35rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    line-height: 1.4;
+}
+
+.tooltip-list li::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: #f59e0b;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
 
 .kpi-card:hover {
     transform: translateY(-4px);
