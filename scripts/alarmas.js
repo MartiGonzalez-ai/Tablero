@@ -41,6 +41,14 @@ geotab.addin.alarmas = function () {
         return ALARM_GROUPS[ruleName] || ruleName;
     };
 
+    // Aggressive Behavior Rules (requested by USER)
+    const AGGRESSIVE_RULES = [
+        "Harsh Braking (New)", "Harsh Acceleration (New)", "Harsh Cornering (New)",
+        "Harsh Braking", "Harsh Cornering", "Hard Acceleration",
+        "Frenado brusco (nuevo)", "Aceleración brusca (nuevo)", "Giro brusco (nuevo)",
+        "Frenado brusco", "Giro brusco", "Aceleración brusca"
+    ];
+
     // DOM Elements
     let btnRefresh, lastUpdatedEl, loadingOverlay, errorToast, errorToastMsg;
 
@@ -123,6 +131,21 @@ geotab.addin.alarmas = function () {
         });
 
         const sortedRules = Object.entries(ruleCounts).sort((a, b) => b[1] - a[1]);
+
+        // Calculate Conducta Agresiva count
+        const aggressiveCount = data.filter(ex => {
+            const rawName = rulesMap[ex.rule.id] ? rulesMap[ex.rule.id].name : "";
+            return AGGRESSIVE_RULES.some(r => r.toLowerCase() === rawName.toLowerCase());
+        }).length;
+
+        // Update UI
+        const kpiAggressive = document.getElementById("kpi-aggressive-count");
+        if (kpiAggressive) {
+            kpiAggressive.textContent = aggressiveCount.toLocaleString();
+            // Optional: Animation effect
+            kpiAggressive.style.animation = "none";
+            setTimeout(() => { kpiAggressive.style.animation = "shimmer 0.5s ease-out"; }, 10);
+        }
 
         // Update Donut Chart
         const distSeries = sortedRules.map(r => r[1]);
