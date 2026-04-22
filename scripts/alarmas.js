@@ -306,3 +306,21 @@ geotab.addin.alarmas = function () {
                     }
                 });
             }
+
+            // Initialize Viz
+            initCharts();
+
+            if (callback) callback();
+        },
+
+        focus: function (geotabApi, state) {
+            api = geotabApi;
+            if (typeof lucide !== "undefined") lucide.createIcons();
+            fetchData();
+        },
+
+        blur: function (geotabApi, state) {
+            // Cleanup if needed
+        }
+    };
+};
