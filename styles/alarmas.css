@@ -172,6 +172,54 @@
     color: #64748b;
 }
 
+/* ── Detailed View Styles ── */
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    width: 100%;
+    max-width: 1200px;
+}
+
+.chart-row--detail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    max-width: 1200px;
+}
+
+.table-panel {
+    width: 100%;
+    max-width: 1200px;
+}
+
+.stat-card[data-color="amber"] { border-left: 4px solid #f59e0b; }
+.stat-icon--amber { background: #fffbeb; color: #f59e0b; }
+
+.btn-back:hover {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #f59e0b;
+}
+
+.view-container {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+    .chart-row--detail {
+        grid-template-columns: 1fr;
+    }
+}
+
 
 .donut-focus {
     width: 100%;
