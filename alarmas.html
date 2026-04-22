@@ -81,91 +81,184 @@
         </header>
 
         <!-- ═══════════ MAIN CONTENT ═══════════ -->
+        <!-- ═══════════ MAIN CONTENT ═══════════ -->
         <main class="main-content main-content--single">
             
-            <!-- KPI Section -->
-            <div class="kpi-grid">
-                <a href="conducta_agresiva.html" class="kpi-card glass-panel" data-type="aggressive" style="text-decoration: none; cursor: pointer;">
-                    <!-- Tooltip Helper -->
-                    <div class="kpi-help-trigger">
+            <!-- View: Main Dashboard -->
+            <div id="view-main" class="view-container active">
+                <!-- KPI Section -->
+                <div class="kpi-grid">
+                    <div class="kpi-card glass-panel" data-type="aggressive" id="btn-go-aggressive" style="cursor: pointer;">
+                        <!-- Tooltip Helper -->
+                        <div class="kpi-help-trigger">
+                            <i data-lucide="help-circle" width="16" height="16"></i>
+                            <div class="kpi-tooltip">
+                                <div class="tooltip-title">Reglas Contabilizadas</div>
+                                <ul class="tooltip-list">
+                                    <li>Frenado brusco (nuevo)</li>
+                                    <li>Aceleración brusca (nuevo)</li>
+                                    <li>Giro brusco (nuevo)</li>
+                                    <li>Frenado brusco</li>
+                                    <li>Giro brusco</li>
+                                    <li>Aceleración brusca</li>
+                                </ul>
+                            </div>
+                        </div>
 
-                        <i data-lucide="help-circle" width="16" height="16"></i>
-                        <div class="kpi-tooltip">
-                            <div class="tooltip-title">Reglas Contabilizadas</div>
-                            <ul class="tooltip-list">
-                                <li>Frenado brusco (nuevo)</li>
-                                <li>Aceleración brusca (nuevo)</li>
-                                <li>Giro brusco (nuevo)</li>
-                                <li>Frenado brusco</li>
-                                <li>Giro brusco</li>
-                                <li>Aceleración brusca</li>
-                            </ul>
+                        <div class="kpi-icon-wrapper">
+                            <i data-lucide="zap" width="24" height="24" stroke="#f59e0b" stroke-width="2.5"></i>
+                        </div>
 
+                        <div class="kpi-content">
+                            <span class="kpi-label">Conducta Agresiva</span>
+                            <div class="kpi-value-row">
+                                <span class="kpi-value" id="kpi-aggressive-count">0</span>
+                                <span class="kpi-unit">alarmas</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="kpi-icon-wrapper">
-                        <i data-lucide="zap" width="24" height="24" stroke="#f59e0b" stroke-width="2.5"></i>
-                    </div>
 
-                    <div class="kpi-content">
-                        <span class="kpi-label">Conducta Agresiva</span>
-                        <div class="kpi-value-row">
-                            <span class="kpi-value" id="kpi-aggressive-count">0</span>
-                            <span class="kpi-unit">alarmas</span>
+                    <div class="kpi-card glass-panel" data-type="speeding">
+                        <!-- Tooltip Helper -->
+                        <div class="kpi-help-trigger">
+                            <i data-lucide="help-circle" width="16" height="16"></i>
+                            <div class="kpi-tooltip">
+                                <div class="tooltip-title">Reglas Contabilizadas</div>
+                                <ul class="tooltip-list tooltip-list--rose">
+                                    <li>Velocidad mayor a 80km/h</li>
+                                    <li>Exceso de velocidad (nuevo)</li>
+                                    <li>Exceso de velocidad</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="kpi-icon-wrapper kpi-icon--rose">
+                            <i data-lucide="gauge" width="24" height="24" stroke="#e11d48" stroke-width="2.5"></i>
+                        </div>
+
+                        <div class="kpi-content">
+                            <span class="kpi-label">Exceso de Velocidad</span>
+                            <div class="kpi-value-row">
+                                <span class="kpi-value" id="kpi-speeding-count">0</span>
+                                <span class="kpi-unit">alarmas</span>
+                            </div>
                         </div>
                     </div>
-                </a>
+                </div>
 
 
-                <div class="kpi-card glass-panel" data-type="speeding">
-                    <!-- Tooltip Helper -->
-                    <div class="kpi-help-trigger">
-                        <i data-lucide="help-circle" width="16" height="16"></i>
-                        <div class="kpi-tooltip">
-                            <div class="tooltip-title">Reglas Contabilizadas</div>
-                            <ul class="tooltip-list tooltip-list--rose">
-                                <li>Velocidad mayor a 80km/h</li>
-                                <li>Exceso de velocidad (nuevo)</li>
-                                <li>Exceso de velocidad</li>
-                            </ul>
+                <div class="chart-card glass-panel donut-focus">
+
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="pie-chart" width="20" height="20" stroke-width="2"></i>
+                            <span style="font-size: 1.1rem; font-weight: 700;">Distribución de Alarmas por Grupo</span>
+                        </div>
+                        <div class="panel-actions">
+                            <span class="last-updated" id="last-updated-time">Actualizado: --:--</span>
                         </div>
                     </div>
-
-                    <div class="kpi-icon-wrapper kpi-icon--rose">
-                        <i data-lucide="gauge" width="24" height="24" stroke="#e11d48" stroke-width="2.5"></i>
+                    <div class="chart-wrapper-xl">
+                        <div id="chart-rule-dist" class="chart-container"></div>
                     </div>
-
-                    <div class="kpi-content">
-                        <span class="kpi-label">Exceso de Velocidad</span>
-                        <div class="kpi-value-row">
-                            <span class="kpi-value" id="kpi-speeding-count">0</span>
-                            <span class="kpi-unit">alarmas</span>
-                        </div>
+                    <div class="donut-legend-info">
+                        <p>Esta gráfica muestra el porcentaje de incidencias detectadas agrupadas por categoría de riesgo.</p>
                     </div>
                 </div>
             </div>
 
-
-            <div class="chart-card glass-panel donut-focus">
-
-                <div class="panel-header">
-                    <div class="panel-title-group">
-                        <i data-lucide="pie-chart" width="20" height="20" stroke-width="2"></i>
-                        <span style="font-size: 1.1rem; font-weight: 700;">Distribución de Alarmas por Grupo</span>
+            <!-- View: Detailed Aggressive Behavior -->
+            <div id="view-details" class="view-container" style="display:none; width: 100%;">
+                <div class="details-header" style="width: 100%; max-width: 1200px; margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;">
+                    <button id="btn-back" class="btn-back" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="arrow-left" width="20" height="20"></i>
+                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i data-lucide="zap" width="24" height="24" stroke="#f59e0b"></i>
+                        <h2 style="font-size: 1.5rem; font-weight: 800; color: #1e293b;">Detalle de Conducta Agresiva</h2>
                     </div>
-                    <div class="panel-actions">
-                        <span class="last-updated" id="last-updated-time">Actualizado: --:--</span>
+                </div>
+
+                <!-- Summary Stats -->
+                <section class="summary-stats">
+                    <div class="stat-card glass-panel" data-color="amber">
+                        <div class="stat-icon stat-icon--amber">
+                            <i data-lucide="zap"></i>
+                        </div>
+                        <div class="stat-body">
+                            <div class="stat-label">Total Alertas</div>
+                            <div class="stat-value" id="stat-total-alerts">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-panel" data-color="rose">
+                        <div class="stat-icon stat-icon--rose">
+                            <i data-lucide="alert-triangle"></i>
+                        </div>
+                        <div class="stat-body">
+                            <div class="stat-label">Unidades Críticas</div>
+                            <div class="stat-value" id="stat-critical-units">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-panel" data-color="blue">
+                        <div class="stat-icon stat-icon--blue">
+                            <i data-lucide="clock"></i>
+                        </div>
+                        <div class="stat-body">
+                            <div class="stat-label">Promedio Diario</div>
+                            <div class="stat-value" id="stat-avg-daily">0</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Charts Section -->
+                <div class="chart-row--detail">
+                    <div class="chart-card glass-panel">
+                        <div class="panel-header">
+                            <div class="panel-title-group">
+                                <i data-lucide="trending-up" width="18" height="18"></i>
+                                <span>Tendencia de Eventos</span>
+                            </div>
+                        </div>
+                        <div id="chart-trend" class="chart-container" style="height: 350px;"></div>
+                    </div>
+                    <div class="chart-card glass-panel">
+                        <div class="panel-header">
+                            <div class="panel-title-group">
+                                <i data-lucide="pie-chart" width="18" height="18"></i>
+                                <span>Distribución por Regla</span>
+                            </div>
+                        </div>
+                        <div id="chart-rules" class="chart-container" style="height: 350px;"></div>
                     </div>
                 </div>
-                <div class="chart-wrapper-xl">
-                    <div id="chart-rule-dist" class="chart-container"></div>
-                </div>
-                <div class="donut-legend-info">
-                    <p>Esta gráfica muestra el porcentaje de incidencias detectadas agrupadas por categoría de riesgo.</p>
-                </div>
+
+                <!-- Detailed Table -->
+                <section class="panel glass-panel table-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <i data-lucide="list" width="18" height="18"></i>
+                            <span>Ranking de Unidades por Conducta Agresiva</span>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="perf-table" id="ranking-table">
+                            <thead>
+                                <tr>
+                                    <th>Unidad</th>
+                                    <th style="text-align:right;">Frenado</th>
+                                    <th style="text-align:right;">Giro</th>
+                                    <th style="text-align:right;">Aceleración</th>
+                                    <th style="text-align:center; font-weight: 800;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ranking-tbody"></tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
         </main>
+
 
         <!-- Loading Overlay -->
         <div id="loading-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); backdrop-filter: blur(4px); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;">
