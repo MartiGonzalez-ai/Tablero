@@ -129,6 +129,18 @@
     background: #fffbeb;
 }
 
+.kpi-icon--rose {
+    background: #fff1f2;
+}
+
+.kpi-card[data-type="speeding"] {
+    border-left-color: #e11d48;
+}
+
+.tooltip-list--rose li::before {
+    background: #e11d48;
+}
+
 .kpi-content {
     display: flex;
     flex-direction: column;
