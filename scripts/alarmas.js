@@ -49,6 +49,11 @@ geotab.addin.alarmas = function () {
         "Frenado brusco", "Giro brusco", "Aceleración brusca"
     ];
 
+    const SPEEDING_RULES = [
+        "Velocidad mayor a 80km/h", "Exceso de velocidad", "Exceso de velocidad (nuevo)",
+        "Speeding", "Speeding (New)"
+    ];
+
     // DOM Elements
     let btnRefresh, lastUpdatedEl, loadingOverlay, errorToast, errorToastMsg;
 
@@ -142,9 +147,22 @@ geotab.addin.alarmas = function () {
         const kpiAggressive = document.getElementById("kpi-aggressive-count");
         if (kpiAggressive) {
             kpiAggressive.textContent = aggressiveCount.toLocaleString();
-            // Optional: Animation effect
             kpiAggressive.style.animation = "none";
             setTimeout(() => { kpiAggressive.style.animation = "shimmer 0.5s ease-out"; }, 10);
+        }
+
+        // Calculate Speeding count
+        const speedingCount = data.filter(ex => {
+            const rawName = rulesMap[ex.rule.id] ? rulesMap[ex.rule.id].name : "";
+            return SPEEDING_RULES.some(r => r.toLowerCase() === rawName.toLowerCase());
+        }).length;
+
+        // Update UI Speeding
+        const kpiSpeeding = document.getElementById("kpi-speeding-count");
+        if (kpiSpeeding) {
+            kpiSpeeding.textContent = speedingCount.toLocaleString();
+            kpiSpeeding.style.animation = "none";
+            setTimeout(() => { kpiSpeeding.style.animation = "shimmer 0.5s ease-out"; }, 10);
         }
 
         // Update Donut Chart
@@ -288,21 +306,3 @@ geotab.addin.alarmas = function () {
                     }
                 });
             }
-
-            // Initialize Viz
-            initCharts();
-
-            if (callback) callback();
-        },
-
-        focus: function (geotabApi, state) {
-            api = geotabApi;
-            if (typeof lucide !== "undefined") lucide.createIcons();
-            fetchData();
-        },
-
-        blur: function (geotabApi, state) {
-            // Cleanup if needed
-        }
-    };
-};
