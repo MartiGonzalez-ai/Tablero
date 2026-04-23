@@ -140,31 +140,50 @@ geotab.addin.alarmas = function () {
 
         // ─── Details View Charts ───
         
-        // Trend Chart
+        // Trend Chart (Premium Area)
         const trendOptions = {
             series: [],
             chart: { type: 'area', height: 350, toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
-            colors: ['#f59e0b'],
-            fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05 } },
-            stroke: { curve: 'smooth', width: 3 },
-            xaxis: { type: 'datetime', labels: { style: { colors: '#64748b' } } },
-            yaxis: { labels: { style: { colors: '#64748b' } } },
+            colors: ['#3b82f6'],
+            fill: { 
+                type: 'gradient', 
+                gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05, stops: [20, 100] } 
+            },
+            stroke: { curve: 'smooth', width: 4 },
+            xaxis: { type: 'datetime', labels: { style: { colors: '#64748b', fontWeight: 500 } } },
+            yaxis: { labels: { style: { colors: '#64748b', fontWeight: 500 } } },
             dataLabels: { enabled: false },
-            tooltip: { x: { format: 'dd MMM' } },
-            noData: { text: 'Cargando datos...' }
+            markers: { size: 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2, hover: { size: 6 } },
+            grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
+            tooltip: { theme: 'light', x: { format: 'dd MMM yyyy' } },
+            noData: { text: 'Cargando datos...', style: { color: '#94a3b8' } }
         };
         chartTrend = new ApexCharts(document.querySelector("#chart-trend"), trendOptions);
         chartTrend.render();
 
-        // Rules Dist Chart (Detail)
+        // Rules Dist Chart (Premium Donut)
         const detailedRulesOptions = {
             series: [],
             chart: { type: 'donut', height: 350, fontFamily: 'Inter, sans-serif' },
             labels: ['Frenado Brusco', 'Aceleración Brusca', 'Giro Brusco'],
             colors: ['#e11d48', '#f59e0b', '#3b82f6'],
-            legend: { position: 'bottom' },
-            plotOptions: { pie: { donut: { size: '65%' } } },
-            noData: { text: 'Sin datos' }
+            stroke: { show: true, width: 3, colors: ['#fff'] },
+            legend: { position: 'bottom', fontSize: '13px', fontWeight: 500, markers: { radius: 12 } },
+            plotOptions: { 
+                pie: { 
+                    donut: { 
+                        size: '72%',
+                        labels: {
+                            show: true,
+                            name: { show: true, fontSize: '15px', color: '#64748b' },
+                            value: { show: true, fontSize: '24px', fontWeight: 800, color: '#1e293b' },
+                            total: { show: true, label: 'Alertas', formatter: w => w.globals.seriesTotals.reduce((a,b) => a+b, 0) }
+                        }
+                    } 
+                } 
+            },
+            dataLabels: { enabled: false },
+            noData: { text: 'Sin datos', style: { color: '#94a3b8' } }
         };
         chartRules = new ApexCharts(document.querySelector("#chart-rules"), detailedRulesOptions);
         chartRules.render();
@@ -286,19 +305,47 @@ geotab.addin.alarmas = function () {
 
         const sortedUnits = Object.values(unitStats).sort((a,b) => b.total - a.total);
         const tbody = document.getElementById("ranking-tbody");
+        
         if (tbody) {
             tbody.innerHTML = "";
-            sortedUnits.forEach(u => {
+            const maxVal = Math.max(...sortedUnits.map(u => u.total), 1);
+            
+            sortedUnits.forEach((u, idx) => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td>${u.name}</td>
-                    <td style="text-align:right;">${u.frenado}</td>
-                    <td style="text-align:right;">${u.giro}</td>
-                    <td style="text-align:right;">${u.aceleracion}</td>
-                    <td style="text-align:center; font-weight: 800; color: #1e293b;">${u.total}</td>
+                    <td>
+                        <div class="unit-name-cell">
+                            <div class="unit-icon-box">
+                                <i data-lucide="truck" width="18" height="18"></i>
+                            </div>
+                            <span>${u.name}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="score-flex">
+                            <span class="val-badge badge--rose">${u.frenado}</span>
+                            <div class="mini-bar-container"><div class="mini-bar-fill" style="width: ${(u.frenado/maxVal*100)}%; background: #e11d48;"></div></div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="score-flex">
+                            <span class="val-badge badge--blue">${u.giro}</span>
+                            <div class="mini-bar-container"><div class="mini-bar-fill" style="width: ${(u.giro/maxVal*100)}%; background: #3b82f6;"></div></div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="score-flex">
+                            <span class="val-badge badge--amber">${u.aceleracion}</span>
+                            <div class="mini-bar-container"><div class="mini-bar-fill" style="width: ${(u.aceleracion/maxVal*100)}%; background: #f59e0b;"></div></div>
+                        </div>
+                    </td>
+                    <td style="text-align:center;">
+                        <span class="total-score-pill">${u.total}</span>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     };
 
