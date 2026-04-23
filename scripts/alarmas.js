@@ -25,6 +25,7 @@ geotab.addin.alarmas = function () {
 
     // View State
     let currentView = "main"; // "main" or "details"
+    let currentExpandedKey = null; // To track which row/cat is open
 
     // Configuration: Alarm Grouping
     const ALARM_GROUPS = {
@@ -205,6 +206,82 @@ geotab.addin.alarmas = function () {
         }
     };
 
+    const toggleDetails = (unitId, category, cell) => {
+        const key = `${unitId}-${category}`;
+        const tbody = document.getElementById("ranking-tbody");
+        const existingDetail = document.getElementById("active-detail-row");
+        
+        // Remove active class from all cells
+        document.querySelectorAll('.score-flex').forEach(c => c.classList.remove('active'));
+
+        if (currentExpandedKey === key) {
+            // Close if clicking the same
+            if (existingDetail) {
+                const container = existingDetail.querySelector('.detail-container');
+                container.classList.remove('open');
+                setTimeout(() => existingDetail.remove(), 400);
+            }
+            currentExpandedKey = null;
+            return;
+        }
+
+        // Remove old if exists
+        if (existingDetail) existingDetail.remove();
+
+        currentExpandedKey = key;
+        cell.classList.add('active');
+
+        // Find the unit stats
+        const unitData = lastProcessedUnitStats[unitId];
+        const alarms = unitData[category.toLowerCase()] || [];
+
+        // Create new detail row
+        const parentTr = cell.closest('tr');
+        const detailTr = document.createElement('tr');
+        detailTr.id = "active-detail-row";
+        detailTr.className = "detail-row";
+        
+        const catNameMap = { 'frenado': 'Frenado Brusco', 'giro': 'Giro Brusco', 'aceleracion': 'Aceleración Brusca' };
+        
+        let alarmsHtml = alarms.map(a => {
+            const date = new Date(a.activeFrom).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+            const ruleName = rulesMap[a.rule.id] ? rulesMap[a.rule.id].name : 'Regla';
+            return `
+                <div class="event-item">
+                    <div class="event-date">${date}</div>
+                    <div class="event-name">${ruleName}</div>
+                    <div class="event-meta">ID: ${a.id.substring(1, 8)}</div>
+                </div>
+            `;
+        }).join('');
+
+        detailTr.innerHTML = `
+            <td colspan="5">
+                <div class="detail-container">
+                    <div class="detail-content">
+                        <div class="detail-header-inline">
+                            <i data-lucide="info" width="18" height="18"></i>
+                            <span>Desglose de ${catNameMap[category.toLowerCase()]} - ${unitData.name}</span>
+                        </div>
+                        <div class="event-list">
+                            ${alarmsHtml || '<div style="padding: 1rem; color: #94a3b8; text-align: center;">No hay detalles disponibles para este periodo.</div>'}
+                        </div>
+                    </div>
+                </div>
+            </td>
+        `;
+
+        parentTr.after(detailTr);
+        
+        // Trigger animation
+        setTimeout(() => {
+            detailTr.querySelector('.detail-container').classList.add('open');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }, 10);
+    };
+
+    let lastProcessedUnitStats = {}; // Cache to retrieve data for details
+
     // ─── Data Processing ────────────────────────────────────────────────────
 
     const processData = (data) => {
@@ -249,7 +326,9 @@ geotab.addin.alarmas = function () {
         // Update Donut Chart (Main)
         const distSeries = sortedRules.map(r => r[1]);
         const distLabels = sortedRules.map(r => r[0]);
-        chartRuleDist.updateOptions({ series: distSeries, labels: distLabels });
+        if (chartRuleDist) chartRuleDist.updateOptions({ series: distSeries, labels: distLabels });
+
+        showView(currentView); // Maintain current view
 
         // ─── Update Details View ───
         const aggressiveFiltered = data.filter(ex => {
@@ -293,24 +372,25 @@ geotab.addin.alarmas = function () {
         aggressiveFiltered.forEach(ex => {
             const dId = ex.device.id;
             const dName = deviceMap[dId] || "Vehículo Desconocido";
-            if (!unitStats[dId]) unitStats[dId] = { name: dName, frenado:0, giro:0, aceleracion:0, total:0 };
+            if (!unitStats[dId]) unitStats[dId] = { name: dName, frenado:[], giro:[], aceleracion:[], total:0 };
             
             const rule = rulesMap[ex.rule.id];
             const cat = AGGRESSIVE_RULES_MAP[rule.name.toLowerCase()];
-            if (cat === 'Frenado Brusco') unitStats[dId].frenado++;
-            if (cat === 'Aceleración Brusca') unitStats[dId].aceleracion++;
-            if (cat === 'Giro Brusco') unitStats[dId].giro++;
+            if (cat === 'Frenado Brusco') unitStats[dId].frenado.push(ex);
+            if (cat === 'Aceleración Brusca') unitStats[dId].aceleracion.push(ex);
+            if (cat === 'Giro Brusco') unitStats[dId].giro.push(ex);
             unitStats[dId].total++;
         });
+
+        lastProcessedUnitStats = unitStats;
 
         const sortedUnits = Object.values(unitStats).sort((a,b) => b.total - a.total);
         const tbody = document.getElementById("ranking-tbody");
         
         if (tbody) {
             tbody.innerHTML = "";
-            const maxVal = Math.max(...sortedUnits.map(u => u.total), 1);
-            
             sortedUnits.forEach((u, idx) => {
+                const uId = Object.keys(unitStats).find(id => unitStats[id].name === u.name);
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td>
@@ -322,21 +402,18 @@ geotab.addin.alarmas = function () {
                         </div>
                     </td>
                     <td>
-                        <div class="score-flex">
-                            <span class="val-badge badge--rose">${u.frenado}</span>
-                            <div class="mini-bar-container"><div class="mini-bar-fill" style="width: ${(u.frenado/maxVal*100)}%; background: #e11d48;"></div></div>
+                        <div class="score-flex" onclick="geotab.addin.alarmas().handleCellClick('${uId}', 'frenado', this)">
+                            <span class="val-badge badge--rose">${u.frenado.length}</span>
                         </div>
                     </td>
                     <td>
-                        <div class="score-flex">
-                            <span class="val-badge badge--blue">${u.giro}</span>
-                            <div class="mini-bar-container"><div class="mini-bar-fill" style="width: ${(u.giro/maxVal*100)}%; background: #3b82f6;"></div></div>
+                        <div class="score-flex" onclick="geotab.addin.alarmas().handleCellClick('${uId}', 'giro', this)">
+                            <span class="val-badge badge--blue">${u.giro.length}</span>
                         </div>
                     </td>
                     <td>
-                        <div class="score-flex">
-                            <span class="val-badge badge--amber">${u.aceleracion}</span>
-                            <div class="mini-bar-container"><div class="mini-bar-fill" style="width: ${(u.aceleracion/maxVal*100)}%; background: #f59e0b;"></div></div>
+                        <div class="score-flex" onclick="geotab.addin.alarmas().handleCellClick('${uId}', 'aceleracion', this)">
+                            <span class="val-badge badge--amber">${u.aceleracion.length}</span>
                         </div>
                     </td>
                     <td style="text-align:center;">
@@ -510,6 +587,11 @@ geotab.addin.alarmas = function () {
 
         blur: function (geotabApi, state) {
             // Cleanup if needed
+        },
+
+        // Public handler for cell clicks
+        handleCellClick: function (unitId, category, element) {
+            toggleDetails(unitId, category, element);
         }
     };
 };
