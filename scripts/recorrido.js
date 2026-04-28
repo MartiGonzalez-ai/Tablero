@@ -17,6 +17,11 @@ geotab.addin.recorrido = function () {
     let lastDistanceData = {};
     let selectedPeriod = "month"; // Default period
 
+    // Pagination State
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let currentTableData = [];
+
     // DOM Elements
     const unitSelect = document.getElementById("unit-select-recorrido");
     const dateUntilInput = document.getElementById("date-until");
@@ -42,6 +47,48 @@ geotab.addin.recorrido = function () {
         if (errorToast) {
             errorToast.style.display = "flex";
             setTimeout(() => { errorToast.style.display = "none"; }, 5000);
+        }
+    };
+
+    const renderTablePage = () => {
+        const tbody = document.getElementById("daily-recorrido-tbody");
+        if (!tbody) return;
+        tbody.innerHTML = "";
+
+        const totalItems = currentTableData.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+        
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        const endIdx = Math.min(startIdx + itemsPerPage, totalItems);
+        const pageData = currentTableData.slice(startIdx, endIdx);
+
+        pageData.forEach(row => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td class="date-td">${row.date}</td>
+                <td class="dist-td" style="text-align: right; color: var(--color-primary); font-weight: 600;">${row.dist.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
+                <td class="odo-td" style="text-align: right; font-weight: 700;">${row.odo.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Update UI controls
+        const btnPrev = document.getElementById("btn-prev-page");
+        const btnNext = document.getElementById("btn-next-page");
+        const pageIndicator = document.getElementById("page-indicator");
+        const paginationInfo = document.getElementById("pagination-info");
+        const paginationContainer = document.getElementById("pagination-controls");
+
+        if (totalItems > 0) {
+            if (paginationContainer) paginationContainer.style.display = "flex";
+            if (paginationInfo) paginationInfo.textContent = `Mostrando ${startIdx + 1} - ${endIdx} de ${totalItems} registros`;
+            if (pageIndicator) pageIndicator.textContent = `Página ${currentPage} de ${totalPages}`;
+            if (btnPrev) btnPrev.disabled = currentPage <= 1;
+            if (btnNext) btnNext.disabled = currentPage >= totalPages;
+        } else {
+            if (paginationContainer) paginationContainer.style.display = "none";
         }
     };
 
@@ -552,18 +599,31 @@ geotab.addin.recorrido = function () {
             }
         ]);
 
-        // Obtener todos los viajes desde el inicio del historial hasta ahora
-        calls.push([
-            "Get",
-            {
-                typeName: "Trip",
-                search: {
-                    deviceSearch: { id: deviceId },
-                    fromDate: searchFromDateToken,
-                    toDate: searchToDateToken
+        // Paginación y Optimización de la API (Chunking Trips)
+        // Obtener viajes en lotes de 30 días para evitar carga pesada
+        const chunks = [];
+        let chunkStart = new Date(fromDateHistoric);
+        while (chunkStart < toDateObj) {
+            let chunkEnd = new Date(chunkStart);
+            chunkEnd.setDate(chunkEnd.getDate() + 30);
+            if (chunkEnd > toDateObj) chunkEnd = new Date(toDateObj);
+            chunks.push({ start: chunkStart.toISOString(), end: chunkEnd.toISOString() });
+            chunkStart = new Date(chunkEnd);
+        }
+
+        chunks.forEach(chunk => {
+            calls.push([
+                "Get",
+                {
+                    typeName: "Trip",
+                    search: {
+                        deviceSearch: { id: deviceId },
+                        fromDate: chunk.start,
+                        toDate: chunk.end
+                    }
                 }
-            }
-        ]);
+            ]);
+        });
 
         api.multiCall(calls, (results) => {
             loadingOverlay.style.display = "none";
@@ -585,8 +645,19 @@ geotab.addin.recorrido = function () {
                 let currentOdoKms = latestOdoData.data / 1000;
                 const odoDateTime = new Date(latestOdoData.dateTime);
 
-                // B. Extraer viajes
-                const trips = results[results.length - 1] || [];
+                // B. Extraer viajes (juntando todos los lotes de trips)
+                const tripsRaw = results.slice(odometerDiagnostics.length).flat().filter(t => t);
+                
+                // Limpiar duplicados si se empalmaron por los chunks
+                const tripsIdSet = new Set();
+                const trips = [];
+                tripsRaw.forEach(t => {
+                    if (!tripsIdSet.has(t.id)) {
+                        tripsIdSet.add(t.id);
+                        trips.push(t);
+                    }
+                });
+
                 // Ordenar del más reciente al más antiguo
                 trips.sort((a, b) => new Date(b.stop || b.start) - new Date(a.stop || a.start));
 
@@ -657,25 +728,21 @@ geotab.addin.recorrido = function () {
                     : formatDateReadable(getLocalDateString(toDateObj));
                 fechaFooter.textContent = rangeDisplay;
 
-                // Tabla
+                // Tabla (ahora paginada)
                 const sortedDatesForTable = Object.keys(dailyOdoData).sort((a, b) => b.localeCompare(a));
-                const tbody = document.getElementById("daily-recorrido-tbody");
-                const labelPeriodo = document.getElementById("label-periodo");
+                
+                currentTableData = sortedDatesForTable.map(date => {
+                    return {
+                        date: date,
+                        dist: dailyDistanceData[date],
+                        odo: dailyOdoData[date]
+                    };
+                });
+                
+                currentPage = 1;
+                renderTablePage();
 
-                if (tbody) {
-                    tbody.innerHTML = "";
-                    sortedDatesForTable.forEach(date => {
-                        const tr = document.createElement("tr");
-                        const dist = dailyDistanceData[date];
-                        const odo = dailyOdoData[date];
-                        tr.innerHTML = `
-                            <td class="date-td">${date}</td>
-                            <td class="dist-td" style="text-align: right; color: var(--color-primary); font-weight: 600;">${dist.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
-                            <td class="odo-td" style="text-align: right; font-weight: 700;">${odo.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                }
+                const labelPeriodo = document.getElementById("label-periodo");
                 if (labelPeriodo) labelPeriodo.textContent = `Detalle de odómetro y distancia por día`;
 
                 // Store results for re-grouping
@@ -716,6 +783,27 @@ geotab.addin.recorrido = function () {
             // Event Listeners
             if (btnConsultar) {
                 btnConsultar.addEventListener("click", calculateDistance);
+            }
+
+            // Pagination Listeners
+            const btnPrev = document.getElementById("btn-prev-page");
+            const btnNext = document.getElementById("btn-next-page");
+            if (btnPrev) {
+                btnPrev.addEventListener("click", () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderTablePage();
+                    }
+                });
+            }
+            if (btnNext) {
+                btnNext.addEventListener("click", () => {
+                    const totalPages = Math.ceil(currentTableData.length / itemsPerPage);
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        renderTablePage();
+                    }
+                });
             }
 
             // Period Presets
