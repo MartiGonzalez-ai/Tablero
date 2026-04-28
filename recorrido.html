@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
@@ -13,6 +14,7 @@
     <link rel="stylesheet" href="styles/Rendimiento.css">
     <link rel="stylesheet" href="styles/recorrido.css">
 </head>
+
 <body>
     <div id="app-recorrido">
         <!-- ═══════════ HEADER ═══════════ -->
@@ -21,7 +23,7 @@
                 <i data-lucide="map-pin" width="28" height="28" stroke="var(--color-primary)" stroke-width="2.5"></i>
                 <h1>Recorrido</h1>
             </div>
-            
+
             <div class="filter-controls">
                 <div class="filter-group">
                     <label for="unit-select-recorrido">Unidad</label>
@@ -96,7 +98,8 @@
 
                 <!-- Simulación del Odómetro Total (Línea) -->
                 <div class="chart-card glass-panel trend-chart-container">
-                    <div class="panel-header" style="justify-content: space-between; display: flex; align-items: center;">
+                    <div class="panel-header"
+                        style="justify-content: space-between; display: flex; align-items: center;">
                         <div class="panel-title-group">
                             <i data-lucide="trending-up" width="16" height="16" stroke-width="2"></i>
                             <span>Tendencia del Odómetro Total (km)</span>
@@ -119,7 +122,8 @@
 
                 <!-- Nueva Gráfica de Barras Diaria -->
                 <div class="chart-card glass-panel">
-                    <div class="panel-header" style="justify-content: space-between; display: flex; align-items: center;">
+                    <div class="panel-header"
+                        style="justify-content: space-between; display: flex; align-items: center;">
                         <div class="panel-title-group">
                             <i data-lucide="bar-chart-2" width="16" height="16" stroke-width="2"></i>
                             <span>Distancia Diaria (km)</span>
@@ -142,43 +146,56 @@
 
                 <!-- Nueva tabla de distancia por día -->
                 <div class="daily-table-container">
-                        <div class="table-header">
-                            <h3>Desglose por Día</h3>
-                            <span id="label-periodo" class="label-periodo"></span>
-                        </div>
-                        <div class="table-scroll">
-                            <table class="daily-recorrido-table">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th style="text-align: right;">Distancia (km)</th>
-                                        <th style="text-align: right;">Odómetro (km)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="daily-recorrido-tbody">
-                                    <!-- Rows populated by JS -->
-                                </tbody>
-                            </table>
+                    <div class="table-header">
+                        <h3>Desglose por Día</h3>
+                        <span id="label-periodo" class="label-periodo"></span>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="daily-recorrido-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th style="text-align: right;">Distancia (km)</th>
+                                    <th style="text-align: right;">Odómetro (km)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="daily-recorrido-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- UI Pagination Controls -->
+                    <div class="pagination-container" id="pagination-controls" style="display: none;">
+                        <span class="pagination-info" id="pagination-info">Mostrando 0 - 0 de 0</span>
+                        <div class="pagination-buttons">
+                            <button id="btn-prev-page" class="btn-page" disabled>
+                                <i data-lucide="chevron-left" width="16" height="16"></i> Anterior
+                            </button>
+                            <span class="page-indicator" id="page-indicator">Página 1</span>
+                            <button id="btn-next-page" class="btn-page" disabled>
+                                Siguiente <i data-lucide="chevron-right" width="16" height="16"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
-
-                <div id="loading-overlay" class="loading-overlay" style="display: none;">
-                    <div class="spinner"></div>
-                    <p>Calculando recorridos...</p>
-                </div>
             </div>
-        </main>
 
-        <!-- Global Error Toast -->
-        <div class="error-toast" id="error-toast" style="display:none;">
-            <i data-lucide="alert-circle" width="16" height="16" stroke-width="2"></i>
-            <span id="error-toast-msg">Error al consultar los datos.</span>
-        </div>
+            <div id="loading-overlay" class="loading-overlay" style="display: none;">
+                <div class="spinner"></div>
+                <p>Calculando recorridos...</p>
+            </div>
+    </div>
+    </main>
+
+    <!-- Global Error Toast -->
+    <div class="error-toast" id="error-toast" style="display:none;">
+        <i data-lucide="alert-circle" width="16" height="16" stroke-width="2"></i>
+        <span id="error-toast-msg">Error al consultar los datos.</span>
+    </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="scripts/recorrido.js"></script>
 </body>
+
 </html>
