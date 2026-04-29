@@ -9,6 +9,7 @@
     <title>Rendimiento de Flota</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/vendor.css">
     <link rel="stylesheet" href="styles/Rendimiento.css">
@@ -29,7 +30,8 @@
             <div class="nav-controls">
                 <!-- Date Range Buttons -->
                 <div class="date-range-group" id="date-range-group">
-                    <button class="btn-range active" data-days="7" id="btn-7d">7 días</button>
+                    <button class="btn-range active" data-days="0" id="btn-today">Hoy</button>
+                    <button class="btn-range" data-days="7" id="btn-7d">7 días</button>
                     <button class="btn-range" data-days="15" id="btn-15d">15 días</button>
                     <button class="btn-range" data-days="30" id="btn-30d">30 días</button>
                     <button class="btn-range btn-range--custom" id="btn-custom">
@@ -410,11 +412,11 @@
             </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="scripts/vendor.js"></script>
-    <script src="scripts/rendimiento.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts" defer></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <script src="scripts/vendor.js" defer></script>
+    <script src="scripts/rendimiento.js" defer></script>
 </body>
 
 </html>
