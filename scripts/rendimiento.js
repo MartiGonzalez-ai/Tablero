@@ -2,7 +2,7 @@
 
 geotab.addin.rendimiento = function () {
     let api;
-    let selectedDays = 7;
+    let selectedDays = 0;
     let customFromDate = null;
     let customToDate = null;
     let isCustomRange = false;
@@ -10,7 +10,7 @@ geotab.addin.rendimiento = function () {
     let filteredRecords = [];
     let rawStatusData = [];    // Raw StatusData for the raw table
     let selectedUnitId = "all"; // "all" or specific device ID
-    let trendGrouping = "month";  // Default: month
+    let trendGrouping = "day";  // Default: day (to match 'Today' initial view)
     let deviceMap = {};        // Global device map
 
     // Chart instances
@@ -28,7 +28,17 @@ geotab.addin.rendimiento = function () {
         }
         const toDate = new Date();
         const fromDate = new Date();
-        fromDate.setDate(fromDate.getDate() - selectedDays);
+
+        if (selectedDays === 0) {
+            // Hoy: Desde el inicio hasta el fin del día actual
+            fromDate.setHours(0, 0, 0, 0);
+            toDate.setHours(23, 59, 59, 999);
+        } else {
+            // Últimos N días: Consideramos días completos incluyendo hoy
+            fromDate.setDate(fromDate.getDate() - selectedDays);
+            fromDate.setHours(0, 0, 0, 0);
+            toDate.setHours(23, 59, 59, 999);
+        }
         return { fromDate: fromDate.toISOString(), toDate: toDate.toISOString() };
     };
 
@@ -170,20 +180,26 @@ geotab.addin.rendimiento = function () {
         const totalDist = (trips || []).reduce((s, t) => s + (parseFloat(t.distance) || 0), 0);
         const totalFuel = (records || []).reduce((s, r) => s + (parseFloat(r.fuelUsed) || 0), 0);
         const avgKmPerL = totalFuel > 0 ? totalDist / totalFuel : 0;
-        const unidades  = records.length;
+        const unidades = records.length;
 
         const elRendimiento = document.getElementById("stat-rendimiento");
-        const elDistancia   = document.getElementById("stat-distancia");
+        const elDistancia = document.getElementById("stat-distancia");
         const elCombustible = document.getElementById("stat-combustible");
-        const elUnidades    = document.getElementById("stat-unidades");
+        const elUnidades = document.getElementById("stat-unidades");
 
-        if (elRendimiento)  { elRendimiento.classList.remove("skeleton");  animateCount(elRendimiento, avgKmPerL, 1, " km/L"); }
-        if (elDistancia)    { elDistancia.classList.remove("skeleton");    animateCount(elDistancia, Math.round(totalDist), 0, ""); }
-        if (elCombustible)  { elCombustible.classList.remove("skeleton");  animateCount(elCombustible, Math.round(totalFuel), 0, ""); }
-        if (elUnidades)     { elUnidades.classList.remove("skeleton");     animateCount(elUnidades, unidades, 0, ""); }
+        if (elRendimiento) { elRendimiento.classList.remove("skeleton"); animateCount(elRendimiento, avgKmPerL, 1, " km/L"); }
+        if (elDistancia) { elDistancia.classList.remove("skeleton"); animateCount(elDistancia, Math.round(totalDist), 0, ""); }
+        if (elCombustible) { elCombustible.classList.remove("skeleton"); animateCount(elCombustible, Math.round(totalFuel), 0, ""); }
+        if (elUnidades) { elUnidades.classList.remove("skeleton"); animateCount(elUnidades, unidades, 0, ""); }
 
         const totalBadge = document.getElementById("stat-total-badge");
-        if (totalBadge) totalBadge.textContent = isCustomRange ? "rango personalizado" : `últimos ${selectedDays} días`;
+        if (totalBadge) {
+            if (isCustomRange) {
+                totalBadge.textContent = "rango personalizado";
+            } else {
+                totalBadge.textContent = selectedDays === 0 ? "hoy" : `últimos ${selectedDays} días`;
+            }
+        }
 
         const badgeRanking = document.getElementById("badge-ranking");
         if (badgeRanking) {
@@ -793,17 +809,17 @@ geotab.addin.rendimiento = function () {
                 });
             }
         }
-                return { dailyData, sortedDates };
+        return { dailyData, sortedDates };
     };
 
     // ─── Export to Excel ─────────────────────────────────────────────────────
     const exportToExcel = (tableId, filename) => {
         const table = document.getElementById(tableId);
         if (!table) return;
-        
+
         // Use SheetJS to convert table to workbook
         const wb = XLSX.utils.table_to_book(table, { sheet: "Datos" });
-        XLSX.writeFile(wb, filename + "_" + new Date().toISOString().slice(0,10) + ".xlsx");
+        XLSX.writeFile(wb, filename + "_" + new Date().toISOString().slice(0, 10) + ".xlsx");
     };
 
 
@@ -879,12 +895,12 @@ geotab.addin.rendimiento = function () {
         if (!window.ApexCharts) return;
 
         // ── Paleta oficial Geotab ─────────────────────────────────────────
-        const cBlue     = "#003666"; // Geotab Primary Blue
-        const cCyan     = "#00b1e1"; // Geotab Light Blue
-        const cGreen    = "#3b753c"; // Geotab Green
-        const cOrange   = "#f29300"; // Geotab Amber/Orange
-        const cRed      = "#cc0000"; // Geotab Red
-        const cSlate    = "#5e6c84"; // texto mútil / eje muted
+        const cBlue = "#003666"; // Geotab Primary Blue
+        const cCyan = "#00b1e1"; // Geotab Light Blue
+        const cGreen = "#3b753c"; // Geotab Green
+        const cOrange = "#f29300"; // Geotab Amber/Orange
+        const cRed = "#cc0000"; // Geotab Red
+        const cSlate = "#5e6c84"; // texto mútil / eje muted
         const textMuted = cSlate;
         const fontFamily = "'Inter', sans-serif";
 
@@ -894,7 +910,7 @@ geotab.addin.rendimiento = function () {
             tooltip: { theme: 'light' }
         };
 
-        const destroyChart = (instance) => { try { if (instance) instance.destroy(); } catch(e) {} };
+        const destroyChart = (instance) => { try { if (instance) instance.destroy(); } catch (e) { } };
 
         // ── 1. Tendencia Diaria de Rendimiento Flota (km/L) — Área azul Geotab ──
         const dailyResult = renderDailyTable();
@@ -909,12 +925,12 @@ geotab.addin.rendimiento = function () {
                 return { x: date, y: parseFloat(eff.toFixed(1)) };
             });
         } else if (trendGrouping === 'week') {
-            const getWeekNumber = function(d) {
+            const getWeekNumber = function (d) {
                 const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
                 const dayNum = date.getUTCDay() || 7;
                 date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-                const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
-                return Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+                const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+                return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
             };
 
             const grouped = {};
@@ -924,7 +940,7 @@ geotab.addin.rendimiento = function () {
                 const diff = d.getDate() - day + (day === 0 ? -6 : 1);
                 const monday = new Date(d.setDate(diff));
                 const weekKey = monday.getFullYear() + "-" + String(monday.getMonth() + 1).padStart(2, '0') + "-" + String(monday.getDate()).padStart(2, '0');
-                
+
                 if (!grouped[weekKey]) grouped[weekKey] = { dist: 0, fuel: 0 };
                 grouped[weekKey].dist += (dailyData[dateStr].dist || 0);
                 grouped[weekKey].fuel += (dailyData[dateStr].fuel || 0);
@@ -959,7 +975,7 @@ geotab.addin.rendimiento = function () {
                 const year = dateStr.substring(0, 4);
                 const bimesterStartMonth = Math.floor((month - 1) / 2) * 2 + 1;
                 const bKey = year + "-" + String(bimesterStartMonth).padStart(2, '0') + "-01";
-                
+
                 if (!grouped[bKey]) grouped[bKey] = { dist: 0, fuel: 0 };
                 grouped[bKey].dist += (dailyData[dateStr].dist || 0);
                 grouped[bKey].fuel += (dailyData[dateStr].fuel || 0);
@@ -981,7 +997,7 @@ geotab.addin.rendimiento = function () {
                 const year = dateStr.substring(0, 4);
                 const trimesterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
                 const tKey = year + "-" + String(trimesterStartMonth).padStart(2, '0') + "-01";
-                
+
                 if (!grouped[tKey]) grouped[tKey] = { dist: 0, fuel: 0 };
                 grouped[tKey].dist += (dailyData[dateStr].dist || 0);
                 grouped[tKey].fuel += (dailyData[dateStr].fuel || 0);
@@ -1000,7 +1016,7 @@ geotab.addin.rendimiento = function () {
                 const year = dateStr.substring(0, 4);
                 const semesterStartMonth = Math.floor((month - 1) / 6) * 6 + 1;
                 const sKey = year + "-" + String(semesterStartMonth).padStart(2, '0') + "-01";
-                
+
                 if (!grouped[sKey]) grouped[sKey] = { dist: 0, fuel: 0 };
                 grouped[sKey].dist += (dailyData[dateStr].dist || 0);
                 grouped[sKey].fuel += (dailyData[dateStr].fuel || 0);
@@ -1041,15 +1057,17 @@ geotab.addin.rendimiento = function () {
             stroke: { curve: 'smooth', width: 2.5 },
             fill: {
                 type: 'gradient',
-                gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.02, stops: [0, 100],
-                    colorStops: [{ offset: 0, color: cCyan, opacity: 0.35 }, { offset: 100, color: cCyan, opacity: 0 }] }
+                gradient: {
+                    shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.02, stops: [0, 100],
+                    colorStops: [{ offset: 0, color: cCyan, opacity: 0.35 }, { offset: 100, color: cCyan, opacity: 0 }]
+                }
             },
             colors: [cCyan],
             xaxis: {
                 type: trendGrouping === 'day' ? 'datetime' : 'category',
-                labels: { 
-                    style: { colors: textMuted, fontSize: '11px' }, 
-                    formatter: function(value, timestamp) {
+                labels: {
+                    style: { colors: textMuted, fontSize: '11px' },
+                    formatter: function (value, timestamp) {
                         if (trendGrouping !== 'day') return value;
                         if (!value) return "";
                         const d = new Date(value);
@@ -1078,7 +1096,7 @@ geotab.addin.rendimiento = function () {
             ...commonOptions,
             series: [
                 { name: 'Combustible (L)', type: 'column', data: dailyFuelSeries },
-                { name: 'Distancia (km)',  type: 'line',   data: dailyDistSeries }
+                { name: 'Distancia (km)', type: 'line', data: dailyDistSeries }
             ],
             chart: { type: 'line', height: 240, fontFamily, toolbar: { show: false }, zoom: { enabled: false } },
             stroke: { width: [0, 2.5], curve: 'smooth' },
@@ -1087,11 +1105,11 @@ geotab.addin.rendimiento = function () {
             fill: { opacity: [0.90, 1] },
             xaxis: {
                 categories: sortedDates,
-                labels: { 
-                    style: { colors: textMuted, fontSize: '11px' }, 
-                    rotate: -30, 
+                labels: {
+                    style: { colors: textMuted, fontSize: '11px' },
+                    rotate: -30,
                     rotateAlways: true,
-                    formatter: function(value) {
+                    formatter: function (value) {
                         if (!value) return "";
                         const d = new Date(value + "T12:00:00");
                         if (isNaN(d.getTime())) return value;
@@ -1103,13 +1121,19 @@ geotab.addin.rendimiento = function () {
                 axisTicks: { show: false }
             },
             yaxis: [
-                { seriesName: 'Combustible (L)',
-                  labels: { style: { colors: cBlue, fontSize: '11px' }, formatter: v => v.toFixed(0) + ' L' } },
-                { seriesName: 'Distancia (km)', opposite: true,
-                  labels: { style: { colors: cOrange, fontSize: '11px' }, formatter: v => v.toFixed(0) + ' km' } }
+                {
+                    seriesName: 'Combustible (L)',
+                    labels: { style: { colors: cBlue, fontSize: '11px' }, formatter: v => v.toFixed(0) + ' L' }
+                },
+                {
+                    seriesName: 'Distancia (km)', opposite: true,
+                    labels: { style: { colors: cOrange, fontSize: '11px' }, formatter: v => v.toFixed(0) + ' km' }
+                }
             ],
-            legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px',
-                      markers: { width: 10, height: 10, radius: 2 } },
+            legend: {
+                position: 'top', horizontalAlign: 'right', fontSize: '12px',
+                markers: { width: 10, height: 10, radius: 2 }
+            },
             grid: { borderColor: '#eaecf0', strokeDashArray: 4 },
             tooltip: { shared: true, intersect: false, theme: 'light' },
             markers: { size: [0, 4], colors: ['#fff'], strokeColors: cOrange, strokeWidth: 2 },
@@ -1123,11 +1147,11 @@ geotab.addin.rendimiento = function () {
         const speedBuckets = { '0–40 km/h': 0, '40–80 km/h': 0, '80–100 km/h': 0, '100–120 km/h': 0, '>120 km/h': 0 };
         (filteredTrips || []).forEach(t => {
             const v = t.maxSpeed || 0;
-            if (v <= 40)       speedBuckets['0–40 km/h']++;
-            else if (v <= 80)  speedBuckets['40–80 km/h']++;
+            if (v <= 40) speedBuckets['0–40 km/h']++;
+            else if (v <= 80) speedBuckets['40–80 km/h']++;
             else if (v <= 100) speedBuckets['80–100 km/h']++;
             else if (v <= 120) speedBuckets['100–120 km/h']++;
-            else               speedBuckets['>120 km/h']++;
+            else speedBuckets['>120 km/h']++;
         });
 
         const optSpeedDist = {
@@ -1137,17 +1161,21 @@ geotab.addin.rendimiento = function () {
             labels: Object.keys(speedBuckets),
             // Paleta Geotab: verde → cyan → naranja → rojo → azul oscuro
             colors: [cGreen, cCyan, cOrange, cRed, cBlue],
-            legend: { position: 'bottom', fontSize: '11px', fontFamily,
-                      labels: { colors: textMuted },
-                      markers: { width: 10, height: 10, radius: 2 } },
+            legend: {
+                position: 'bottom', fontSize: '11px', fontFamily,
+                labels: { colors: textMuted },
+                markers: { width: 10, height: 10, radius: 2 }
+            },
             plotOptions: {
                 pie: {
                     donut: {
                         size: '62%',
                         labels: {
                             show: true,
-                            value: { fontSize: '18px', fontWeight: '800', color: cBlue,
-                                     formatter: val => Math.round(val) },
+                            value: {
+                                fontSize: '18px', fontWeight: '800', color: cBlue,
+                                formatter: val => Math.round(val)
+                            },
                             total: {
                                 show: true,
                                 label: 'Total Viajes',
@@ -1187,16 +1215,18 @@ geotab.addin.rendimiento = function () {
         // Colores Geotab por umbral de eficiencia
         const driverColors = driverData.map(d => {
             if (d.kmPerL >= 12) return cGreen;   // Excelente
-            if (d.kmPerL >= 8)  return cCyan;    // Bueno
-            if (d.kmPerL >= 5)  return cOrange;  // Regular
+            if (d.kmPerL >= 8) return cCyan;    // Bueno
+            if (d.kmPerL >= 5) return cOrange;  // Regular
             return cRed;                          // Bajo
         });
 
         const optDriverEff = {
             ...commonOptions,
             series: [{ name: 'Rendimiento (km/L)', data: driverData.map(d => parseFloat(d.kmPerL.toFixed(2))) }],
-            chart: { type: 'bar', height: Math.max(240, driverData.length * 34 + 60),
-                     fontFamily, toolbar: { show: false } },
+            chart: {
+                type: 'bar', height: Math.max(240, driverData.length * 34 + 60),
+                fontFamily, toolbar: { show: false }
+            },
             plotOptions: {
                 bar: { horizontal: true, distributed: true, barHeight: '55%', borderRadius: 4 }
             },
@@ -1213,11 +1243,15 @@ geotab.addin.rendimiento = function () {
             },
             yaxis: { labels: { style: { colors: cBlue, fontSize: '11px', fontWeight: '600' } } },
             legend: { show: false },
-            grid: { borderColor: '#eaecf0', strokeDashArray: 4,
-                    xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
+            grid: {
+                borderColor: '#eaecf0', strokeDashArray: 4,
+                xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } }
+            },
             tooltip: { y: { formatter: val => val.toFixed(2) + ' km/L' } },
-            noData: { text: 'Sin datos de conductores', align: 'center', verticalAlign: 'middle',
-                      style: { color: textMuted } }
+            noData: {
+                text: 'Sin datos de conductores', align: 'center', verticalAlign: 'middle',
+                style: { color: textMuted }
+            }
         };
         destroyChart(chartDriverEff);
         chartDriverEff = new ApexCharts(document.querySelector("#chart-driver-eff"), optDriverEff);
@@ -1530,6 +1564,20 @@ geotab.addin.rendimiento = function () {
                     isCustomRange = false;
                     customFromDate = null;
                     customToDate = null;
+
+                    // Ajuste automático de agrupación de tendencia
+                    const trendSelect = document.getElementById("trend-timeframe-select");
+                    if (selectedDays === 0) {
+                        trendGrouping = "day";
+                        if (trendSelect) trendSelect.value = "day";
+                    } else if (selectedDays >= 30) {
+                        trendGrouping = "month";
+                        if (trendSelect) trendSelect.value = "month";
+                    } else {
+                        trendGrouping = "day";
+                        if (trendSelect) trendSelect.value = "day";
+                    }
+
                     var btnCustom = document.getElementById("btn-custom");
                     if (btnCustom) {
                         btnCustom.innerHTML = '<i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i> Personalizado';
