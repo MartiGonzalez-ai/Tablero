@@ -2,24 +2,25 @@
 
 geotab.addin.rendimiento = function () {
     let api;
-    let selectedDays = 7;
+    let selectedDays = 0;
     let customFromDate = null;
     let customToDate = null;
     let isCustomRange = false;
-    let allRecords = [];       // Processed performance records (per device)
-    let filteredRecords = [];
-    let rawStatusData = [];    // Raw StatusData for the raw table
-    let selectedUnitId = "all"; // "all" or specific device ID
-    let trendGrouping = "month";  // Default: month
-    let deviceMap = {};        // Global device map
+    // UI Elements Cache
+    let UI = {};
 
     // Chart instances
     let chartEffByUnit, chartDailyFuel, chartSpeedDist, chartDriverEff;
 
-    // DOM refs
-    let btnRefresh, lastUpdatedEl, errorToast, errorToastMsg, searchInput, tripsSearchInput, odoTripsSearchInput;
+    // Data containers
     let allTrips = [], filteredTrips = [];
     let filteredOdoTrips = [];
+    let rawStatusData = [];    // Raw StatusData for the raw table
+    let allRecords = [];       // Processed performance records (per device)
+    let filteredRecords = [];
+    let deviceMap = {};        // Global device map
+    let driverMap = {};        // Global driver map
+
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const getDateRange = () => {
@@ -28,7 +29,11 @@ geotab.addin.rendimiento = function () {
         }
         const toDate = new Date();
         const fromDate = new Date();
-        fromDate.setDate(fromDate.getDate() - selectedDays);
+        if (selectedDays === 0) {
+            fromDate.setHours(0, 0, 0, 0);
+        } else {
+            fromDate.setDate(fromDate.getDate() - selectedDays);
+        }
         return { fromDate: fromDate.toISOString(), toDate: toDate.toISOString() };
     };
 
@@ -166,171 +171,142 @@ geotab.addin.rendimiento = function () {
         return perfRecords;
     };
 
-    const renderSummary = (records, trips) => {
-        const totalDist = (trips || []).reduce((s, t) => s + (parseFloat(t.distance) || 0), 0);
-        const totalFuel = (records || []).reduce((s, r) => s + (parseFloat(r.fuelUsed) || 0), 0);
-        const avgKmPerL = totalFuel > 0 ? totalDist / totalFuel : 0;
-        const unidades  = records.length;
 
-        const elRendimiento = document.getElementById("stat-rendimiento");
-        const elDistancia   = document.getElementById("stat-distancia");
-        const elCombustible = document.getElementById("stat-combustible");
-        const elUnidades    = document.getElementById("stat-unidades");
-
-        if (elRendimiento)  { elRendimiento.classList.remove("skeleton");  animateCount(elRendimiento, avgKmPerL, 1, " km/L"); }
-        if (elDistancia)    { elDistancia.classList.remove("skeleton");    animateCount(elDistancia, Math.round(totalDist), 0, ""); }
-        if (elCombustible)  { elCombustible.classList.remove("skeleton");  animateCount(elCombustible, Math.round(totalFuel), 0, ""); }
-        if (elUnidades)     { elUnidades.classList.remove("skeleton");     animateCount(elUnidades, unidades, 0, ""); }
-
-        const totalBadge = document.getElementById("stat-total-badge");
-        if (totalBadge) totalBadge.textContent = isCustomRange ? "rango personalizado" : `últimos ${selectedDays} días`;
-
-        const badgeRanking = document.getElementById("badge-ranking");
-        if (badgeRanking) {
-            badgeRanking.classList.remove("skeleton");
-            badgeRanking.textContent = `${unidades} unidades`;
+    const renderSummary = (records) => {
+        if (!records || records.length === 0) {
+            if (UI.statRendimiento) UI.statRendimiento.textContent = "0.0";
+            if (UI.statDistancia) UI.statDistancia.textContent = "0.00";
+            if (UI.statCombustible) UI.statCombustible.textContent = "0.00";
+            if (UI.statUnidades) UI.statUnidades.textContent = "0";
+            if (UI.statTotalBadge) UI.statTotalBadge.textContent = "0 Unidades";
+            return;
         }
+
+        let totalDist = 0, totalFuel = 0;
+        records.forEach(r => {
+            totalDist += (r.distKm || 0);
+            totalFuel += (r.fuelUsed || 0);
+        });
+
+        const avgEff = totalFuel > 0 ? (totalDist / totalFuel) : 0;
+
+        if (UI.statRendimiento) animateCount(UI.statRendimiento, avgEff, 1);
+        if (UI.statDistancia) animateCount(UI.statDistancia, totalDist, 1);
+        if (UI.statCombustible) animateCount(UI.statCombustible, totalFuel, 1);
+        if (UI.statUnidades) UI.statUnidades.textContent = records.length;
+        if (UI.statTotalBadge) UI.statTotalBadge.textContent = `${records.length} Unidades`;
     };
 
     // ─── Render ranking ──────────────────────────────────────────────────────
     const renderRanking = (records) => {
-        const sorted = [...records].filter(d => d.kmPerL > 0).sort((a, b) => b.kmPerL - a.kmPerL);
-        const maxKmPerL = sorted.length > 0 ? sorted[0].kmPerL : 1;
-        const ul = document.getElementById("ranking-list");
-        if (!ul) return;
-        ul.innerHTML = "";
+        if (!UI.rankingList) return;
+        
+        const sorted = [...records].filter(r => r.kmPerL > 0).sort((a, b) => b.kmPerL - a.kmPerL);
+        const top5 = sorted.slice(0, 5);
+        const fragment = document.createDocumentFragment();
 
-        if (sorted.length === 0) {
-            ul.innerHTML = `<li class="ranking-empty">Sin datos en el periodo seleccionado</li>`;
-            return;
-        }
-
-        sorted.forEach((item, idx) => {
-            const pct = Math.round((item.kmPerL / maxKmPerL) * 100);
-            const li = document.createElement("li");
-            li.className = "ranking-item";
-            li.innerHTML = `
-                <div class="ranking-pos">${idx + 1}</div>
+        top5.forEach((r, idx) => {
+            const item = document.createElement("div");
+            item.className = "ranking-item";
+            item.innerHTML = `
                 <div class="ranking-info">
-                    <div class="ranking-name">${item.deviceName}</div>
-                    <div class="ranking-bar-wrap">
-                        <div class="ranking-bar" style="width:${pct}%"></div>
+                    <div class="ranking-rank rank-${idx + 1}">${idx + 1}</div>
+                    <div class="ranking-name-group">
+                        <span class="ranking-name">${r.deviceName}</span>
+                        <span class="ranking-sub">${r.distKm.toFixed(1)} km</span>
                     </div>
                 </div>
-                <div class="ranking-stats">
-                    <span class="ranking-count">${item.kmPerL.toFixed(1)}</span>
-                    <span class="ranking-liters">km/L</span>
-                </div>
+                <div class="ranking-value">${r.kmPerL.toFixed(1)} <small>km/l</small></div>
             `;
-            ul.appendChild(li);
+            fragment.appendChild(item);
         });
+
+        UI.rankingList.innerHTML = "";
+        UI.rankingList.appendChild(fragment);
+        if (UI.badgeRanking) UI.badgeRanking.textContent = records.length;
     };
 
-
-
-    // ─── Render performance table ────────────────────────────────────────────
     const renderTable = (records) => {
-        const tbody = document.getElementById("perf-tbody");
-        const emptyEl = document.getElementById("table-empty");
-        const badgeTable = document.getElementById("badge-table");
-
-        if (!tbody) return;
-        tbody.innerHTML = "";
-        if (badgeTable) badgeTable.textContent = `${records.length} registros`;
-
+        if (!UI.perfTbody) return;
+        
         if (records.length === 0) {
-            if (emptyEl) emptyEl.style.display = "flex";
+            UI.perfTbody.innerHTML = "";
+            if (UI.tableEmpty) UI.tableEmpty.style.display = "block";
+            if (UI.badgeTable) UI.badgeTable.textContent = "0";
             return;
         }
-        if (emptyEl) emptyEl.style.display = "none";
 
-        const sorted = [...records].sort((a, b) => b.fuelUsed - a.fuelUsed);
+        if (UI.tableEmpty) UI.tableEmpty.style.display = "none";
+        const fragment = document.createDocumentFragment();
 
-        sorted.forEach(r => {
+        records.forEach(r => {
             const tr = document.createElement("tr");
-            tr.className = "perf-row";
-            const effClass = getEffClass(r.kmPerL);
             tr.innerHTML = `
                 <td>
-                    <div class="unit-chip">
-                        <div class="unit-dot"></div>
-                        <span>${r.deviceName}</span>
+                    <div class="unit-cell">
+                        <div class="unit-icon"><i data-lucide="truck"></i></div>
+                        <div class="unit-info">
+                            <span class="unit-name">${r.deviceName}</span>
+                            <span class="unit-id">${r.deviceId}</span>
+                        </div>
                     </div>
                 </td>
-                <td style="text-align:right; font-weight:600;">${r.distKm > 0 ? r.distKm.toFixed(1) + " km" : "0.0 km"}</td>
-                <td style="text-align:right; font-weight:700; color:var(--c-blue);">${r.fuelUsed > 0 ? r.fuelUsed.toFixed(2) + " L" : "0.00 L"}</td>
-                <td style="text-align:center;">
-                    <span class="eff-badge ${effClass}">${r.kmPerL > 0 ? r.kmPerL.toFixed(1) + " km/L" : "0.0 km/L"}</span>
-                </td>
+                <td><div class="stat-main">${r.distKm.toFixed(2)} <span class="stat-unit">km</span></div></td>
+                <td><div class="stat-main">${r.fuelUsed.toFixed(2)} <span class="stat-unit">L</span></div></td>
                 <td>
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(r.dateStart)}</span>
-                        <span class="date-time">→ ${formatDateShort(r.dateEnd)}</span>
+                    <div class="rendimiento-cell">
+                        <span class="rendimiento-val">${r.kmPerL.toFixed(2)}</span>
+                        <span class="stat-unit">km/l</span>
                     </div>
                 </td>
             `;
-            tbody.appendChild(tr);
+            fragment.appendChild(tr);
         });
+
+        UI.perfTbody.innerHTML = "";
+        UI.perfTbody.appendChild(fragment);
+        if (window.lucide) lucide.createIcons({ scope: UI.perfTbody });
+        if (UI.badgeTable) UI.badgeTable.textContent = records.length;
     };
 
-    // ─── Render Trips Performance Table ──────────────────────────────────────
     const renderTripsTable = (trips) => {
-        const tbody = document.getElementById("trips-tbody");
-        const emptyEl = document.getElementById("trips-empty");
-        const badgeTrips = document.getElementById("badge-trips");
-
-        if (!tbody) return;
-        tbody.innerHTML = "";
-        if (badgeTrips) badgeTrips.textContent = `${trips.length} viajes`;
-
+        if (!UI.tripsTbody) return;
+        
         if (trips.length === 0) {
-            if (emptyEl) emptyEl.style.display = "flex";
+            UI.tripsTbody.innerHTML = "";
+            if (UI.tripsEmpty) UI.tripsEmpty.style.display = "block";
+            if (UI.badgeTrips) UI.badgeTrips.textContent = "0";
             return;
         }
-        if (emptyEl) emptyEl.style.display = "none";
+
+        if (UI.tripsEmpty) UI.tripsEmpty.style.display = "none";
+        const fragment = document.createDocumentFragment();
 
         trips.forEach(t => {
             const tr = document.createElement("tr");
-            tr.className = "perf-row";
-            const eff = t.fuelUsed > 0 ? (t.distance / t.fuelUsed) : 0;
-            const effClass = getEffClass(eff);
-
             tr.innerHTML = `
                 <td>
-                    <div class="unit-chip">
-                        <div class="unit-dot" style="background: var(--c-purple);"></div>
-                        <span>${t.deviceName}</span>
-                    </div>
-                </td>
-                <td style="font-size:0.75rem;">${t.driverName}</td>
-                <td>
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(t.start)}</span>
-                        <span class="date-time">${formatTimeShort(t.start)}</span>
+                    <div class="unit-info">
+                        <span class="unit-name">${t.deviceName || t.deviceId}</span>
+                        <span class="unit-id">${t.deviceId}</span>
                     </div>
                 </td>
                 <td>
-                    <div class="date-cell">
-                        <span class="date-main">${formatDateShort(t.stop)}</span>
-                        <span class="date-time">${formatTimeShort(t.stop)}</span>
-                    </div>
+                    <div class="stat-main">${formatDateTime(t.start)}</div>
                 </td>
-                <td style="font-weight:600; text-align:right;">${t.distance.toFixed(1)} km</td>
-                <td style="text-align:right;">${t.maxSpeed ? Math.round(t.maxSpeed) + " km/h" : "—"}</td>
-                <td style="text-align:right;">${t.averageSpeed ? Math.round(t.averageSpeed) + " km/h" : "—"}</td>
-                <td style="text-align:right;">${formatDuration(t.drivingDuration)}</td>
-                <td style="text-align:right;">${formatDuration(t.stopDuration)}</td>
-                <td style="color:var(--c-blue); font-weight:600; text-align:right;">${t.fuelUsed > 0 ? t.fuelUsed.toFixed(2) + " L" : "—"}</td>
-                <td style="text-align:center;">
-                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : "0.0 km/L"}</span>
-                </td>
-                <td style="font-size:0.7rem; color:var(--color-text-muted);">${t.stopPoint}</td>
                 <td>
-                    ${t.isCurrent ? '<span class="eff-badge eff-average" style="background:#e6f7fb; color:#00b1e1; border-color:#00b1e1;">En curso</span>' : '<span style="color:var(--color-text-muted); font-size:0.7rem;">Finalizado</span>'}
+                    <div class="stat-main">${(t.distance || 0).toFixed(2)} <span class="stat-unit">km</span></div>
+                </td>
+                <td>
+                    <div class="stat-main">${formatDuration(t.drivingDuration)}</div>
                 </td>
             `;
-            tbody.appendChild(tr);
+            fragment.appendChild(tr);
         });
+
+        UI.tripsTbody.innerHTML = "";
+        UI.tripsTbody.appendChild(fragment);
+        if (UI.badgeTrips) UI.badgeTrips.textContent = trips.length;
     };
 
     // ─── Render Accumulated Odometer per Trip Table ──────────────────────────
@@ -825,403 +801,127 @@ geotab.addin.rendimiento = function () {
 
         const tbody = document.getElementById("perf-tbody");
         if (tbody) tbody.innerHTML = Array(5).fill('<tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>').join("");
+    const resetUI = () => {
+        if (UI.lastUpdated) UI.lastUpdated.textContent = "Cargando...";
+        if (UI.perfTbody) UI.perfTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td></tr>').join("");
+        if (UI.badgeTable) UI.badgeTable.textContent = "—";
+        if (UI.dailyTbody) UI.dailyTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td></tr>').join("");
+        if (UI.tripsTbody) UI.tripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td></tr>').join("");
+        if (UI.odoTripsTbody) UI.odoTripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td></tr>').join("");
+        if (UI.rawTbody) UI.rawTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>').join("");
+    };
 
-        const badgeTable = document.getElementById("badge-table");
-        if (badgeTable) badgeTable.textContent = "—";
+    const calculateDailyData = (trips) => {
+        const daily = {};
+        trips.forEach(t => {
+            const date = new Date(t.start).toISOString().split('T')[0];
+            if (!daily[date]) daily[date] = { dist: 0, fuel: 0 };
+            daily[date].dist += (t.distance || 0);
+            daily[date].fuel += (t.fuelUsed || 0);
+        });
+        return daily;
+    };
 
-        const emptyEl = document.getElementById("table-empty");
-        if (emptyEl) emptyEl.style.display = "none";
+    const renderDailyTable = (trips) => {
+        if (!UI.dailyTbody) return {};
+        const dailyData = calculateDailyData(trips);
+        const sortedDates = Object.keys(dailyData).sort().reverse();
+        const fragment = document.createDocumentFragment();
 
-        const dailyTbody = document.getElementById("daily-tbody");
-        if (dailyTbody) dailyTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>').join("");
+        sortedDates.forEach(date => {
+            const d = dailyData[date];
+            const eff = d.fuel > 0 ? d.dist / d.fuel : 0;
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><div class="stat-main">${formatDateShort(date)}</div></td>
+                <td><div class="stat-main">${d.dist.toFixed(1)} <span class="stat-unit">km</span></div></td>
+                <td><div class="stat-main">${d.fuel.toFixed(2)} <span class="stat-unit">L</span></div></td>
+                <td><div class="stat-main">${eff.toFixed(2)} <span class="stat-unit">km/l</span></div></td>
+            `;
+            fragment.appendChild(tr);
+        });
 
-        const badgeDaily = document.getElementById("badge-daily");
-        if (badgeDaily) badgeDaily.textContent = "—";
+        UI.dailyTbody.innerHTML = "";
+        UI.dailyTbody.appendChild(fragment);
+        if (UI.badgeDaily) UI.badgeDaily.textContent = sortedDates.length;
+        return { dailyData, sortedDates };
+    };
 
-        const dailyEmptyEl = document.getElementById("daily-empty");
-        if (dailyEmptyEl) dailyEmptyEl.style.display = "none";
-
-        const rawThead = document.getElementById("raw-thead");
-        const rawTbody = document.getElementById("raw-tbody");
-        if (rawThead) rawThead.innerHTML = `<tr><th>Cargando Combustible...</th></tr>`;
-        if (rawTbody) rawTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>').join("");
-
-        const odoThead = document.getElementById("odo-raw-thead");
-        const odoTbody = document.getElementById("odo-raw-tbody");
-        if (odoThead) odoThead.innerHTML = `<tr><th>Cargando Odómetro...</th></tr>`;
-        if (odoTbody) odoTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>').join("");
-
-        const tripsTbody = document.getElementById("trips-tbody");
-        if (tripsTbody) tripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>').join("");
-
-        const badgeTrips = document.getElementById("badge-trips");
-        if (badgeTrips) badgeTrips.textContent = "—";
-
-        const fuelSummaryTbody = document.getElementById("fuel-summary-tbody");
-        if (fuelSummaryTbody) fuelSummaryTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>').join("");
-
-        const badgeFuelSummary = document.getElementById("badge-fuel-summary");
-        if (badgeFuelSummary) badgeFuelSummary.textContent = "—";
-
-        const odoTripsTbody = document.getElementById("odo-trips-tbody");
-        if (odoTripsTbody) odoTripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="6"><div class="td-skel"></div></td></tr>').join("");
-
-        const badgeOdoTrips = document.getElementById("badge-odo-trips");
-        if (badgeOdoTrips) badgeOdoTrips.textContent = "—";
-
-        if (searchInput) searchInput.value = "";
-        if (tripsSearchInput) tripsSearchInput.value = "";
-        if (odoTripsSearchInput) odoTripsSearchInput.value = "";
     };
 
     // ─── Render Charts ────────────────────────────────────────────────
     const renderCharts = (records) => {
-        if (!window.ApexCharts) return;
+        if (!records || !window.ApexCharts) return;
 
-        // ── Paleta oficial Geotab ─────────────────────────────────────────
-        const cBlue     = "#003666"; // Geotab Primary Blue
-        const cCyan     = "#00b1e1"; // Geotab Light Blue
-        const cGreen    = "#3b753c"; // Geotab Green
-        const cOrange   = "#f29300"; // Geotab Amber/Orange
-        const cRed      = "#cc0000"; // Geotab Red
-        const cSlate    = "#5e6c84"; // texto mútil / eje muted
-        const textMuted = cSlate;
-        const fontFamily = "'Inter', sans-serif";
+        const cCyan = "#00b1e1", cOrange = "#f29300", cGreen = "#10b981", cRed = "#ef4444", cBlue = "#003666";
+        const textMuted = "#64748b";
 
-        const commonOptions = {
-            chart: { fontFamily, toolbar: { show: false } },
-            dataLabels: { enabled: false },
-            tooltip: { theme: 'light' }
-        };
+        // Top 10 Optimization
+        const sortedTop = [...records].sort((a, b) => b.kmPerL - a.kmPerL).slice(0, 10);
+        const unitNames = sortedTop.map(r => r.deviceName);
+        const unitEffs = sortedTop.map(r => parseFloat(r.kmPerL.toFixed(2)));
 
-        const destroyChart = (instance) => { try { if (instance) instance.destroy(); } catch(e) {} };
-
-        // ── 1. Tendencia Diaria de Rendimiento Flota (km/L) — Área azul Geotab ──
-        const dailyResult = renderDailyTable();
-        const { dailyData, sortedDates } = dailyResult || { dailyData: {}, sortedDates: [] };
-
-        let trendSeries = [];
-
-        if (trendGrouping === 'day') {
-            trendSeries = sortedDates.map(date => {
-                const day = dailyData[date];
-                const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
-                return { x: date, y: parseFloat(eff.toFixed(1)) };
+        if (!chartEffByUnit) {
+            chartEffByUnit = new ApexCharts(document.querySelector("#chart-eff-unit"), {
+                chart: { type: 'bar', height: 260, toolbar: { show: false }, background: 'transparent' },
+                series: [{ name: 'Rendimiento', data: unitEffs }],
+                xaxis: { categories: unitNames, labels: { style: { colors: textMuted } } },
+                colors: [cCyan],
+                theme: { mode: 'light' },
+                plotOptions: { bar: { borderRadius: 4, horizontal: true } }
             });
-        } else if (trendGrouping === 'week') {
-            const getWeekNumber = function(d) {
-                const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-                const dayNum = date.getUTCDay() || 7;
-                date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-                const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
-                return Math.ceil((((date - yearStart) / 86400000) + 1)/7);
-            };
-
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const d = new Date(dateStr + "T12:00:00");
-                const day = d.getDay(); // 0(Sun) to 6(Sat)
-                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-                const monday = new Date(d.setDate(diff));
-                const weekKey = monday.getFullYear() + "-" + String(monday.getMonth() + 1).padStart(2, '0') + "-" + String(monday.getDate()).padStart(2, '0');
-                
-                if (!grouped[weekKey]) grouped[weekKey] = { dist: 0, fuel: 0 };
-                grouped[weekKey].dist += (dailyData[dateStr].dist || 0);
-                grouped[weekKey].fuel += (dailyData[dateStr].fuel || 0);
-            });
-            Object.keys(grouped).sort().forEach(weekKey => {
-                const g = grouped[weekKey];
-                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
-                const d = new Date(weekKey + "T12:00:00");
-                const weekNum = getWeekNumber(d);
-                trendSeries.push({ x: "Semana " + weekNum, y: parseFloat(eff.toFixed(1)) });
-            });
-        } else if (trendGrouping === 'month') {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const monthKey = dateStr.substring(0, 7) + "-01";
-                if (!grouped[monthKey]) grouped[monthKey] = { dist: 0, fuel: 0 };
-                grouped[monthKey].dist += (dailyData[dateStr].dist || 0);
-                grouped[monthKey].fuel += (dailyData[dateStr].fuel || 0);
-            });
-            Object.keys(grouped).sort().forEach(monthKey => {
-                const g = grouped[monthKey];
-                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
-                const d = new Date(monthKey + "T12:00:00");
-                const label = d.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
-                const capitalized = label.charAt(0).toUpperCase() + label.slice(1);
-                trendSeries.push({ x: capitalized, y: parseFloat(eff.toFixed(1)) });
-            });
-        } else if (trendGrouping === 'bimester') {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const month = parseInt(dateStr.substring(5, 7));
-                const year = dateStr.substring(0, 4);
-                const bimesterStartMonth = Math.floor((month - 1) / 2) * 2 + 1;
-                const bKey = year + "-" + String(bimesterStartMonth).padStart(2, '0') + "-01";
-                
-                if (!grouped[bKey]) grouped[bKey] = { dist: 0, fuel: 0 };
-                grouped[bKey].dist += (dailyData[dateStr].dist || 0);
-                grouped[bKey].fuel += (dailyData[dateStr].fuel || 0);
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                const g = grouped[key];
-                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
-                const d1 = new Date(key + "T12:00:00");
-                const d2 = new Date(d1); d2.setMonth(d2.getMonth() + 1);
-                const l1 = d1.toLocaleDateString("es-MX", { month: "short" });
-                const l2 = d2.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
-                const label = l1.charAt(0).toUpperCase() + l1.slice(1) + " - " + l2.charAt(0).toUpperCase() + l2.slice(1);
-                trendSeries.push({ x: label, y: parseFloat(eff.toFixed(1)) });
-            });
-        } else if (trendGrouping === 'trimester') {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const month = parseInt(dateStr.substring(5, 7));
-                const year = dateStr.substring(0, 4);
-                const trimesterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
-                const tKey = year + "-" + String(trimesterStartMonth).padStart(2, '0') + "-01";
-                
-                if (!grouped[tKey]) grouped[tKey] = { dist: 0, fuel: 0 };
-                grouped[tKey].dist += (dailyData[dateStr].dist || 0);
-                grouped[tKey].fuel += (dailyData[dateStr].fuel || 0);
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                const g = grouped[key];
-                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
-                const d = new Date(key + "T12:00:00");
-                const q = Math.floor(d.getMonth() / 3) + 1;
-                trendSeries.push({ x: "T" + q + " " + d.getFullYear(), y: parseFloat(eff.toFixed(1)) });
-            });
-        } else if (trendGrouping === '6months') {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const month = parseInt(dateStr.substring(5, 7));
-                const year = dateStr.substring(0, 4);
-                const semesterStartMonth = Math.floor((month - 1) / 6) * 6 + 1;
-                const sKey = year + "-" + String(semesterStartMonth).padStart(2, '0') + "-01";
-                
-                if (!grouped[sKey]) grouped[sKey] = { dist: 0, fuel: 0 };
-                grouped[sKey].dist += (dailyData[dateStr].dist || 0);
-                grouped[sKey].fuel += (dailyData[dateStr].fuel || 0);
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                const g = grouped[key];
-                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
-                const d = new Date(key + "T12:00:00");
-                const sem = d.getMonth() < 6 ? "1er Sem" : "2do Sem";
-                trendSeries.push({ x: sem + " " + d.getFullYear(), y: parseFloat(eff.toFixed(1)) });
-            });
-        } else if (trendGrouping === 'year') {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const yearKey = dateStr.substring(0, 4) + "-01-01";
-                if (!grouped[yearKey]) grouped[yearKey] = { dist: 0, fuel: 0 };
-                grouped[yearKey].dist += (dailyData[dateStr].dist || 0);
-                grouped[yearKey].fuel += (dailyData[dateStr].fuel || 0);
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                const g = grouped[key];
-                const eff = g.fuel > 0 ? (g.dist / g.fuel) : 0;
-                trendSeries.push({ x: key.substring(0, 4), y: parseFloat(eff.toFixed(1)) });
-            });
+            chartEffByUnit.render();
+        } else {
+            chartEffByUnit.updateOptions({ xaxis: { categories: unitNames } });
+            chartEffByUnit.updateSeries([{ data: unitEffs }]);
         }
 
-        const optTrendDaily = {
-            ...commonOptions,
-            series: [{ name: 'Rendimiento Promedio (km/L)', data: trendSeries }],
-            chart: { type: 'area', height: 260, fontFamily, toolbar: { show: false }, zoom: { enabled: false } },
-            dataLabels: {
-                enabled: true,
-                formatter: val => val.toFixed(1),
-                offsetY: -6,
-                style: { fontSize: '11px', fontWeight: '700', colors: [cBlue] },
-                background: { enabled: true, foreColor: '#fff', borderRadius: 4, borderWidth: 0, opacity: 0.9 }
-            },
-            stroke: { curve: 'smooth', width: 2.5 },
-            fill: {
-                type: 'gradient',
-                gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.02, stops: [0, 100],
-                    colorStops: [{ offset: 0, color: cCyan, opacity: 0.35 }, { offset: 100, color: cCyan, opacity: 0 }] }
-            },
-            colors: [cCyan],
-            xaxis: {
-                type: trendGrouping === 'day' ? 'datetime' : 'category',
-                labels: { 
-                    style: { colors: textMuted, fontSize: '11px' }, 
-                    formatter: function(value, timestamp) {
-                        if (trendGrouping !== 'day') return value;
-                        if (!value) return "";
-                        const d = new Date(value);
-                        if (isNaN(d.getTime())) return value;
-                        const label = d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
-                        return label.charAt(0).toUpperCase() + label.slice(1);
-                    }
-                },
-                axisBorder: { show: false },
-                axisTicks: { show: false }
-            },
-            yaxis: { labels: { style: { colors: textMuted }, formatter: val => val.toFixed(1) + ' km/L' } },
-            grid: { borderColor: '#eaecf0', strokeDashArray: 4 },
-            markers: { size: 4, colors: ['#fff'], strokeColors: cCyan, strokeWidth: 2.5, hover: { size: 7 } },
-            noData: { text: 'Sin datos de tendencia', align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        destroyChart(chartEffByUnit);
-        chartEffByUnit = new ApexCharts(document.querySelector("#chart-eff-unit"), optTrendDaily);
-        chartEffByUnit.render();
+        // Daily Trend logic from existing trips
+        const dailyDataResult = calculateDailyData(filteredTrips);
+        const sortedDates = Object.keys(dailyDataResult).sort();
+        const trendValues = sortedDates.map(date => {
+            const d = dailyDataResult[date];
+            return parseFloat((d.fuel > 0 ? d.dist / d.fuel : 0).toFixed(2));
+        });
+        const dateLabels = sortedDates.map(date => formatDateShort(date));
 
-        // ── 2. Consumo Diario vs Distancia — Columnas azul Geotab + línea naranja ──
-        const dailyFuelSeries = sortedDates.map(d => parseFloat((dailyData[d].fuel || 0).toFixed(2)));
-        const dailyDistSeries = sortedDates.map(d => parseFloat((dailyData[d].dist || 0).toFixed(1)));
+        if (!chartDailyFuel) {
+            chartDailyFuel = new ApexCharts(document.querySelector("#chart-daily-fuel"), {
+                chart: { type: 'area', height: 260, toolbar: { show: false } },
+                series: [{ name: 'Rendimiento Promedio', data: trendValues }],
+                xaxis: { categories: dateLabels, labels: { style: { colors: textMuted } } },
+                stroke: { curve: 'smooth', width: 3 },
+                colors: [cGreen],
+                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05 } }
+            });
+            chartDailyFuel.render();
+        } else {
+            chartDailyFuel.updateOptions({ xaxis: { categories: dateLabels } });
+            chartDailyFuel.updateSeries([{ data: trendValues }]);
+        }
 
-        const optDailyFuel = {
-            ...commonOptions,
-            series: [
-                { name: 'Combustible (L)', type: 'column', data: dailyFuelSeries },
-                { name: 'Distancia (km)',  type: 'line',   data: dailyDistSeries }
-            ],
-            chart: { type: 'line', height: 240, fontFamily, toolbar: { show: false }, zoom: { enabled: false } },
-            stroke: { width: [0, 2.5], curve: 'smooth' },
-            plotOptions: { bar: { columnWidth: '52%', borderRadius: 3 } },
-            colors: [cBlue, cOrange],
-            fill: { opacity: [0.90, 1] },
-            xaxis: {
-                categories: sortedDates,
-                labels: { 
-                    style: { colors: textMuted, fontSize: '11px' }, 
-                    rotate: -30, 
-                    rotateAlways: true,
-                    formatter: function(value) {
-                        if (!value) return "";
-                        const d = new Date(value + "T12:00:00");
-                        if (isNaN(d.getTime())) return value;
-                        const label = d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
-                        return label.charAt(0).toUpperCase() + label.slice(1);
-                    }
-                },
-                axisBorder: { show: false },
-                axisTicks: { show: false }
-            },
-            yaxis: [
-                { seriesName: 'Combustible (L)',
-                  labels: { style: { colors: cBlue, fontSize: '11px' }, formatter: v => v.toFixed(0) + ' L' } },
-                { seriesName: 'Distancia (km)', opposite: true,
-                  labels: { style: { colors: cOrange, fontSize: '11px' }, formatter: v => v.toFixed(0) + ' km' } }
-            ],
-            legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px',
-                      markers: { width: 10, height: 10, radius: 2 } },
-            grid: { borderColor: '#eaecf0', strokeDashArray: 4 },
-            tooltip: { shared: true, intersect: false, theme: 'light' },
-            markers: { size: [0, 4], colors: ['#fff'], strokeColors: cOrange, strokeWidth: 2 },
-            noData: { text: 'Sin datos', align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        destroyChart(chartDailyFuel);
-        chartDailyFuel = new ApexCharts(document.querySelector("#chart-daily-fuel"), optDailyFuel);
-        chartDailyFuel.render();
-
-        // ── 3. Distribución de Velocidad Máxima — Donut paleta Geotab ──────────
-        const speedBuckets = { '0–40 km/h': 0, '40–80 km/h': 0, '80–100 km/h': 0, '100–120 km/h': 0, '>120 km/h': 0 };
+        const speedBuckets = { '0–40': 0, '40–80': 0, '80–100': 0, '100–120': 0, '>120': 0 };
         (filteredTrips || []).forEach(t => {
             const v = t.maxSpeed || 0;
-            if (v <= 40)       speedBuckets['0–40 km/h']++;
-            else if (v <= 80)  speedBuckets['40–80 km/h']++;
-            else if (v <= 100) speedBuckets['80–100 km/h']++;
-            else if (v <= 120) speedBuckets['100–120 km/h']++;
-            else               speedBuckets['>120 km/h']++;
+            if (v <= 40) speedBuckets['0–40']++;
+            else if (v <= 80) speedBuckets['40–80']++;
+            else if (v <= 100) speedBuckets['80–100']++;
+            else if (v <= 120) speedBuckets['100–120']++;
+            else speedBuckets['>120']++;
         });
 
-        const optSpeedDist = {
-            ...commonOptions,
-            series: Object.values(speedBuckets),
-            chart: { type: 'donut', height: 240, fontFamily },
-            labels: Object.keys(speedBuckets),
-            // Paleta Geotab: verde → cyan → naranja → rojo → azul oscuro
-            colors: [cGreen, cCyan, cOrange, cRed, cBlue],
-            legend: { position: 'bottom', fontSize: '11px', fontFamily,
-                      labels: { colors: textMuted },
-                      markers: { width: 10, height: 10, radius: 2 } },
-            plotOptions: {
-                pie: {
-                    donut: {
-                        size: '62%',
-                        labels: {
-                            show: true,
-                            value: { fontSize: '18px', fontWeight: '800', color: cBlue,
-                                     formatter: val => Math.round(val) },
-                            total: {
-                                show: true,
-                                label: 'Total Viajes',
-                                fontSize: '11px',
-                                fontWeight: '600',
-                                color: textMuted,
-                                formatter: w => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
-                            }
-                        }
-                    }
-                }
-            },
-            dataLabels: { enabled: false },
-            tooltip: { y: { formatter: val => val + ' viajes' } },
-            stroke: { width: 2, colors: ['#fff'] },
-            noData: { text: 'Sin datos de velocidad', align: 'center', verticalAlign: 'middle', style: { color: textMuted } }
-        };
-        destroyChart(chartSpeedDist);
-        chartSpeedDist = new ApexCharts(document.querySelector("#chart-speed-dist"), optSpeedDist);
-        chartSpeedDist.render();
-
-        // ── 4. Eficiencia por Conductor — Barras horizontales paleta Geotab ───
-        const driverEff = {};
-        (filteredTrips || []).forEach(t => {
-            const name = t.driverName || 'Sin Conductor';
-            if (!driverEff[name]) driverEff[name] = { dist: 0, fuel: 0 };
-            driverEff[name].dist += (parseFloat(t.distance) || 0);
-            driverEff[name].fuel += (parseFloat(t.fuelUsed) || 0);
-        });
-
-        const driverData = Object.entries(driverEff)
-            .map(([name, v]) => ({ name, kmPerL: v.fuel > 0 ? v.dist / v.fuel : 0 }))
-            .filter(d => d.kmPerL > 0)
-            .sort((a, b) => b.kmPerL - a.kmPerL)
-            .slice(0, 14);
-
-        // Colores Geotab por umbral de eficiencia
-        const driverColors = driverData.map(d => {
-            if (d.kmPerL >= 12) return cGreen;   // Excelente
-            if (d.kmPerL >= 8)  return cCyan;    // Bueno
-            if (d.kmPerL >= 5)  return cOrange;  // Regular
-            return cRed;                          // Bajo
-        });
-
-        const optDriverEff = {
-            ...commonOptions,
-            series: [{ name: 'Rendimiento (km/L)', data: driverData.map(d => parseFloat(d.kmPerL.toFixed(2))) }],
-            chart: { type: 'bar', height: Math.max(240, driverData.length * 34 + 60),
-                     fontFamily, toolbar: { show: false } },
-            plotOptions: {
-                bar: { horizontal: true, distributed: true, barHeight: '55%', borderRadius: 4 }
-            },
-            colors: driverColors,
-            dataLabels: {
-                enabled: true,
-                formatter: val => val.toFixed(1) + ' km/L',
-                offsetX: 6,
-                style: { fontSize: '11px', fontWeight: '700', colors: [cBlue] }
-            },
-            xaxis: {
-                categories: driverData.map(d => d.name),
-                labels: { style: { colors: textMuted, fontSize: '11px' }, formatter: v => v.toFixed(0) + ' km/L' }
-            },
-            yaxis: { labels: { style: { colors: cBlue, fontSize: '11px', fontWeight: '600' } } },
-            legend: { show: false },
-            grid: { borderColor: '#eaecf0', strokeDashArray: 4,
-                    xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
-            tooltip: { y: { formatter: val => val.toFixed(2) + ' km/L' } },
-            noData: { text: 'Sin datos de conductores', align: 'center', verticalAlign: 'middle',
-                      style: { color: textMuted } }
-        };
-        destroyChart(chartDriverEff);
-        chartDriverEff = new ApexCharts(document.querySelector("#chart-driver-eff"), optDriverEff);
-        chartDriverEff.render();
+        if (!chartSpeedDist) {
+            chartSpeedDist = new ApexCharts(document.querySelector("#chart-speed-dist"), {
+                chart: { type: 'donut', height: 260 },
+                series: Object.values(speedBuckets),
+                labels: Object.keys(speedBuckets),
+                colors: [cGreen, cCyan, cOrange, cRed, cBlue],
+                plotOptions: { pie: { donut: { size: '65%' } } }
+            });
+            chartSpeedDist.render();
+        } else {
+            chartSpeedDist.updateSeries(Object.values(speedBuckets));
+        }
     };
 
 
@@ -1295,7 +995,6 @@ geotab.addin.rendimiento = function () {
     };
 
     const applyUnitFilter = () => {
-        // Filter performance records
         if (selectedUnitId === "all") {
             filteredRecords = [...allRecords];
             filteredTrips = [...allTrips];
@@ -1304,25 +1003,12 @@ geotab.addin.rendimiento = function () {
             filteredTrips = allTrips.filter(t => t.deviceId === selectedUnitId);
         }
 
-        // Apply any existing search terms
-        if (searchInput && searchInput.value) applySearch(searchInput.value);
-        else {
-            renderTable(filteredRecords);
-            renderCharts(filteredRecords);
-        }
-
-        if (tripsSearchInput && tripsSearchInput.value) applyTripsSearch(tripsSearchInput.value);
-        else renderTripsTable(filteredTrips);
-
-        if (odoTripsSearchInput && odoTripsSearchInput.value) applyOdoTripsSearch(odoTripsSearchInput.value);
-        else renderOdoTripsTable(filteredTrips);
-
-        // Update Summary (KPIs) with filtered records and trips
-        renderSummary(filteredRecords, filteredTrips);
-
-        // Update Raw Tables
-        renderRawTable(rawStatusData, deviceMap);
-        renderOdoRawTable(rawStatusData, deviceMap);
+        renderSummary(filteredRecords);
+        renderRanking(filteredRecords);
+        renderTable(filteredRecords);
+        renderCharts(filteredRecords);
+        renderDailyTable(filteredTrips);
+        renderTripsTable(filteredTrips);
     };
 
     // ─── MAIN DATA LOADER ─────────────────────────────────────────────────────
@@ -1451,14 +1137,13 @@ geotab.addin.rendimiento = function () {
             console.log("[Rendimiento] Performance records:", allRecords.length);
             console.log("[Rendimiento] Processed Trips:", allTrips.length);
 
-            renderSummary(allRecords, allTrips);
+            renderSummary(allRecords);
             renderRanking(allRecords);
             renderTable(filteredRecords);
             renderCharts(filteredRecords);
+            renderDailyTable(filteredTrips);
             renderTripsTable(filteredTrips);
-            renderOdoTripsTable(filteredTrips);
             renderRawTable(rawStatusData, deviceMap);
-            renderOdoRawTable(rawStatusData, deviceMap);
 
             // Trigger filtering if unit was already selected
             if (selectedUnitId !== "all") {
@@ -1489,32 +1174,81 @@ geotab.addin.rendimiento = function () {
         initialize: function (_api, state, callback) {
             api = _api;
 
+            // Cache all UI references once
+            UI = {
+                btnRefresh: document.getElementById("btn-refresh"),
+                lastUpdated: document.getElementById("last-updated-time"),
+                errorToast: document.getElementById("error-toast"),
+                errorToastMsg: document.getElementById("error-toast-msg"),
+                searchInput: document.getElementById("search-input"),
+                tripsSearchInput: document.getElementById("trips-search-input"),
+                odoTripsSearchInput: document.getElementById("odo-trips-search-input"),
+                unitSelect: document.getElementById("unit-select"),
+                trendSelect: document.getElementById("trend-timeframe-select"),
+                btnCustom: document.getElementById("btn-custom"),
+                datePopover: document.getElementById("date-popover"),
+                dateFromInput: document.getElementById("date-from"),
+                dateToInput: document.getElementById("date-to"),
+                btnApply: document.getElementById("btn-date-apply"),
+                btnCancel: document.getElementById("btn-date-cancel"),
+                
+                // Tables & Lists
+                rankingList: document.getElementById("ranking-list"),
+                perfTbody: document.getElementById("perf-tbody"),
+                dailyTbody: document.getElementById("daily-tbody"),
+                tripsTbody: document.getElementById("trips-tbody"),
+                odoTripsTbody: document.getElementById("odo-trips-tbody"),
+                rawThead: document.getElementById("raw-thead"),
+                rawTbody: document.getElementById("raw-tbody"),
+                odoRawThead: document.getElementById("odo-raw-thead"),
+                odoRawTbody: document.getElementById("odo-raw-tbody"),
+
+                // Badges
+                badgeRanking: document.getElementById("badge-ranking"),
+                badgeTable: document.getElementById("badge-table"),
+                badgeDaily: document.getElementById("badge-daily"),
+                badgeTrips: document.getElementById("badge-trips"),
+                badgeOdoTrips: document.getElementById("badge-odo-trips"),
+                badgeRaw: document.getElementById("badge-raw"),
+                badgeRawOdo: document.getElementById("badge-raw-odo"),
+
+                // Empty States
+                tableEmpty: document.getElementById("table-empty"),
+                dailyEmpty: document.getElementById("daily-empty"),
+                tripsEmpty: document.getElementById("trips-empty"),
+                odoTripsEmpty: document.getElementById("odo-trips-empty"),
+
+                // KPIs
+                statRendimiento: document.getElementById("stat-rendimiento"),
+                statDistancia: document.getElementById("stat-distancia"),
+                statCombustible: document.getElementById("stat-combustible"),
+                statUnidades: document.getElementById("stat-unidades"),
+                statTotalBadge: document.getElementById("stat-total-badge")
+            };
+
+            // Legacy refs backfill
+            btnRefresh = UI.btnRefresh;
+            lastUpdatedEl = UI.lastUpdated;
+            errorToast = UI.errorToast;
+            errorToastMsg = UI.errorToastMsg;
+            if (UI.odoTripsSearchInput) UI.odoTripsSearchInput.value = "";
+
             if (window.lucide) {
                 lucide.createIcons();
             }
 
-            btnRefresh = document.getElementById("btn-refresh");
-            lastUpdatedEl = document.getElementById("last-updated-time");
-            errorToast = document.getElementById("error-toast");
-            errorToastMsg = document.getElementById("error-toast-msg");
-            searchInput = document.getElementById("search-input");
-            tripsSearchInput = document.getElementById("trips-search-input");
-            odoTripsSearchInput = document.getElementById("odo-trips-search-input");
-            const unitSelect = document.getElementById("unit-select");
-
             // Unit Filter Event
-            if (unitSelect) {
-                unitSelect.addEventListener("change", function () {
-                    selectedUnitId = unitSelect.value;
+            if (UI.unitSelect) {
+                UI.unitSelect.addEventListener("change", function () {
+                    selectedUnitId = UI.unitSelect.value;
                     applyUnitFilter();
                 });
             }
 
             // Trend grouping select
-            const trendSelect = document.getElementById("trend-timeframe-select");
-            if (trendSelect) {
-                trendSelect.addEventListener("change", function () {
-                    trendGrouping = trendSelect.value;
+            if (UI.trendSelect) {
+                UI.trendSelect.addEventListener("change", function () {
+                    trendGrouping = UI.trendSelect.value;
                     if (filteredRecords) {
                         renderCharts(filteredRecords);
                     }
@@ -1530,90 +1264,88 @@ geotab.addin.rendimiento = function () {
                     isCustomRange = false;
                     customFromDate = null;
                     customToDate = null;
-                    var btnCustom = document.getElementById("btn-custom");
-                    if (btnCustom) {
-                        btnCustom.innerHTML = '<i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i> Personalizado';
+                    if (UI.btnCustom) {
+                        UI.btnCustom.innerHTML = '<i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i> Personalizado';
                         if (window.lucide) lucide.createIcons();
                     }
                     loadData();
                 });
             });
 
-            // Custom date popover
-            var btnCustom = document.getElementById("btn-custom");
-            var datePopover = document.getElementById("date-popover");
-            var dateFromInput = document.getElementById("date-from");
-            var dateToInput = document.getElementById("date-to");
-            var btnApply = document.getElementById("btn-date-apply");
-            var btnCancel = document.getElementById("btn-date-cancel");
-
+            // Custom date setup
             var todayStr = new Date().toISOString().slice(0, 10);
             var weekAgo = new Date();
             weekAgo.setDate(weekAgo.getDate() - 7);
-            dateFromInput.value = weekAgo.toISOString().slice(0, 10);
-            dateToInput.value = todayStr;
-            dateToInput.max = todayStr;
+            if(UI.dateFromInput) UI.dateFromInput.value = weekAgo.toISOString().slice(0, 10);
+            if(UI.dateToInput) {
+                UI.dateToInput.value = todayStr;
+                UI.dateToInput.max = todayStr;
+            }
 
-            var closePopover = function () { datePopover.classList.remove("open"); };
+            var closePopover = function () { UI.datePopover.classList.remove("open"); };
 
-            btnCustom.addEventListener("click", function (e) {
-                e.stopPropagation();
-                datePopover.classList.toggle("open");
-            });
+            if(UI.btnCustom) {
+                UI.btnCustom.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    UI.datePopover.classList.toggle("open");
+                });
+            }
 
-            btnCancel.addEventListener("click", closePopover);
+            if(UI.btnCancel) UI.btnCancel.addEventListener("click", closePopover);
 
-            btnApply.addEventListener("click", function () {
-                var from = dateFromInput.value;
-                var to = dateToInput.value;
-                if (!from || !to) { showError("Selecciona ambas fechas."); return; }
-                if (new Date(from) > new Date(to)) { showError("'Desde' no puede ser mayor que 'Hasta'."); return; }
+            if(UI.btnApply) {
+                UI.btnApply.addEventListener("click", function () {
+                    var from = UI.dateFromInput.value;
+                    var to = UI.dateToInput.value;
+                    if (!from || !to) { showError("Selecciona ambas fechas."); return; }
+                    if (new Date(from) > new Date(to)) { showError("'Desde' no puede ser mayor que 'Hasta'."); return; }
 
-                customFromDate = new Date(from + "T00:00:00").toISOString();
-                customToDate = new Date(to + "T23:59:59").toISOString();
-                isCustomRange = true;
+                    customFromDate = new Date(from + "T00:00:00").toISOString();
+                    customToDate = new Date(to + "T23:59:59").toISOString();
+                    isCustomRange = true;
 
-                var fmt = function (s) { return new Date(s + "T12:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short" }); };
-                btnCustom.innerHTML = '<i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i> ' + fmt(from) + " – " + fmt(to);
-                if (window.lucide) lucide.createIcons();
+                    var fmt = function (s) { return new Date(s + "T12:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short" }); };
+                    UI.btnCustom.innerHTML = '<i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i> ' + fmt(from) + " – " + fmt(to);
+                    if (window.lucide) lucide.createIcons();
 
-                document.querySelectorAll(".btn-range").forEach(function (b) { b.classList.remove("active"); });
-                btnCustom.classList.add("active");
-                closePopover();
-                loadData();
-            });
+                    document.querySelectorAll(".btn-range").forEach(function (b) { b.classList.remove("active"); });
+                    UI.btnCustom.classList.add("active");
+                    closePopover();
+                    loadData();
+                });
+            }
 
             document.addEventListener("click", function (e) {
-                if (!datePopover.contains(e.target) && e.target !== btnCustom) closePopover();
+                if (UI.datePopover && !UI.datePopover.contains(e.target) && e.target !== UI.btnCustom) closePopover();
             });
 
-            dateFromInput.addEventListener("change", function () { dateToInput.min = dateFromInput.value; });
+            if(UI.dateFromInput) UI.dateFromInput.addEventListener("change", function () { UI.dateToInput.min = UI.dateFromInput.value; });
 
             // Search
-            if (searchInput) {
+            if (UI.searchInput) {
                 var searchTimer = null;
-                searchInput.addEventListener("input", function () {
+                UI.searchInput.addEventListener("input", function () {
                     clearTimeout(searchTimer);
-                    searchTimer = setTimeout(function () { applySearch(searchInput.value); }, 250);
+                    searchTimer = setTimeout(function () { applySearch(UI.searchInput.value); }, 250);
                 });
             }
-            if (tripsSearchInput) {
+            if (UI.tripsSearchInput) {
                 var tripsSearchTimer = null;
-                tripsSearchInput.addEventListener("input", function () {
+                UI.tripsSearchInput.addEventListener("input", function () {
                     clearTimeout(tripsSearchTimer);
-                    tripsSearchTimer = setTimeout(function () { applyTripsSearch(tripsSearchInput.value); }, 250);
+                    tripsSearchTimer = setTimeout(function () { applyTripsSearch(UI.tripsSearchInput.value); }, 250);
                 });
             }
 
-            if (odoTripsSearchInput) {
+            if (UI.odoTripsSearchInput) {
                 var odoTripsSearchTimer = null;
-                odoTripsSearchInput.addEventListener("input", function () {
+                UI.odoTripsSearchInput.addEventListener("input", function () {
                     clearTimeout(odoTripsSearchTimer);
-                    odoTripsSearchTimer = setTimeout(function () { applyOdoTripsSearch(odoTripsSearchInput.value); }, 250);
+                    odoTripsSearchTimer = setTimeout(function () { applyOdoTripsSearch(UI.odoTripsSearchInput.value); }, 250);
                 });
             }
 
-            btnRefresh.addEventListener("click", function () { loadData(); });
+            UI.btnRefresh.addEventListener("click", function () { loadData(); });
 
             // Export Excel Listeners
             document.querySelectorAll(".btn-export-excel").forEach(btn => {
