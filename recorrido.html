@@ -34,8 +34,9 @@
 
                 <!-- Date Range Presets -->
                 <div class="date-range-group" id="period-presets">
+                    <button class="btn-range active" data-period="day">Hoy</button>
                     <button class="btn-range" data-period="week">Esta semana</button>
-                    <button class="btn-range active" data-period="month">Este mes</button>
+                    <button class="btn-range" data-period="month">Este mes</button>
                     <button class="btn-range" data-period="bimester">Bimestre</button>
                     <button class="btn-range" data-period="trimester">Trimestre</button>
                     <button class="btn-range" data-period="semester">6 meses</button>
@@ -160,21 +161,9 @@
                                 </tr>
                             </thead>
                             <tbody id="daily-recorrido-tbody">
+                                <!-- Rows populated by JS -->
                             </tbody>
                         </table>
-                    </div>
-                    <!-- UI Pagination Controls -->
-                    <div class="pagination-container" id="pagination-controls" style="display: none;">
-                        <span class="pagination-info" id="pagination-info">Mostrando 0 - 0 de 0</span>
-                        <div class="pagination-buttons">
-                            <button id="btn-prev-page" class="btn-page" disabled>
-                                <i data-lucide="chevron-left" width="16" height="16"></i> Anterior
-                            </button>
-                            <span class="page-indicator" id="page-indicator">Página 1</span>
-                            <button id="btn-next-page" class="btn-page" disabled>
-                                Siguiente <i data-lucide="chevron-right" width="16" height="16"></i>
-                            </button>
-                        </div>
                     </div>
                 </div>
             </div>
