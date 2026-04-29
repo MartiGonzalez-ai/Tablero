@@ -528,250 +528,6 @@ geotab.addin.rendimiento = function () {
         });
     };
 
-    // ─── Render Daily Table ───────────────────────────────────────────────────
-    const renderDailyTable = () => {
-        const tbody = document.getElementById("daily-tbody");
-        const emptyEl = document.getElementById("daily-empty");
-        const badgeDaily = document.getElementById("badge-daily");
-
-        if (!tbody) return;
-        tbody.innerHTML = "";
-
-        // Initialize dailyData with all dates in the selected range
-        const dailyData = {};
-        const range = window.getDateRange ? window.getDateRange() : { fromDate: new Date().toISOString(), toDate: new Date().toISOString() };
-
-        const startD = new Date(range.fromDate);
-        const endD = new Date(range.toDate);
-        startD.setHours(12, 0, 0, 0); // avoid tz boundary issues
-        endD.setHours(12, 0, 0, 0);
-
-        for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
-            const dStr = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
-            dailyData[dStr] = { dist: 0, fuel: 0 };
-        }
-
-        // 1. Distance from Trips
-        (filteredTrips || []).forEach(t => {
-            if (!t.start) return;
-            const dateObj = new Date(t.start);
-            const dStr = dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
-            if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
-            dailyData[dStr].dist += (parseFloat(t.distance) || 0);
-        });
-
-        // 2. Fuel from StatusData (Datos Crudos)
-        let fuelDataToProcess = rawStatusData;
-        if (selectedUnitId !== "all") {
-            fuelDataToProcess = rawStatusData.filter(d => d.device && d.device.id === selectedUnitId);
-        }
-        const fuelData = fuelDataToProcess.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticDeviceTotalFuelId");
-
-        const fuelByDev = {};
-        fuelData.forEach(d => {
-            const devId = d.device.id;
-            if (!fuelByDev[devId]) fuelByDev[devId] = [];
-            fuelByDev[devId].push(d);
-        });
-
-        const odoData = fuelDataToProcess.filter(d => d.diagnostic && d.diagnostic.id === "DiagnosticOdometerId");
-        const odoByDev = {};
-        odoData.forEach(d => {
-            const devId = d.device.id;
-            if (!odoByDev[devId]) odoByDev[devId] = [];
-            odoByDev[devId].push(d);
-        });
-        Object.keys(odoByDev).forEach(devId => {
-            odoByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-        });
-
-        Object.keys(fuelByDev).forEach(devId => {
-            const arr = fuelByDev[devId].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-            for (let i = 1; i < arr.length; i++) {
-                const deltaL = arr[i].data - arr[i - 1].data;
-                if (deltaL > 0) { // Only positive increments in total fuel
-                    const tzDate = new Date(arr[i].dateTime);
-                    const dStr = tzDate.getFullYear() + "-" + String(tzDate.getMonth() + 1).padStart(2, '0') + "-" + String(tzDate.getDate()).padStart(2, '0');
-                    if (!dailyData[dStr]) dailyData[dStr] = { dist: 0, fuel: 0 };
-                    dailyData[dStr].fuel += deltaL;
-                }
-            }
-        });
-
-        const sortedDates = Object.keys(dailyData).sort();
-
-        if (badgeDaily) badgeDaily.textContent = `${sortedDates.length} días`;
-
-        if (sortedDates.length === 0) {
-            if (emptyEl) emptyEl.style.display = "flex";
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = "none";
-
-        // Sort descending so most recent is on top
-        const reversedDates = [...sortedDates].reverse();
-
-        reversedDates.forEach(dateStr => {
-            const day = dailyData[dateStr];
-            const eff = day.fuel > 0 ? (day.dist / day.fuel) : 0;
-            const effClass = getEffClass(eff);
-
-            const tr = document.createElement("tr");
-            tr.className = "perf-row";
-            tr.innerHTML = `
-                <td>
-                    <div class="date-cell">
-                        <span class="date-main" style="font-weight:600; color:var(--color-primary);">${dateStr}</span>
-                    </div>
-                </td>
-                <td style="text-align:right; font-weight:600;">${day.dist.toFixed(1)} km</td>
-                <td style="text-align:right; font-weight:600; color:var(--text-color);" id="odo-${dateStr}">
-                    <span style="opacity:0.5;">Cargando...</span>
-                </td>
-                <td style="text-align:right; font-weight:600; color:var(--c-blue);">${day.fuel.toFixed(2)} L</td>
-                <td style="text-align:center;">
-                    <span class="eff-badge ${effClass}">${eff > 0 ? eff.toFixed(1) + " km/L" : ((day.dist >= 0 || day.fuel >= 0) ? "0.0 km/L" : "---")}</span>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        // Reconstruccion de Odometro por dia (igual que recorrido.js)
-        // Estrategia: obtener el odometro absoluto mas reciente como ancla,
-        // luego reconstruir hacia atras restando la distancia recorrida cada dia.
-        if (typeof api !== "undefined") {
-            const odometerDiagnostics = [
-                "DiagnosticOdometerAdjustmentId",
-                "DiagnosticOdometerId",
-                "DiagnosticOBDOdometerReaderId",
-                "DiagnosticJ1939TotalVehicleDistanceId"
-            ];
-
-            // El odometro acumulado solo tiene sentido para una unidad especifica.
-            // En modo "Todas las Unidades" no se puede sumar el odometro absoluto de N vehiculos.
-            if (selectedUnitId === "all") {
-                sortedDates.forEach(dateStr => {
-                    const el = document.getElementById("odo-" + dateStr);
-                    if (el) el.textContent = "---";
-                });
-            }
-
-            const devicesToQuery = selectedUnitId !== "all"
-                ? [selectedUnitId]
-                : [];
-
-            if (devicesToQuery.length > 0) {
-                // Llamadas para obtener la ultima lectura de odometro por dispositivo
-                const anchorCalls = [];
-                const anchorCallMap = [];
-
-                devicesToQuery.forEach(devId => {
-                    odometerDiagnostics.forEach(diagId => {
-                        anchorCalls.push(["Get", {
-                            typeName: "StatusData",
-                            search: {
-                                deviceSearch: { id: devId },
-                                diagnosticSearch: { id: diagId },
-                                toDate: new Date().toISOString(),
-                                resultsLimit: 1,
-                                applyLatest: true
-                            }
-                        }]);
-                        anchorCallMap.push({ devId, diagId });
-                    });
-                });
-
-                api.multiCall(anchorCalls, function (anchorResults) {
-                    // 1. Lectura de odometro mas reciente por dispositivo (metros -> km)
-                    const latestOdoPerDev = {};
-
-                    anchorResults.forEach((res, i) => {
-                        if (!res || res.length === 0) return;
-                        const reading = res[0];
-                        if (reading.data === undefined) return;
-                        const { devId } = anchorCallMap[i];
-                        const readingDate = new Date(reading.dateTime);
-                        const odoKm = reading.data / 1000;
-
-                        if (!latestOdoPerDev[devId] || readingDate > latestOdoPerDev[devId].dateTime) {
-                            latestOdoPerDev[devId] = { odoKm, dateTime: readingDate };
-                        }
-                    });
-
-                    // 2. Inicializar acumuladores
-                    sortedDates.forEach(dateStr => {
-                        dailyData[dateStr].acumulado = 0;
-                        dailyData[dateStr]._devCount = 0;
-                    });
-
-                    // 3. Para cada dispositivo, reconstruir el odometro diario hacia atras
-                    devicesToQuery.forEach(devId => {
-                        const anchor = latestOdoPerDev[devId];
-                        if (!anchor) return;
-
-                        // Viajes de este dispositivo ordenados del mas reciente al mas antiguo
-                        const deviceTrips = (filteredTrips || [])
-                            .filter(t => t.deviceId === devId)
-                            .sort((a, b) => new Date(b.stop || b.start) - new Date(a.stop || a.start));
-
-                        // Distancia recorrida por dia para este dispositivo
-                        const devDailyDist = {};
-                        sortedDates.forEach(d => { devDailyDist[d] = 0; });
-                        deviceTrips.forEach(trip => {
-                            if (!trip.start) return;
-                            const dStr = trip.start.slice(0, 10);
-                            if (devDailyDist[dStr] !== undefined) {
-                                devDailyDist[dStr] += (parseFloat(trip.distance) || 0);
-                            }
-                        });
-
-                        // Partir del ancla y ajustar viajes posteriores
-                        let runningOdo = anchor.odoKm;
-                        deviceTrips.forEach(trip => {
-                            const tripStop = new Date(trip.stop || trip.start);
-                            if (tripStop > anchor.dateTime) {
-                                runningOdo -= (parseFloat(trip.distance) || 0);
-                            }
-                        });
-
-                        // runningOdo = odometro al FINAL del ultimo dia del rango.
-                        // Recorrer de mas reciente a mas antiguo asignando el odometro de cada dia.
-                        const reversedForDev = [...sortedDates].reverse();
-
-                        reversedForDev.forEach(dateStr => {
-                            dailyData[dateStr].acumulado += runningOdo;
-                            dailyData[dateStr]._devCount += 1;
-                            runningOdo -= devDailyDist[dateStr];
-                        });
-                    });
-
-                    // 4. Actualizar celdas del DOM
-                    sortedDates.forEach(dateStr => {
-                        const el = document.getElementById("odo-" + dateStr);
-                        if (!el) return;
-                        const day = dailyData[dateStr];
-                        if (day._devCount > 0) {
-                            el.textContent = day.acumulado.toLocaleString("es-MX", {
-                                minimumFractionDigits: 1,
-                                maximumFractionDigits: 1
-                            }) + " km";
-                        } else {
-                            el.textContent = "---";
-                        }
-                    });
-
-                }, function (e) {
-                    console.error("Error fetching anchor odometers:", e);
-                    sortedDates.forEach(dateStr => {
-                        const el = document.getElementById("odo-" + dateStr);
-                        if (el) el.textContent = "---";
-                    });
-                });
-            }
-        }
-                return { dailyData, sortedDates };
-    };
-
     // ─── Export to Excel ─────────────────────────────────────────────────────
     const exportToExcel = (tableId, filename) => {
         const table = document.getElementById(tableId);
@@ -786,44 +542,40 @@ geotab.addin.rendimiento = function () {
 
     // ─── Reset UI ─────────────────────────────────────────────────────────────
     const resetUI = () => {
+        // KPIs & Labels
         ["stat-rendimiento", "stat-distancia", "stat-combustible", "stat-unidades"].forEach(id => {
             const el = document.getElementById(id);
             if (el) { el.textContent = "—"; el.classList.add("skeleton"); }
         });
-
-        const ul = document.getElementById("ranking-list");
-        if (ul) ul.innerHTML = Array(5).fill('<li class="ranking-skeleton"></li>').join("");
-
-        const badgeRanking = document.getElementById("badge-ranking");
-        if (badgeRanking) { badgeRanking.textContent = "—"; badgeRanking.classList.add("skeleton"); }
-
-
-
-        const tbody = document.getElementById("perf-tbody");
-        if (tbody) tbody.innerHTML = Array(5).fill('<tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>').join("");
-    const resetUI = () => {
         if (UI.lastUpdated) UI.lastUpdated.textContent = "Cargando...";
-        if (UI.perfTbody) UI.perfTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td></tr>').join("");
-        if (UI.badgeTable) UI.badgeTable.textContent = "—";
-        if (UI.dailyTbody) UI.dailyTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td></tr>').join("");
-        if (UI.tripsTbody) UI.tripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td></tr>').join("");
-        if (UI.odoTripsTbody) UI.odoTripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td><td><div class="td-skel"></div></td></tr>').join("");
+
+        // Lists/Tables
+        if (UI.rankingList) UI.rankingList.innerHTML = Array(5).fill('<li class="ranking-skeleton"></li>').join("");
+        if (UI.perfTbody) UI.perfTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>').join("");
+        
+        const badges = [UI.badgeRanking, UI.badgeTable, UI.badgeDaily, UI.badgeTrips, UI.badgeOdoTrips, UI.badgeRaw, UI.badgeRawOdo];
+        badges.forEach(b => { if (b) { b.textContent = "—"; b.classList.add("skeleton"); } });
+
+        if (UI.dailyTbody) UI.dailyTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="5"><div class="td-skel"></div></td></tr>').join("");
+        if (UI.tripsTbody) UI.tripsTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td colspan="13"><div class="td-skel"></div></td></tr>').join("");
         if (UI.rawTbody) UI.rawTbody.innerHTML = Array(3).fill('<tr class="tr-skeleton"><td><div class="td-skel"></div></td></tr>').join("");
     };
 
     const calculateDailyData = (trips) => {
         const daily = {};
-        trips.forEach(t => {
+        (trips || []).forEach(t => {
+            if (!t.start) return;
             const date = new Date(t.start).toISOString().split('T')[0];
             if (!daily[date]) daily[date] = { dist: 0, fuel: 0 };
-            daily[date].dist += (t.distance || 0);
-            daily[date].fuel += (t.fuelUsed || 0);
+            daily[date].dist += (parseFloat(t.distance) || 0);
+            daily[date].fuel += (parseFloat(t.fuelUsed) || 0);
         });
         return daily;
     };
 
     const renderDailyTable = (trips) => {
-        if (!UI.dailyTbody) return {};
+        const tbody = document.getElementById("daily-tbody");
+        if (!tbody) return {};
         const dailyData = calculateDailyData(trips);
         const sortedDates = Object.keys(dailyData).sort().reverse();
         const fragment = document.createDocumentFragment();
@@ -841,12 +593,10 @@ geotab.addin.rendimiento = function () {
             fragment.appendChild(tr);
         });
 
-        UI.dailyTbody.innerHTML = "";
-        UI.dailyTbody.appendChild(fragment);
+        tbody.innerHTML = "";
+        tbody.appendChild(fragment);
         if (UI.badgeDaily) UI.badgeDaily.textContent = sortedDates.length;
         return { dailyData, sortedDates };
-    };
-
     };
 
     // ─── Render Charts ────────────────────────────────────────────────
