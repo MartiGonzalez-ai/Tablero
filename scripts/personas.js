@@ -10,7 +10,7 @@ geotab.addin.personas = function () {
     };
 
     // DOM Refs
-    let btnRefresh, lastUpdatedEl, searchInput, btnExport, userGrid, groupsTbody;
+    let btnRefresh, lastUpdatedEl, searchInput, btnExport, userGrid;
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const formatDate = (dateStr) => {
@@ -200,32 +200,6 @@ geotab.addin.personas = function () {
         if (window.lucide) window.lucide.createIcons();
     };
 
-    const renderGroupsTable = (groups) => {
-        if (!groupsTbody) return;
-        groupsTbody.innerHTML = "";
-
-        // Filter to only show groups that have a name (ignore system groups if necessary)
-        const sortedGroups = groups
-            .filter(g => g.name && g.id)
-            .sort((a, b) => a.name.localeCompare(b.name));
-
-        if (sortedGroups.length === 0) {
-            groupsTbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding: 2rem;">No se encontraron grupos.</td></tr>`;
-            return;
-        }
-
-        const fragment = document.createDocumentFragment();
-        sortedGroups.forEach(g => {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td style="font-weight:600;">${g.name}</td>
-                <td style="font-family:monospace; color: var(--color-text-muted);">${g.id}</td>
-            `;
-            fragment.appendChild(tr);
-        });
-        groupsTbody.appendChild(fragment);
-    };
-
     const renderCharts = (users) => {
         // Inactivity Distribution
         const inactivityGroups = {
@@ -304,7 +278,6 @@ geotab.addin.personas = function () {
             renderKPIs(allUsers);
             renderTable(allUsers);
             renderCharts(allUsers);
-            renderGroupsTable(groups);
 
             lastUpdatedEl.textContent = `Actualizado: ${new Date().toLocaleTimeString()}`;
             btnRefresh.classList.remove("loading");
@@ -357,7 +330,6 @@ geotab.addin.personas = function () {
             searchInput = document.getElementById("search-input");
             btnExport = document.getElementById("btn-export");
             userGrid = document.getElementById("user-grid");
-            groupsTbody = document.getElementById("groups-tbody");
 
             // Events
             btnRefresh.addEventListener("click", loadData);
