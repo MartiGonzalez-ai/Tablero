@@ -10,7 +10,7 @@ geotab.addin.personas = function () {
     };
 
     // DOM Refs
-    let btnRefresh, lastUpdatedEl, searchInput, btnExport, userTbody;
+    let btnRefresh, lastUpdatedEl, searchInput, btnExport, userTbody, groupsTbody;
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const formatDate = (dateStr) => {
@@ -138,6 +138,32 @@ geotab.addin.personas = function () {
         userTbody.appendChild(fragment);
     };
 
+    const renderGroupsTable = (groups) => {
+        if (!groupsTbody) return;
+        groupsTbody.innerHTML = "";
+
+        // Filter to only show groups that have a name (ignore system groups if necessary)
+        const sortedGroups = groups
+            .filter(g => g.name && g.id)
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (sortedGroups.length === 0) {
+            groupsTbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding: 2rem;">No se encontraron grupos.</td></tr>`;
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        sortedGroups.forEach(g => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td style="font-weight:600;">${g.name}</td>
+                <td style="font-family:monospace; color: var(--color-text-muted);">${g.id}</td>
+            `;
+            fragment.appendChild(tr);
+        });
+        groupsTbody.appendChild(fragment);
+    };
+
     const renderCharts = (users) => {
         // Inactivity Distribution
         const inactivityGroups = {
@@ -203,23 +229,27 @@ geotab.addin.personas = function () {
         if (!api) return;
         btnRefresh.classList.add("loading");
 
-        api.call("Get", {
-            typeName: "User",
-            search: { isBasicAuthentication: false } // Typical filter for real users
-        }, (users) => {
+        api.multiCall([
+            ["Get", { typeName: "User", search: { isBasicAuthentication: false } }],
+            ["Get", { typeName: "Group" }]
+        ], (results) => {
+            const users = results[0];
+            const groups = results[1];
+
             allUsers = processData(users);
             filteredUsers = [...allUsers];
 
             renderKPIs(allUsers);
             renderTable(allUsers);
             renderCharts(allUsers);
+            renderGroupsTable(groups);
 
             lastUpdatedEl.textContent = `Actualizado: ${new Date().toLocaleTimeString()}`;
             btnRefresh.classList.remove("loading");
         }, (err) => {
-            console.error("Error fetching users:", err);
+            console.error("Error fetching data:", err);
             btnRefresh.classList.remove("loading");
-            alert("Error al cargar los datos de usuarios.");
+            alert("Error al cargar los datos.");
         });
     };
 
@@ -269,6 +299,7 @@ geotab.addin.personas = function () {
             searchInput = document.getElementById("search-input");
             btnExport = document.getElementById("btn-export");
             userTbody = document.getElementById("user-tbody");
+            groupsTbody = document.getElementById("groups-tbody");
 
             // Events
             btnRefresh.addEventListener("click", loadData);
