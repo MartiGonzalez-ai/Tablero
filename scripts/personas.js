@@ -10,7 +10,7 @@ geotab.addin.personas = function () {
     };
 
     // DOM Refs
-    let btnRefresh, lastUpdatedEl, searchInput, btnExport, userTbody, groupsTbody;
+    let btnRefresh, lastUpdatedEl, searchInput, btnExport, userGrid, groupsTbody;
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const formatDate = (dateStr) => {
@@ -65,6 +65,20 @@ geotab.addin.personas = function () {
         requestAnimationFrame(step);
     };
 
+    const getInitials = (name) => {
+        if (!name) return "?";
+        const parts = name.trim().split(" ");
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    };
+
+    const getStatusType = (label) => {
+        if (label.includes("Activo")) return "active";
+        if (label.includes("Medio")) return "warning";
+        if (label.includes("Crítico")) return "critical";
+        return "never";
+    };
+
     // ─── Data Processing ─────────────────────────────────────────────────────
     const processData = (users, groups = []) => {
         const groupMap = {};
@@ -111,35 +125,79 @@ geotab.addin.personas = function () {
     };
 
     const renderTable = (users) => {
-        if (!userTbody) return;
-        userTbody.innerHTML = "";
+        if (!userGrid) return;
+        userGrid.innerHTML = "";
 
         if (users.length === 0) {
-            userTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 3rem;">No se encontraron usuarios.</td></tr>`;
+            userGrid.innerHTML = `
+                <div style="text-align:center; padding: 5rem; width: 100%; color: var(--color-text-muted);">
+                    No se encontraron usuarios que coincidan con la búsqueda.
+                </div>
+            `;
             return;
         }
 
         const fragment = document.createDocumentFragment();
         users.forEach(u => {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>
-                    <div class="user-info">
-                        <span class="user-name">${u.name}</span>
+            const statusType = getStatusType(u.status.label);
+            const initials = getInitials(u.name);
+            const phone = u.phone && u.phone !== "—" ? u.phone : "+52 00 0000 0000"; // Placeholder as in image if none
+            
+            const card = document.createElement("div");
+            card.className = `user-card user-card--${statusType}`;
+            card.innerHTML = `
+                <div class="user-card__badge-status">
+                    <i data-lucide="${statusType === 'active' ? 'check-circle' : statusType === 'warning' ? 'alert-circle' : 'alert-triangle'}" width="14" height="14"></i>
+                    <span>${u.status.label.split(" (")[0]}</span>
+                </div>
+
+                <div class="user-card__header">
+                    <div class="user-card__avatar">${initials}</div>
+                    <div class="user-card__info">
+                        <div class="user-card__name">${u.name}</div>
+                        <div class="user-card__email">${u.email}</div>
+                        <div class="user-card__phone">
+                            <i data-lucide="phone" width="14" height="14"></i>
+                            <span>${phone}</span>
+                        </div>
                     </div>
-                </td>
-                <td><span class="user-email">${u.email}</span></td>
-                <td style="text-align:center;">${u.isDriver}</td>
-                <td style="font-size:0.75rem;">${u.securityGroups}</td>
-                <td style="font-size:0.75rem;">${u.organizationGroups}</td>
-                <td>${formatDate(u.lastAccess)}</td>
-                <td style="font-weight:700;">${u.daysInactive === Infinity ? "—" : u.daysInactive + " días"}</td>
-                <td><span class="badge ${u.status.class}">${u.status.label}</span></td>
-                <td>${u.phone}</td>
+                </div>
+
+                <div class="user-card__body">
+                    <div class="user-card__data-group">
+                        <div class="user-card__label">Organización</div>
+                        <div class="user-card__value">${u.organizationGroups}</div>
+                    </div>
+                    <div class="user-card__data-group">
+                        <div class="user-card__label">Seguridad</div>
+                        <div class="user-card__value">${u.securityGroups}</div>
+                    </div>
+                    <div class="user-card__data-group">
+                        <div class="user-card__label">Conductor</div>
+                        <div class="user-card__value">
+                            <span class="user-card__driver-badge" style="background: ${u.isDriver === 'Sí' ? '#f0fff4' : '#fef2f2'}; color: ${u.isDriver === 'Sí' ? '#2f855a' : '#991b1b'};">
+                                ${u.isDriver}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-card__footer">
+                    <div class="user-card__last-access">
+                        <i data-lucide="clock" width="14" height="14"></i>
+                        <span>Último acceso: ${formatDate(u.lastAccess).toLowerCase()}</span>
+                    </div>
+                    <div class="user-card__days-badge" style="background: ${statusType === 'active' ? '#f0fff4' : statusType === 'warning' ? '#fff9db' : '#fff5f5'}; color: ${statusType === 'active' ? '#2f855a' : statusType === 'warning' ? '#f08c00' : '#c53030'};">
+                        Hace ${u.daysInactive === Infinity ? "—" : u.daysInactive} días
+                    </div>
+                </div>
             `;
-            fragment.appendChild(tr);
+            fragment.appendChild(card);
         });
-        userTbody.appendChild(fragment);
+        userGrid.appendChild(fragment);
+
+        // Re-initialize icons
+        if (window.lucide) window.lucide.createIcons();
     };
 
     const renderGroupsTable = (groups) => {
@@ -298,7 +356,7 @@ geotab.addin.personas = function () {
             lastUpdatedEl = document.getElementById("last-updated-time");
             searchInput = document.getElementById("search-input");
             btnExport = document.getElementById("btn-export");
-            userTbody = document.getElementById("user-tbody");
+            userGrid = document.getElementById("user-grid");
             groupsTbody = document.getElementById("groups-tbody");
 
             // Events
