@@ -64,10 +64,16 @@ geotab.addin.personas = function () {
                 id: u.id,
                 name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name,
                 email: u.name,
+                employeeNumber: u.employeeNumber || "—",
+                isDriver: u.isDriver ? "Sí" : "No",
                 lastAccess: u.lastAccessDate,
                 daysInactive: days,
                 status: getStatusInfo(days),
-                securityGroups: u.securityGroups ? u.securityGroups.map(g => g.name || g.id).join(", ") : "—"
+                securityGroups: u.securityGroups ? u.securityGroups.map(g => g.name || g.id).join(", ") : "—",
+                organizationGroups: u.companyGroups ? u.companyGroups.map(g => g.name || g.id).join(", ") : "—",
+                phone: u.phoneNumber || "—",
+                timeZone: u.timeZoneId || "—",
+                language: u.language || "—"
             };
         }).sort((a, b) => b.daysInactive - a.daysInactive);
     };
@@ -100,16 +106,23 @@ geotab.addin.personas = function () {
         users.forEach(u => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
+                <td style="font-family:monospace; font-size:0.7rem;">${u.id}</td>
                 <td>
                     <div class="user-info">
                         <span class="user-name">${u.name}</span>
                     </div>
                 </td>
                 <td><span class="user-email">${u.email}</span></td>
-                <td>${u.securityGroups}</td>
+                <td>${u.employeeNumber}</td>
+                <td style="text-align:center;">${u.isDriver}</td>
+                <td style="font-size:0.75rem;">${u.securityGroups}</td>
+                <td style="font-size:0.75rem;">${u.organizationGroups}</td>
                 <td>${formatDate(u.lastAccess)}</td>
                 <td style="font-weight:700;">${u.daysInactive === Infinity ? "—" : u.daysInactive + " días"}</td>
                 <td><span class="badge ${u.status.class}">${u.status.label}</span></td>
+                <td>${u.phone}</td>
+                <td style="font-size:0.75rem;">${u.timeZone}</td>
+                <td>${u.language}</td>
             `;
             fragment.appendChild(tr);
         });
@@ -212,12 +225,19 @@ geotab.addin.personas = function () {
 
     const exportToExcel = () => {
         const data = filteredUsers.map(u => ({
+            "ID": u.id,
             "Nombre": u.name,
             "Email": u.email,
-            "Grupos": u.securityGroups,
+            "Núm. Empleado": u.employeeNumber,
+            "¿Es Conductor?": u.isDriver,
+            "Grupos de Seguridad": u.securityGroups,
+            "Grupos de Organización": u.organizationGroups,
             "Último Acceso": formatDate(u.lastAccess),
             "Días Inactivo": u.daysInactive === Infinity ? "Nunca" : u.daysInactive,
-            "Estado": u.status.label
+            "Estado": u.status.label,
+            "Teléfono": u.phone,
+            "Zona Horaria": u.timeZone,
+            "Idioma": u.language
         }));
 
         const ws = XLSX.utils.json_to_sheet(data);
