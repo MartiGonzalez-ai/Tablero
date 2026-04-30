@@ -1,5 +1,3 @@
-
-
 :root {
     /* Fondo */
     --color-bg-main:    #f0f2f5;
@@ -261,6 +259,33 @@ body {
     color: #fff;
 }
 
+.btn-email {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .5rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-primary);
+    background: #fff;
+    color: var(--color-primary);
+    font-weight: 600;
+    font-size: .85rem;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.btn-email:not(:disabled):hover {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.btn-email:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: var(--color-panel-border);
+    color: var(--color-text-muted);
+}
+
 .table-wrapper {
     overflow-x: auto;
     max-height: 600px;
@@ -360,13 +385,20 @@ body {
     background: #fff;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
+    border: 2px solid transparent;
     border-top: 5px solid var(--status-color, var(--color-primary));
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
     position: relative;
-    transition: transform .2s ease, box-shadow .2s ease;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    cursor: pointer;
+}
+
+.user-card--selected {
+    border-color: var(--color-primary);
+    background: var(--color-primary-glow);
 }
 
 .user-card:hover {
@@ -378,6 +410,7 @@ body {
     display: flex;
     align-items: center;
     gap: 1.25rem;
+    padding-left: 1.75rem; /* Space for checkbox */
 }
 
 .user-card__avatar {
@@ -423,6 +456,36 @@ body {
 
 .user-card__phone svg {
     color: #d53f8c; /* Pink color as in image */
+}
+
+.user-card__checkbox {
+    position: absolute;
+    top: 1.25rem;
+    left: 1.25rem;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 2px solid #cbd5e1;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+.user-card--selected .user-card__checkbox {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+
+.user-card__checkbox i {
+    display: none;
+}
+
+.user-card--selected .user-card__checkbox i {
+    display: block;
 }
 
 .user-card__badge-status {
