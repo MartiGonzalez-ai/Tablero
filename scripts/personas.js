@@ -4,13 +4,14 @@ geotab.addin.personas = function () {
     let api;
     let allUsers = [];
     let filteredUsers = [];
+    let selectedEmails = new Set();
     let charts = {
         inactivity: null,
         groups: null
     };
 
     // DOM Refs
-    let btnRefresh, lastUpdatedEl, searchInput, btnExport, userGrid;
+    let btnRefresh, lastUpdatedEl, searchInput, btnExport, btnEmail, userGrid;
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const formatDate = (dateStr) => {
@@ -141,11 +142,16 @@ geotab.addin.personas = function () {
         users.forEach(u => {
             const statusType = getStatusType(u.status.label);
             const initials = getInitials(u.name);
-            const phone = u.phone && u.phone !== "—" ? u.phone : "+52 00 0000 0000"; // Placeholder as in image if none
+            const phone = u.phone && u.phone !== "—" ? u.phone : "+52 00 0000 0000"; 
+            const isSelected = selectedEmails.has(u.email);
             
             const card = document.createElement("div");
-            card.className = `user-card user-card--${statusType}`;
+            card.className = `user-card user-card--${statusType} ${isSelected ? 'user-card--selected' : ''}`;
+            card.dataset.email = u.email;
             card.innerHTML = `
+                <div class="user-card__checkbox">
+                    <i data-lucide="check" width="14" height="14"></i>
+                </div>
                 <div class="user-card__badge-status">
                     <i data-lucide="${statusType === 'active' ? 'check-circle' : statusType === 'warning' ? 'alert-circle' : 'alert-triangle'}" width="14" height="14"></i>
                     <span>${u.status.label.split(" (")[0]}</span>
@@ -192,12 +198,46 @@ geotab.addin.personas = function () {
                     </div>
                 </div>
             `;
+
+            card.addEventListener("click", (e) => {
+                toggleSelection(u.email, card);
+            });
+
             fragment.appendChild(card);
         });
         userGrid.appendChild(fragment);
 
         // Re-initialize icons
         if (window.lucide) window.lucide.createIcons();
+    };
+
+    const toggleSelection = (email, card) => {
+        if (selectedEmails.has(email)) {
+            selectedEmails.delete(email);
+            card.classList.remove("user-card--selected");
+        } else {
+            selectedEmails.add(email);
+            card.classList.add("user-card--selected");
+        }
+        updateEmailButton();
+    };
+
+    const updateEmailButton = () => {
+        if (!btnEmail) return;
+        const count = selectedEmails.size;
+        btnEmail.disabled = count === 0;
+        btnEmail.querySelector("span").textContent = `Enviar Correo (${count})`;
+    };
+
+    const handleSendEmail = () => {
+        if (selectedEmails.size === 0) return;
+        const emails = Array.from(selectedEmails).join(",");
+        const subject = encodeURIComponent("Dashboard Geotab - Notificación");
+        const body = encodeURIComponent("Hola,\n\nSe adjunta información relevante sobre su acceso al dashboard de Geotab.");
+        
+        // Use BCC (copia privada) as requested
+        const mailtoUrl = `mailto:?bcc=${emails}&subject=${subject}&body=${body}`;
+        window.location.href = mailtoUrl;
     };
 
     const renderCharts = (users) => {
@@ -274,6 +314,8 @@ geotab.addin.personas = function () {
 
             allUsers = processData(users, groups);
             filteredUsers = [...allUsers];
+            selectedEmails.clear();
+            updateEmailButton();
 
             renderKPIs(allUsers);
             renderTable(allUsers);
@@ -329,12 +371,14 @@ geotab.addin.personas = function () {
             lastUpdatedEl = document.getElementById("last-updated-time");
             searchInput = document.getElementById("search-input");
             btnExport = document.getElementById("btn-export");
+            btnEmail = document.getElementById("btn-email");
             userGrid = document.getElementById("user-grid");
 
             // Events
             btnRefresh.addEventListener("click", loadData);
             searchInput.addEventListener("input", handleSearch);
             btnExport.addEventListener("click", exportToExcel);
+            btnEmail.addEventListener("click", handleSendEmail);
 
             loadData();
             if (callback) callback();
