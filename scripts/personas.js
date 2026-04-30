@@ -40,6 +40,15 @@ geotab.addin.personas = function () {
         return { label: "Inactivo (Crítico)", class: "badge--critical" };
     };
 
+    const translateSecurityGroup = (id) => {
+        if (!id) return "—";
+        if (id.includes("ViewOnlySecurity")) return "Solo ver";
+        if (id.includes("EverythingSecurity")) return "Administrador";
+        if (id.includes("SupervisorSecurity")) return "Supervisor";
+        if (id.includes("b27D1")) return "Solo Ver Custom";
+        return id;
+    };
+
     const animateCount = (el, target) => {
         if (!el) return;
         el.classList.remove("skeleton");
@@ -69,7 +78,7 @@ geotab.addin.personas = function () {
                 lastAccess: u.lastAccessDate,
                 daysInactive: days,
                 status: getStatusInfo(days),
-                securityGroups: u.securityGroups ? u.securityGroups.map(g => g.name || g.id).join(", ") : "—",
+                securityGroups: u.securityGroups ? u.securityGroups.map(g => translateSecurityGroup(g.name || g.id)).join(", ") : "—",
                 organizationGroups: u.companyGroups ? u.companyGroups.map(g => g.name || g.id).join(", ") : "—",
                 phone: u.phoneNumber || "—",
                 timeZone: u.timeZoneId || "—",
