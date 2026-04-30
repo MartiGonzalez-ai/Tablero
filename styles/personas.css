@@ -1,8 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════
-   PERSONAS.CSS — Estilos para el Dashboard de Monitoreo de Usuarios
-   Geotab Add-In | Inter font | Light Mode
-   Premium Aesthetic: Glassmorphism & Vibrant Colors
-═══════════════════════════════════════════════════════════════ */
+
 
 :root {
     /* Fondo */
@@ -350,3 +346,169 @@ body {
     .charts-section { grid-template-columns: 1fr; padding: 1rem 1rem 0; }
     .table-section { padding: 1rem; }
 }
+
+/* ─── USER CARD GRID ────────────────────────────────────────────────────────── */
+.user-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: #f8fafc;
+}
+
+.user-card {
+    background: #fff;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    border-top: 5px solid var(--status-color, var(--color-primary));
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    position: relative;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.user-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+.user-card__header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.user-card__avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--status-color, var(--color-primary));
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 800;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.user-card__info {
+    flex: 1;
+}
+
+.user-card__name {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    margin-bottom: 0.15rem;
+}
+
+.user-card__email {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    word-break: break-all;
+}
+
+.user-card__phone {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-weight: 500;
+}
+
+.user-card__phone svg {
+    color: #d53f8c; /* Pink color as in image */
+}
+
+.user-card__badge-status {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--status-color);
+}
+
+.user-card__body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 1.25rem;
+}
+
+.user-card__data-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.user-card__label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #94a3b8;
+    letter-spacing: 0.025em;
+}
+
+.user-card__value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    line-height: 1.3;
+}
+
+.user-card__driver-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.75rem;
+    border-radius: 99px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: #f0fff4;
+    color: #2f855a;
+}
+
+.user-card__footer {
+    margin-top: auto;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.user-card__last-access {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.user-card__days-badge {
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: #fff5eb;
+    color: #c05621;
+}
+
+/* Status Colors Overrides */
+.user-card--active { --status-color: #3b753c; }
+.user-card--warning { --status-color: #f29300; }
+.user-card--critical { --status-color: #cc0000; }
+.user-card--never { --status-color: #64748b; }
