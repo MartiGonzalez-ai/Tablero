@@ -231,13 +231,26 @@ geotab.addin.personas = function () {
 
     const handleSendEmail = () => {
         if (selectedEmails.size === 0) return;
-        const emails = Array.from(selectedEmails).join(",");
+        const emails = Array.from(selectedEmails).join(", ");
         const subject = encodeURIComponent("Dashboard Geotab - Notificación");
         const body = encodeURIComponent("Hola,\n\nSe adjunta información relevante sobre su acceso al dashboard de Geotab.");
         
-        // Use BCC (copia privada) as requested
-        const mailtoUrl = `mailto:?bcc=${emails}&subject=${subject}&body=${body}`;
-        window.location.href = mailtoUrl;
+        // Copy to clipboard as fallback (Telmex webmail might not support URL params for BCC)
+        navigator.clipboard.writeText(emails).then(() => {
+            console.log("Emails copiados al portapapeles");
+            
+            // Open Telmex Webmail
+            const webmailUrl = `https://micorreo.telmex.com/#/mail/compose?bcc=${encodeURIComponent(emails)}&subject=${subject}&body=${body}`;
+            window.open(webmailUrl, "_blank");
+
+            // Optional: alert the user
+            alert(`Se han copiado ${selectedEmails.size} correos al portapapeles. \n\nPuedes pegarlos (Ctrl+V) en el campo BCC si no aparecen automáticamente.`);
+        }).catch(err => {
+            console.error("Error al copiar al portapapeles:", err);
+            // Fallback to just opening the URL
+            const webmailUrl = `https://micorreo.telmex.com/#/mail/compose?bcc=${encodeURIComponent(emails)}&subject=${subject}&body=${body}`;
+            window.open(webmailUrl, "_blank");
+        });
     };
 
     const renderCharts = (users) => {
