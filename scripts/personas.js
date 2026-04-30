@@ -66,7 +66,12 @@ geotab.addin.personas = function () {
     };
 
     // ─── Data Processing ─────────────────────────────────────────────────────
-    const processData = (users) => {
+    const processData = (users, groups = []) => {
+        const groupMap = {};
+        groups.forEach(g => {
+            if (g.id && g.name) groupMap[g.id] = g.name;
+        });
+
         return users.map(u => {
             const days = getInactivityDays(u.lastAccessDate);
             return {
@@ -79,7 +84,10 @@ geotab.addin.personas = function () {
                 daysInactive: days,
                 status: getStatusInfo(days),
                 securityGroups: u.securityGroups ? u.securityGroups.map(g => translateSecurityGroup(g.name || g.id)).join(", ") : "—",
-                organizationGroups: u.companyGroups ? u.companyGroups.map(g => g.name || g.id).join(", ") : "—",
+                organizationGroups: u.companyGroups ? u.companyGroups.map(g => {
+                    const groupId = g.id || g;
+                    return groupMap[groupId] || g.name || groupId;
+                }).join(", ") : "—",
                 phone: u.phoneNumber || "—",
                 timeZone: u.timeZoneId || "—",
                 language: u.language || "—"
@@ -236,7 +244,7 @@ geotab.addin.personas = function () {
             const users = results[0];
             const groups = results[1];
 
-            allUsers = processData(users);
+            allUsers = processData(users, groups);
             filteredUsers = [...allUsers];
 
             renderKPIs(allUsers);
