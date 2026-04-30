@@ -123,39 +123,12 @@
                     </div>
                 </div>
                 <div class="table-wrapper">
-                    <table class="user-table" id="user-table">
-                        <thead>
-                            <tr>
-                                <th>Usuario</th>
-                                <th>Email</th>
-                                <th>¿Es Conductor?</th>
-                                <th>Grupo de Seguridad</th>
-                                <th>Grupos de Organización</th>
-                                <th>Último Acceso</th>
-                                <th>Días Inactivo</th>
-                                <th>Estado</th>
-                                <th>Teléfono</th>
-                            </tr>
-                        </thead>
-                        <tbody id="user-tbody">
-                            <!-- Skeletons -->
-                            <tr class="skeleton-row">
-                                <td colspan="6">
-                                    <div class="skeleton" style="height: 20px; width: 100%;"></div>
-                                </td>
-                            </tr>
-                            <tr class="skeleton-row">
-                                <td colspan="6">
-                                    <div class="skeleton" style="height: 20px; width: 100%;"></div>
-                                </td>
-                            </tr>
-                            <tr class="skeleton-row">
-                                <td colspan="6">
-                                    <div class="skeleton" style="height: 20px; width: 100%;"></div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div id="user-grid" class="user-grid">
+                        <!-- User Cards will be rendered here -->
+                        <div style="text-align:center; padding: 5rem; width: 100%; color: var(--color-text-muted);">
+                            Cargando usuarios...
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
