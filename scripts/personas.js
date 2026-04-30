@@ -64,12 +64,13 @@ geotab.addin.personas = function () {
                 id: u.id,
                 name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name,
                 email: u.name,
+                userType: u.isDriver ? "Conductor" : "Usuario",
+                securityAuthorization: u.securityGroups ? u.securityGroups.map(g => g.name || g.id).join(", ") : "—",
                 employeeNumber: u.employeeNumber || "—",
                 isDriver: u.isDriver ? "Sí" : "No",
                 lastAccess: u.lastAccessDate,
                 daysInactive: days,
                 status: getStatusInfo(days),
-                securityGroups: u.securityGroups ? u.securityGroups.map(g => g.name || g.id).join(", ") : "—",
                 organizationGroups: u.companyGroups ? u.companyGroups.map(g => g.name || g.id).join(", ") : "—",
                 phone: u.phoneNumber || "—",
                 timeZone: u.timeZoneId || "—",
@@ -113,9 +114,9 @@ geotab.addin.personas = function () {
                     </div>
                 </td>
                 <td><span class="user-email">${u.email}</span></td>
+                <td>${u.userType}</td>
+                <td style="font-size:0.75rem;">${u.securityAuthorization}</td>
                 <td>${u.employeeNumber}</td>
-                <td style="text-align:center;">${u.isDriver}</td>
-                <td style="font-size:0.75rem;">${u.securityGroups}</td>
                 <td style="font-size:0.75rem;">${u.organizationGroups}</td>
                 <td>${formatDate(u.lastAccess)}</td>
                 <td style="font-weight:700;">${u.daysInactive === Infinity ? "—" : u.daysInactive + " días"}</td>
@@ -228,9 +229,9 @@ geotab.addin.personas = function () {
             "ID": u.id,
             "Nombre": u.name,
             "Email": u.email,
+            "Tipo de usuario": u.userType,
+            "Autorización de seguridad": u.securityAuthorization,
             "Núm. Empleado": u.employeeNumber,
-            "¿Es Conductor?": u.isDriver,
-            "Grupos de Seguridad": u.securityGroups,
             "Grupos de Organización": u.organizationGroups,
             "Último Acceso": formatDate(u.lastAccess),
             "Días Inactivo": u.daysInactive === Infinity ? "Nunca" : u.daysInactive,
