@@ -55,31 +55,31 @@
                 </div>
                 <div class="stat-body">
                     <div class="stat-label">Activos (< 7 días)</div>
-                    <div class="stat-value skeleton" id="stat-active">—</div>
+                            <div class="stat-value skeleton" id="stat-active">—</div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Inactividad Moderada -->
-            <div class="stat-card" data-color="orange">
-                <div class="stat-icon stat-icon--warning">
-                    <i data-lucide="user-minus" stroke-width="2"></i>
+                <!-- Inactividad Moderada -->
+                <div class="stat-card" data-color="orange">
+                    <div class="stat-icon stat-icon--warning">
+                        <i data-lucide="user-minus" stroke-width="2"></i>
+                    </div>
+                    <div class="stat-body">
+                        <div class="stat-label">Moderada (7-30 días)</div>
+                        <div class="stat-value skeleton" id="stat-warning">—</div>
+                    </div>
                 </div>
-                <div class="stat-body">
-                    <div class="stat-label">Moderada (7-30 días)</div>
-                    <div class="stat-value skeleton" id="stat-warning">—</div>
-                </div>
-            </div>
 
-            <!-- Inactividad Crítica -->
-            <div class="stat-card" data-color="red">
-                <div class="stat-icon stat-icon--critical">
-                    <i data-lucide="user-x" stroke-width="2"></i>
+                <!-- Inactividad Crítica -->
+                <div class="stat-card" data-color="red">
+                    <div class="stat-icon stat-icon--critical">
+                        <i data-lucide="user-x" stroke-width="2"></i>
+                    </div>
+                    <div class="stat-body">
+                        <div class="stat-label">Crítica (> 30 días)</div>
+                        <div class="stat-value skeleton" id="stat-critical">—</div>
+                    </div>
                 </div>
-                <div class="stat-body">
-                    <div class="stat-label">Crítica (> 30 días)</div>
-                    <div class="stat-value skeleton" id="stat-critical">—</div>
-                </div>
-            </div>
         </section>
 
         <!-- ═══════════ CHARTS SECTION ═══════════ -->
@@ -114,7 +114,8 @@
                         <span>Detalle de Usuarios</span>
                     </div>
                     <div class="table-controls">
-                        <input type="text" id="search-input" class="search-input" placeholder="Buscar por nombre o email...">
+                        <input type="text" id="search-input" class="search-input"
+                            placeholder="Buscar por nombre o email...">
                         <button id="btn-export" class="btn-export">
                             <i data-lucide="download" width="16" height="16"></i>
                             Exportar Excel
@@ -128,10 +129,9 @@
                                 <th>ID</th>
                                 <th>Usuario</th>
                                 <th>Email</th>
-                                <th>Tipo de usuario</th>
-                                <th>Autorización de seguridad</th>
                                 <th>Núm. Empleado</th>
                                 <th>¿Es Conductor?</th>
+                                <th>Grupo de Seguridad</th>
                                 <th>Grupos de Organización</th>
                                 <th>Último Acceso</th>
                                 <th>Días Inactivo</th>
@@ -144,13 +144,19 @@
                         <tbody id="user-tbody">
                             <!-- Skeletons -->
                             <tr class="skeleton-row">
-                                <td colspan="6"><div class="skeleton" style="height: 20px; width: 100%;"></div></td>
+                                <td colspan="6">
+                                    <div class="skeleton" style="height: 20px; width: 100%;"></div>
+                                </td>
                             </tr>
                             <tr class="skeleton-row">
-                                <td colspan="6"><div class="skeleton" style="height: 20px; width: 100%;"></div></td>
+                                <td colspan="6">
+                                    <div class="skeleton" style="height: 20px; width: 100%;"></div>
+                                </td>
                             </tr>
                             <tr class="skeleton-row">
-                                <td colspan="6"><div class="skeleton" style="height: 20px; width: 100%;"></div></td>
+                                <td colspan="6">
+                                    <div class="skeleton" style="height: 20px; width: 100%;"></div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
