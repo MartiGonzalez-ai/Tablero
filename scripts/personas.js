@@ -64,13 +64,12 @@ geotab.addin.personas = function () {
                 id: u.id,
                 name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name,
                 email: u.name,
-                userType: u.isDriver ? "Conductor" : "Usuario",
-                securityAuthorization: u.securityGroups ? u.securityGroups.map(g => g.name || g.id).join(", ") : "—",
                 employeeNumber: u.employeeNumber || "—",
                 isDriver: u.isDriver ? "Sí" : "No",
                 lastAccess: u.lastAccessDate,
                 daysInactive: days,
                 status: getStatusInfo(days),
+                securityGroups: u.securityGroups ? u.securityGroups.map(g => g.name || g.id).join(", ") : "—",
                 organizationGroups: u.companyGroups ? u.companyGroups.map(g => g.name || g.id).join(", ") : "—",
                 phone: u.phoneNumber || "—",
                 timeZone: u.timeZoneId || "—",
@@ -114,9 +113,9 @@ geotab.addin.personas = function () {
                     </div>
                 </td>
                 <td><span class="user-email">${u.email}</span></td>
-                <td>${u.userType}</td>
-                <td style="font-size:0.75rem;">${u.securityAuthorization}</td>
                 <td>${u.employeeNumber}</td>
+                <td style="text-align:center;">${u.isDriver}</td>
+                <td style="font-size:0.75rem;">${u.securityGroups}</td>
                 <td style="font-size:0.75rem;">${u.organizationGroups}</td>
                 <td>${formatDate(u.lastAccess)}</td>
                 <td style="font-weight:700;">${u.daysInactive === Infinity ? "—" : u.daysInactive + " días"}</td>
@@ -194,18 +193,18 @@ geotab.addin.personas = function () {
     const loadData = () => {
         if (!api) return;
         btnRefresh.classList.add("loading");
-        
+
         api.call("Get", {
             typeName: "User",
             search: { isBasicAuthentication: false } // Typical filter for real users
         }, (users) => {
             allUsers = processData(users);
             filteredUsers = [...allUsers];
-            
+
             renderKPIs(allUsers);
             renderTable(allUsers);
             renderCharts(allUsers);
-            
+
             lastUpdatedEl.textContent = `Actualizado: ${new Date().toLocaleTimeString()}`;
             btnRefresh.classList.remove("loading");
         }, (err) => {
@@ -217,8 +216,8 @@ geotab.addin.personas = function () {
 
     const handleSearch = (e) => {
         const query = e.target.value.toLowerCase();
-        filteredUsers = allUsers.filter(u => 
-            u.name.toLowerCase().includes(query) || 
+        filteredUsers = allUsers.filter(u =>
+            u.name.toLowerCase().includes(query) ||
             u.email.toLowerCase().includes(query)
         );
         renderTable(filteredUsers);
@@ -229,9 +228,9 @@ geotab.addin.personas = function () {
             "ID": u.id,
             "Nombre": u.name,
             "Email": u.email,
-            "Tipo de usuario": u.userType,
-            "Autorización de seguridad": u.securityAuthorization,
             "Núm. Empleado": u.employeeNumber,
+            "¿Es Conductor?": u.isDriver,
+            "Grupos de Seguridad": u.securityGroups,
             "Grupos de Organización": u.organizationGroups,
             "Último Acceso": formatDate(u.lastAccess),
             "Días Inactivo": u.daysInactive === Infinity ? "Nunca" : u.daysInactive,
@@ -244,14 +243,14 @@ geotab.addin.personas = function () {
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Usuarios");
-        XLSX.writeFile(wb, `Reporte_Inactividad_Usuarios_${new Date().toISOString().slice(0,10)}.xlsx`);
+        XLSX.writeFile(wb, `Reporte_Inactividad_Usuarios_${new Date().toISOString().slice(0, 10)}.xlsx`);
     };
 
     // ─── Initialize ──────────────────────────────────────────────────────────
     return {
         initialize: function (geotabApi, state, callback) {
             api = geotabApi;
-            
+
             // Initialize Lucide icons
             if (window.lucide) window.lucide.createIcons();
 
