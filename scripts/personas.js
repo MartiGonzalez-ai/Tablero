@@ -11,7 +11,14 @@ geotab.addin.personas = function () {
     };
 
     // DOM Refs
-    let btnRefresh, lastUpdatedEl, searchInput, btnExport, btnEmail, userGrid;
+    let btnRefresh, lastUpdatedEl, searchInput, btnExport, btnEmail, btnEmailSettings, userGrid;
+    let modal, btnCloseModal, btnSaveSettings, inputSubject, inputBody;
+
+    // Constants
+    const STORAGE_KEY_SUBJECT = "geotab_personas_email_subject";
+    const STORAGE_KEY_BODY = "geotab_personas_email_body";
+    const DEFAULT_SUBJECT = "Dashboard Geotab - Notificación";
+    const DEFAULT_BODY = "Hola,\n\nSe adjunta información relevante sobre su acceso al dashboard de Geotab.";
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const formatDate = (dateStr) => {
@@ -229,11 +236,34 @@ geotab.addin.personas = function () {
         btnEmail.querySelector("span").textContent = `Enviar Correo (${count})`;
     };
 
+    const loadEmailSettings = () => {
+        const savedSubject = localStorage.getItem(STORAGE_KEY_SUBJECT) || DEFAULT_SUBJECT;
+        const savedBody = localStorage.getItem(STORAGE_KEY_BODY) || DEFAULT_BODY;
+        
+        if (inputSubject) inputSubject.value = savedSubject;
+        if (inputBody) inputBody.value = savedBody;
+        
+        return { subject: savedSubject, body: savedBody };
+    };
+
+    const saveEmailSettings = () => {
+        const subject = inputSubject.value.trim() || DEFAULT_SUBJECT;
+        const body = inputBody.value.trim() || DEFAULT_BODY;
+        
+        localStorage.setItem(STORAGE_KEY_SUBJECT, subject);
+        localStorage.setItem(STORAGE_KEY_BODY, body);
+        
+        modal.classList.remove("active");
+        alert("Configuración guardada correctamente.");
+    };
+
     const handleSendEmail = () => {
         if (selectedEmails.size === 0) return;
         const emails = Array.from(selectedEmails).join(", ");
-        const subject = encodeURIComponent("Dashboard Geotab - Notificación");
-        const body = encodeURIComponent("Hola,\n\nSe adjunta información relevante sobre su acceso al dashboard de Geotab.");
+        
+        const settings = loadEmailSettings();
+        const subject = encodeURIComponent(settings.subject);
+        const body = encodeURIComponent(settings.body);
         
         // Copy to clipboard as fallback (Telmex webmail might not support URL params for BCC)
         navigator.clipboard.writeText(emails).then(() => {
@@ -385,13 +415,36 @@ geotab.addin.personas = function () {
             searchInput = document.getElementById("search-input");
             btnExport = document.getElementById("btn-export");
             btnEmail = document.getElementById("btn-email");
+            btnEmailSettings = document.getElementById("btn-email-settings");
             userGrid = document.getElementById("user-grid");
+
+            // Modal Refs
+            modal = document.getElementById("email-settings-modal");
+            btnCloseModal = document.getElementById("btn-close-modal");
+            btnSaveSettings = document.getElementById("btn-save-settings");
+            inputSubject = document.getElementById("email-subject");
+            inputBody = document.getElementById("email-body");
 
             // Events
             btnRefresh.addEventListener("click", loadData);
             searchInput.addEventListener("input", handleSearch);
             btnExport.addEventListener("click", exportToExcel);
             btnEmail.addEventListener("click", handleSendEmail);
+            
+            btnEmailSettings.addEventListener("click", () => {
+                loadEmailSettings();
+                modal.classList.add("active");
+            });
+
+            btnCloseModal.addEventListener("click", () => modal.classList.remove("active"));
+            btnSaveSettings.addEventListener("click", saveEmailSettings);
+
+            // Close modal on outside click
+            window.addEventListener("click", (e) => {
+                if (e.target === modal) modal.classList.remove("active");
+            });
+
+            loadEmailSettings();
 
             loadData();
             if (callback) callback();
