@@ -259,27 +259,30 @@ geotab.addin.personas = function () {
 
     const handleSendEmail = () => {
         if (selectedEmails.size === 0) return;
-        const emails = Array.from(selectedEmails).join(", ");
+        const emails = Array.from(selectedEmails).join(","); // Comma-separated for mailto
         
         const settings = loadEmailSettings();
+        
+        // Use mailto: which is the standard for pre-filling email data
+        // Encoding for mailto requires specific handling for spaces (%20) and newlines (%0A)
         const subject = encodeURIComponent(settings.subject);
         const body = encodeURIComponent(settings.body);
         
-        // Copy to clipboard as fallback (Telmex webmail might not support URL params for BCC)
+        const mailtoUrl = `mailto:?bcc=${emails}&subject=${subject}&body=${body}`;
+        
+        // Copy to clipboard as fallback
         navigator.clipboard.writeText(emails).then(() => {
             console.log("Emails copiados al portapapeles");
             
-            // Open Telmex Webmail
-            const webmailUrl = `https://micorreo.telmex.com/#/mail/compose?bcc=${encodeURIComponent(emails)}&subject=${subject}&body=${body}`;
-            window.open(webmailUrl, "_blank");
+            // Open mailto link
+            window.location.href = mailtoUrl;
 
-            // Optional: alert the user
-            alert(`Se han copiado ${selectedEmails.size} correos al portapapeles. \n\nPuedes pegarlos (Ctrl+V) en el campo BCC si no aparecen automáticamente.`);
+            // Alert the user about the clipboard
+            alert(`Se han copiado ${selectedEmails.size} correos al portapapeles.\n\nSe ha intentado abrir tu aplicación de correo. Si no abre, puedes pegar los correos en el campo CCO (BCC) manualmente.`);
         }).catch(err => {
             console.error("Error al copiar al portapapeles:", err);
             // Fallback to just opening the URL
-            const webmailUrl = `https://micorreo.telmex.com/#/mail/compose?bcc=${encodeURIComponent(emails)}&subject=${subject}&body=${body}`;
-            window.open(webmailUrl, "_blank");
+            window.location.href = mailtoUrl;
         });
     };
 
