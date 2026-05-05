@@ -339,6 +339,11 @@ body {
     gap: 1.5rem;
 }
 
+.charts-section--full {
+    grid-template-columns: 1fr !important;
+    padding-bottom: 0;
+}
+
 .chart-card {
     border-radius: var(--radius-xl);
     overflow: hidden;
