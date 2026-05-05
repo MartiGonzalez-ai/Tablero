@@ -11,7 +11,7 @@ geotab.addin.personas = function () {
     };
 
     // DOM Refs
-    let btnRefresh, lastUpdatedEl, searchInput, btnExport, btnEmail, btnEmailSettings, userGrid;
+    let btnRefresh, lastUpdatedEl, searchInput, selectOrganization, btnExport, btnEmail, btnEmailSettings, userGrid;
     let modal, btnCloseModal, btnSaveSettings, inputSubject, inputBody;
 
     // Constants
@@ -380,6 +380,21 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             const groups = results[1];
 
             allUsers = processData(users, groups);
+            
+            // Populate organization filter
+            if (selectOrganization) {
+                const currentVal = selectOrganization.value;
+                selectOrganization.innerHTML = '<option value="all">Todas las organizaciones</option>';
+                const orgs = [...new Set(allUsers.flatMap(u => u.organizationGroups.split(", ")))].filter(o => o !== "—").sort();
+                orgs.forEach(org => {
+                    const opt = document.createElement("option");
+                    opt.value = org;
+                    opt.textContent = org;
+                    selectOrganization.appendChild(opt);
+                });
+                selectOrganization.value = [...orgs, "all"].includes(currentVal) ? currentVal : "all";
+            }
+
             filteredUsers = [...allUsers];
             selectedEmails.clear();
             updateEmailButton();
@@ -397,13 +412,19 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
         });
     };
 
-    const handleSearch = (e) => {
-        const query = e.target.value.toLowerCase();
-        filteredUsers = allUsers.filter(u =>
-            u.name.toLowerCase().includes(query) ||
-            u.email.toLowerCase().includes(query)
-        );
+    const applyFilters = () => {
+        const query = searchInput.value.toLowerCase();
+        const selectedOrg = selectOrganization ? selectOrganization.value : "all";
+
+        filteredUsers = allUsers.filter(u => {
+            const matchesSearch = u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query);
+            const matchesOrg = selectedOrg === "all" || u.organizationGroups.includes(selectedOrg);
+            return matchesSearch && matchesOrg;
+        });
+
+        renderKPIs(filteredUsers);
         renderTable(filteredUsers);
+        renderCharts(filteredUsers);
     };
 
     const exportToExcel = () => {
@@ -437,6 +458,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             btnRefresh = document.getElementById("btn-refresh");
             lastUpdatedEl = document.getElementById("last-updated-time");
             searchInput = document.getElementById("search-input");
+            selectOrganization = document.getElementById("select-organization");
             btnExport = document.getElementById("btn-export");
             btnEmail = document.getElementById("btn-email");
             btnEmailSettings = document.getElementById("btn-email-settings");
@@ -451,7 +473,8 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
 
             // Events
             btnRefresh.addEventListener("click", loadData);
-            searchInput.addEventListener("input", handleSearch);
+            searchInput.addEventListener("input", applyFilters);
+            if (selectOrganization) selectOrganization.addEventListener("change", applyFilters);
             btnExport.addEventListener("click", exportToExcel);
             btnEmail.addEventListener("click", handleSendEmail);
             
