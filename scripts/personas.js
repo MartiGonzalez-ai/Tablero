@@ -259,30 +259,55 @@ geotab.addin.personas = function () {
 
     const handleSendEmail = () => {
         if (selectedEmails.size === 0) return;
-        const emails = Array.from(selectedEmails).join(","); // Comma-separated for mailto
+        
+        // Separador estándar (coma) para Thunderbird
+        const emails = Array.from(selectedEmails).join(","); 
         
         const settings = loadEmailSettings();
-        
-        // Use mailto: which is the standard for pre-filling email data
-        // Encoding for mailto requires specific handling for spaces (%20) and newlines (%0A)
         const subject = encodeURIComponent(settings.subject);
         const body = encodeURIComponent(settings.body);
         
+        // URL mailto: completa
         const mailtoUrl = `mailto:?bcc=${emails}&subject=${subject}&body=${body}`;
         
-        // Copy to clipboard as fallback
+        // Límite de seguridad para Thunderbird en Windows (~2000 chars)
+        // Si se supera, el sistema operativo o Thunderbird pueden ignorar la llamada
+        const URL_LIMIT = 2000;
+        const isUrlTooLong = mailtoUrl.length > URL_LIMIT;
+
+        // Siempre intentamos copiar al portapapeles como respaldo seguro
         navigator.clipboard.writeText(emails).then(() => {
             console.log("Emails copiados al portapapeles");
             
-            // Open mailto link
-            window.location.href = mailtoUrl;
+            if (isUrlTooLong) {
+                // Si es muy largo, no intentamos abrir el enlace porque fallará silenciosamente
+                // y confundirá al usuario. Mejor ser directos.
+                alert(`Has seleccionado ${selectedEmails.size} correos.
 
-            // Alert the user about the clipboard
-            alert(`Se han copiado ${selectedEmails.size} correos al portapapeles.\n\nSe ha intentado abrir tu aplicación de correo. Si no abre, puedes pegar los correos en el campo CCO (BCC) manualmente.`);
+La lista es demasiado larga para abrirse automáticamente en Thunderbird (límite de longitud de Windows).
+
+ACCIÓN REQUERIDA:
+1. Thunderbird NO se abrirá automáticamente.
+2. Los correos YA están copiados en tu portapapeles.
+3. Abre Thunderbird manualmente y pega (Ctrl+V) en el campo CCO (BCC).`);
+            } else {
+                // Intentar abrir el enlace
+                window.location.href = mailtoUrl;
+
+                alert(`Se han copiado ${selectedEmails.size} correos al portapapeles.
+
+Se ha intentado abrir Thunderbird. Si no abre automáticamente, puedes pegar los correos manualmente en el campo CCO (BCC).`);
+            }
         }).catch(err => {
             console.error("Error al copiar al portapapeles:", err);
-            // Fallback to just opening the URL
-            window.location.href = mailtoUrl;
+            
+            if (!isUrlTooLong) {
+                window.location.href = mailtoUrl;
+            } else {
+                alert(`Error al acceder al portapapeles. 
+
+La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y no se pudo copiar automáticamente. Por favor, selecciona menos usuarios.`);
+            }
         });
     };
 
