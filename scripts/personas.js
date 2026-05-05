@@ -7,7 +7,8 @@ geotab.addin.personas = function () {
     let selectedEmails = new Set();
     let charts = {
         inactivity: null,
-        groups: null
+        groups: null,
+        orgStacked: null
     };
 
     // DOM Refs
@@ -369,6 +370,62 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
         if (charts.groups) charts.groups.destroy();
         charts.groups = new ApexCharts(document.getElementById("chart-groups"), groupOptions);
         charts.groups.render();
+
+        // Stacked Org Chart
+        const orgData = {};
+        users.forEach(u => {
+            const orgs = u.organizationGroups.split(", ");
+            orgs.forEach(org => {
+                if (org === "—") return;
+                if (!orgData[org]) orgData[org] = { active: 0, warning: 0, critical: 0, never: 0, total: 0 };
+                const type = getStatusType(u.status.label);
+                orgData[org][type]++;
+                orgData[org].total++;
+            });
+        });
+
+        const topOrgs = Object.entries(orgData)
+            .sort((a, b) => b[1].total - a[1].total)
+            .slice(0, 15);
+
+        const stackedOptions = {
+            series: [
+                { name: 'Activo', data: topOrgs.map(o => o[1].active) },
+                { name: 'Moderado', data: topOrgs.map(o => o[1].warning) },
+                { name: 'Crítico', data: topOrgs.map(o => o[1].critical) },
+                { name: 'Nunca', data: topOrgs.map(o => o[1].never) }
+            ],
+            chart: {
+                type: 'bar',
+                height: 450,
+                stacked: true,
+                stackType: '100%',
+                toolbar: { show: true }
+            },
+            plotOptions: {
+                bar: {
+                    horizontal: false,
+                    columnWidth: '60%'
+                }
+            },
+            colors: ['#3b753c', '#f29300', '#cc0000', '#5e6c84'],
+            xaxis: {
+                categories: topOrgs.map(o => o[0]),
+                labels: { rotate: -45, style: { fontSize: '10px' } }
+            },
+            yaxis: { title: { text: 'Porcentaje de Usuarios' } },
+            legend: { position: 'top', horizontalAlign: 'center' },
+            fill: { opacity: 1 },
+            tooltip: {
+                y: {
+                    formatter: (val) => `${val} usuarios`
+                }
+            }
+        };
+
+        if (charts.orgStacked) charts.orgStacked.destroy();
+        charts.orgStacked = new ApexCharts(document.getElementById("chart-org-stacked"), stackedOptions);
+        charts.orgStacked.render();
     };
 
     // ─── Actions ─────────────────────────────────────────────────────────────
