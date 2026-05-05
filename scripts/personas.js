@@ -293,10 +293,6 @@ ACCIÓN REQUERIDA:
             } else {
                 // Intentar abrir el enlace
                 window.location.href = mailtoUrl;
-
-                alert(`Se han copiado ${selectedEmails.size} correos al portapapeles.
-
-Se ha intentado abrir Thunderbird. Si no abre automáticamente, puedes pegar los correos manualmente en el campo CCO (BCC).`);
             }
         }).catch(err => {
             console.error("Error al copiar al portapapeles:", err);
