@@ -11,8 +11,12 @@ geotab.addin.personas = function () {
     };
 
     // DOM Refs
-    let btnRefresh, lastUpdatedEl, searchInput, selectOrganization, btnExport, btnEmail, btnEmailSettings, userGrid;
+    let btnRefresh, lastUpdatedEl, searchInput, btnExport, btnEmail, btnEmailSettings, userGrid;
     let modal, btnCloseModal, btnSaveSettings, inputSubject, inputBody;
+    
+    // Multi-select Org Refs
+    let multiSelectContainer, multiSelectTrigger, multiSelectDropdown, orgSearchInput, orgOptionsList, btnClearOrgs, btnApplyOrgs;
+    let selectedOrgs = new Set();
 
     // Constants
     const STORAGE_KEY_SUBJECT = "geotab_personas_email_subject";
@@ -382,17 +386,9 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             allUsers = processData(users, groups);
             
             // Populate organization filter
-            if (selectOrganization) {
-                const currentVal = selectOrganization.value;
-                selectOrganization.innerHTML = '<option value="all">Todas las organizaciones</option>';
+            if (orgOptionsList) {
                 const orgs = [...new Set(allUsers.flatMap(u => u.organizationGroups.split(", ")))].filter(o => o !== "—").sort();
-                orgs.forEach(org => {
-                    const opt = document.createElement("option");
-                    opt.value = org;
-                    opt.textContent = org;
-                    selectOrganization.appendChild(opt);
-                });
-                selectOrganization.value = [...orgs, "all"].includes(currentVal) ? currentVal : "all";
+                renderOrgOptions(orgs);
             }
 
             filteredUsers = [...allUsers];
@@ -414,17 +410,70 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
 
     const applyFilters = () => {
         const query = searchInput.value.toLowerCase();
-        const selectedOrg = selectOrganization ? selectOrganization.value : "all";
 
         filteredUsers = allUsers.filter(u => {
             const matchesSearch = u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query);
-            const matchesOrg = selectedOrg === "all" || u.organizationGroups.includes(selectedOrg);
+            
+            let matchesOrg = true;
+            if (selectedOrgs.size > 0) {
+                const userGroups = u.organizationGroups.split(", ");
+                matchesOrg = Array.from(selectedOrgs).some(org => userGroups.includes(org));
+            }
+            
             return matchesSearch && matchesOrg;
         });
 
         renderKPIs(filteredUsers);
         renderTable(filteredUsers);
         renderCharts(filteredUsers);
+    };
+
+    const renderOrgOptions = (orgs) => {
+        if (!orgOptionsList) return;
+        orgOptionsList.innerHTML = "";
+        
+        orgs.forEach(org => {
+            const option = document.createElement("div");
+            option.className = "multi-select__option";
+            option.dataset.value = org;
+            option.innerHTML = `
+                <input type="checkbox" ${selectedOrgs.has(org) ? 'checked' : ''}>
+                <span>${org}</span>
+            `;
+            
+            option.addEventListener("click", (e) => {
+                const cb = option.querySelector("input");
+                if (e.target !== cb) cb.checked = !cb.checked;
+                
+                if (cb.checked) selectedOrgs.add(org);
+                else selectedOrgs.delete(org);
+                
+                updateOrgTriggerLabel();
+            });
+            
+            orgOptionsList.appendChild(option);
+        });
+        updateOrgTriggerLabel();
+    };
+
+    const updateOrgTriggerLabel = () => {
+        const labelEl = multiSelectContainer.querySelector(".multi-select__label");
+        if (selectedOrgs.size === 0) {
+            labelEl.textContent = "Todas las organizaciones";
+        } else if (selectedOrgs.size === 1) {
+            labelEl.textContent = Array.from(selectedOrgs)[0];
+        } else {
+            labelEl.textContent = `${selectedOrgs.size} organizaciones`;
+        }
+    };
+
+    const handleOrgSearch = (e) => {
+        const term = e.target.value.toLowerCase();
+        const options = orgOptionsList.querySelectorAll(".multi-select__option");
+        options.forEach(opt => {
+            const val = opt.dataset.value.toLowerCase();
+            opt.classList.toggle("hidden", !val.includes(term));
+        });
     };
 
     const exportToExcel = () => {
@@ -458,11 +507,19 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             btnRefresh = document.getElementById("btn-refresh");
             lastUpdatedEl = document.getElementById("last-updated-time");
             searchInput = document.getElementById("search-input");
-            selectOrganization = document.getElementById("select-organization");
             btnExport = document.getElementById("btn-export");
             btnEmail = document.getElementById("btn-email");
             btnEmailSettings = document.getElementById("btn-email-settings");
             userGrid = document.getElementById("user-grid");
+
+            // Multi-select Bind
+            multiSelectContainer = document.getElementById("multi-select-org");
+            multiSelectTrigger = multiSelectContainer.querySelector(".multi-select__trigger");
+            multiSelectDropdown = multiSelectContainer.querySelector(".multi-select__dropdown");
+            orgSearchInput = document.getElementById("org-search-input");
+            orgOptionsList = document.getElementById("org-options-list");
+            btnClearOrgs = document.getElementById("btn-clear-orgs");
+            btnApplyOrgs = document.getElementById("btn-apply-orgs");
 
             // Modal Refs
             modal = document.getElementById("email-settings-modal");
@@ -474,10 +531,37 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             // Events
             btnRefresh.addEventListener("click", loadData);
             searchInput.addEventListener("input", applyFilters);
-            if (selectOrganization) selectOrganization.addEventListener("change", applyFilters);
             btnExport.addEventListener("click", exportToExcel);
             btnEmail.addEventListener("click", handleSendEmail);
             
+            // Multi-select events
+            multiSelectTrigger.addEventListener("click", (e) => {
+                e.stopPropagation();
+                multiSelectContainer.classList.toggle("active");
+                if (multiSelectContainer.classList.contains("active")) {
+                    orgSearchInput.focus();
+                }
+            });
+
+            orgSearchInput.addEventListener("input", handleOrgSearch);
+            
+            btnClearOrgs.addEventListener("click", (e) => {
+                e.stopPropagation();
+                selectedOrgs.clear();
+                const checks = orgOptionsList.querySelectorAll("input");
+                checks.forEach(c => c.checked = false);
+                updateOrgTriggerLabel();
+                applyFilters();
+                multiSelectContainer.classList.remove("active");
+            });
+
+            btnApplyOrgs.addEventListener("click", (e) => {
+                e.stopPropagation();
+                applyFilters();
+                multiSelectContainer.classList.remove("active");
+            });
+
+            // Modal events
             btnEmailSettings.addEventListener("click", () => {
                 loadEmailSettings();
                 modal.classList.add("active");
@@ -486,8 +570,11 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             btnCloseModal.addEventListener("click", () => modal.classList.remove("active"));
             btnSaveSettings.addEventListener("click", saveEmailSettings);
 
-            // Close modal on outside click
+            // Close multi-select on outside click
             window.addEventListener("click", (e) => {
+                if (!multiSelectContainer.contains(e.target)) {
+                    multiSelectContainer.classList.remove("active");
+                }
                 if (e.target === modal) modal.classList.remove("active");
             });
 
