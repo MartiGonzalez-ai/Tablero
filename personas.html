@@ -27,11 +27,27 @@
             </div>
 
             <div class="nav-controls">
-                <div class="filter-group">
-                    <i data-lucide="building-2" width="16" height="16"></i>
-                    <select id="select-organization" class="select-filter">
-                        <option value="all">Todas las organizaciones</option>
-                    </select>
+                <div id="multi-select-org" class="multi-select">
+                    <div class="multi-select__trigger" title="Filtrar por organizaciones">
+                        <i data-lucide="building-2" width="16" height="16"></i>
+                        <span class="multi-select__label">Todas las organizaciones</span>
+                        <i data-lucide="chevron-down" width="14" height="14" class="chevron"></i>
+                    </div>
+                    <div class="multi-select__dropdown glass-panel">
+                        <div class="multi-select__search">
+                            <i data-lucide="search" width="12" height="12"></i>
+                            <input type="text" id="org-search-input" placeholder="Buscar organización...">
+                        </div>
+                        <div class="multi-select__options-container">
+                            <div id="org-options-list" class="multi-select__options">
+                                <!-- Options populated by JS -->
+                            </div>
+                        </div>
+                        <div class="multi-select__footer">
+                            <button id="btn-clear-orgs" class="btn-text">Limpiar</button>
+                            <button id="btn-apply-orgs" class="btn-primary-sm">Aplicar</button>
+                        </div>
+                    </div>
                 </div>
                 <button id="btn-refresh" class="btn-refresh" title="Refrescar datos">
                     <i data-lucide="refresh-cw" width="18" height="18" stroke-width="2.5"></i>
