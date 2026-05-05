@@ -27,6 +27,11 @@
             </div>
 
             <div class="nav-controls">
+                <div class="search-group">
+                    <i data-lucide="search" width="16" height="16"></i>
+                    <input type="text" id="search-input" class="search-input"
+                        placeholder="Nombre, email o teléfono...">
+                </div>
                 <div id="multi-select-org" class="multi-select">
                     <div class="multi-select__trigger" title="Filtrar por organizaciones">
                         <i data-lucide="building-2" width="16" height="16"></i>
@@ -148,8 +153,6 @@
                         <span>Detalle de Usuarios</span>
                     </div>
                     <div class="table-controls">
-                        <input type="text" id="search-input" class="search-input"
-                            placeholder="Buscar por nombre o email...">
                         <button id="btn-email" class="btn-email" disabled>
                             <i data-lucide="mail" width="16" height="16"></i>
                             <span>Enviar Correo (0)</span>
