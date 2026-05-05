@@ -469,7 +469,9 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
         const query = searchInput.value.toLowerCase();
 
         filteredUsers = allUsers.filter(u => {
-            const matchesSearch = u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query);
+            const matchesSearch = u.name.toLowerCase().includes(query) || 
+                                 u.email.toLowerCase().includes(query) ||
+                                 u.phone.toLowerCase().includes(query);
             
             let matchesOrg = true;
             if (selectedOrgs.size > 0) {
