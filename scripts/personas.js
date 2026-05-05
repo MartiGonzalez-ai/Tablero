@@ -1,917 +1,652 @@
-:root {
-    /* Fondo */
-    --color-bg-main:    #f0f2f5;
-    --color-bg-surface: #ffffff;
-    --color-bg-panel:   #ffffff;
-    --color-panel-border: #d4d9e0;
-
-    /* Primario Geotab */
-    --color-primary:      #003666;
-    --color-primary-glow: rgba(0, 54, 102, 0.10);
-
-    /* Texto */
-    --color-text-main:  #333333;
-    --color-text-muted: #5e6c84;
-    --color-text-sub:   #4a5568;
-
-    /* Paleta Inactividad */
-    --c-active:     #3b753c;  --c-active-bg:   #ebf1ec;
-    --c-warning:    #f29300;  --c-warning-bg:  #fff0d9;
-    --c-critical:   #cc0000;  --c-critical-bg: #fae6e6;
-    --c-never:      #5e6c84;  --c-never-bg:    #f1f5f9;
-    --c-blue:       #003666;  --c-blue-bg:     #e6ebf0;
-
-    /* Radio & sombras */
-    --radius-sm: 4px;
-    --radius-md: 6px;
-    --radius-lg: 8px;
-    --radius-xl: 12px;
-    --shadow-lg: 0 4px 6px -1px rgba(0,0,0,.10), 0 2px 4px -1px rgba(0,0,0,.06);
-
-    /* Nav */
-    --nav-height: 72px;
-
-    /* Fuente */
-    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-/* ─── RESET & BASE ──────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-    font-family: var(--font);
-    background-color: var(--color-bg-main);
-    color: var(--color-text-main);
-    min-height: 100vh;
-    overflow-y: auto;
-}
-
-#app-personas {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-.glass-panel {
-    background: var(--color-bg-panel);
-    border: 1px solid var(--color-panel-border);
-}
-
-/* ─── TOP NAVIGATION ────────────────────────────────────────────────────────── */
-.top-nav {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    height: var(--nav-height);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 2rem;
-    border-bottom: 1px solid var(--color-panel-border);
-    background: var(--color-bg-surface);
-    gap: 1rem;
-}
-
-.nav-brand {
-    display: flex;
-    align-items: center;
-    gap: .875rem;
-}
-
-.nav-brand h1 {
-    font-size: 1.125rem;
-    font-weight: 700;
-    letter-spacing: -.02em;
-    color: var(--color-primary);
-}
-
-.nav-controls {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.btn-refresh {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    background: #fff;
-    border: 1px solid var(--color-panel-border);
-    border-radius: var(--radius-md);
-    color: var(--color-text-main);
-    font-family: var(--font);
-    font-size: .8rem;
-    font-weight: 600;
-    padding: .45rem .9rem;
-    cursor: pointer;
-    transition: all .2s ease;
-}
-
-/* ─── MULTI-SELECT DROPDOWN ─────────────────────────────────────────────────── */
-.multi-select {
-    position: relative;
-    width: 280px;
-    user-select: none;
-}
-
-.multi-select__trigger {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    background: #fff;
-    border: 1px solid var(--color-panel-border);
-    border-radius: var(--radius-md);
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.multi-select__trigger:hover {
-    border-color: var(--color-primary);
-    background: var(--color-primary-glow);
-}
-
-.multi-select__label {
-    flex: 1;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--color-text-main);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.multi-select .chevron {
-    transition: transform 0.3s ease;
-    color: var(--color-text-muted);
-}
-
-.multi-select.active .chevron {
-    transform: rotate(180deg);
-}
-
-.multi-select__dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    width: 100%;
-    background: #fff;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    display: none;
-    flex-direction: column;
-    z-index: 1000;
-    animation: dropdown-fade-in 0.2s ease-out;
-}
-
-@keyframes dropdown-fade-in {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.multi-select.active .multi-select__dropdown {
-    display: flex;
-}
-
-.multi-select__search {
-    padding: 0.75rem;
-    border-bottom: 1px solid var(--color-panel-border);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: #f8fafc;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-
-.multi-select__search input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    font-family: var(--font);
-    font-size: 0.85rem;
-    outline: none;
-    color: var(--color-text-main);
-}
-
-.multi-select__options-container {
-    max-height: 250px;
-    overflow-y: auto;
-}
-
-.multi-select__options {
-    padding: 0.5rem 0;
-}
-
-.multi-select__option {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.6rem 1rem;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-.multi-select__option:hover {
-    background: #f1f5f9;
-}
-
-.multi-select__option input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-}
-
-.multi-select__option span {
-    font-size: 0.85rem;
-    color: var(--color-text-main);
-    font-weight: 500;
-}
-
-.multi-select__option.hidden {
-    display: none;
-}
-
-.multi-select__footer {
-    padding: 0.75rem;
-    border-top: 1px solid var(--color-panel-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #f8fafc;
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-}
-
-.btn-text {
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-}
-
-.btn-text:hover {
-    color: var(--color-primary);
-    text-decoration: underline;
-}
-
-.btn-primary-sm {
-    background: var(--color-primary);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: 0.35rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.btn-primary-sm:hover {
-    background: #002a50;
-}
-
-.btn-refresh:hover {
-    background: rgba(0, 54, 102, 0.05);
-    border-color: var(--color-primary);
-}
-
-/* ─── SUMMARY STRIP ─────────────────────────────────────────────────────────── */
-.summary-strip {
-    display: flex;
-    gap: 1rem;
-    padding: 1.25rem 2rem 0;
-    flex-wrap: wrap;
-}
-
-.stat-card {
-    flex: 1 1 200px;
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-panel-border);
-    border-radius: var(--radius-xl);
-    padding: 1.25rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    box-shadow: var(--shadow-lg);
-    transition: transform .2s ease;
-}
-
-.stat-card:hover { transform: translateY(-2px); }
-
-.stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-lg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.stat-body { flex: 1; }
-
-.stat-label {
-    font-size: .7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-    margin-bottom: .25rem;
-}
-
-.stat-value {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--color-text-main);
-    line-height: 1;
-}
-
-.stat-icon--total    { background: var(--c-blue-bg);     color: var(--color-primary); }
-.stat-icon--active   { background: var(--c-active-bg);   color: var(--c-active); }
-.stat-icon--warning  { background: var(--c-warning-bg);  color: var(--c-warning); }
-.stat-icon--critical { background: var(--c-critical-bg); color: var(--c-critical); }
-
-/* ─── CHARTS SECTION ────────────────────────────────────────────────────────── */
-.charts-section {
-    padding: 2rem 2rem 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 2rem;
-}
-
-.charts-section--full {
-    grid-template-columns: 1fr !important;
-    padding-bottom: 2rem;
-    margin-top: 1rem;
-}
-
-.chart-card {
-    border-radius: var(--radius-xl);
-    overflow: hidden;
-    box-shadow: var(--shadow-lg);
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-}
-
-.panel-header {
-    padding: 1.25rem;
-    border-bottom: 1px solid var(--color-panel-border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.panel-title-group {
-    display: flex;
-    align-items: center;
-    gap: .6rem;
-    font-size: .85rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--color-text-sub);
-}
-
-.chart-container {
-    padding: 1.5rem;
-    min-height: 300px;
-}
-
-/* ─── TABLE SECTION ─────────────────────────────────────────────────────────── */
-.table-section {
-    padding: 1.5rem 2rem 2rem;
-}
-
-.table-panel {
-    border-radius: var(--radius-xl);
-    overflow: hidden;
-    box-shadow: var(--shadow-lg);
-    background: #fff;
-}
-
-.table-controls {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-.search-group {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: #fff;
-    border: 1px solid var(--color-panel-border);
-    border-radius: var(--radius-md);
-    padding: 0 0.75rem;
-    color: var(--color-text-muted);
-    transition: all 0.2s;
-    width: 300px;
-}
-
-.search-group:focus-within {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary-glow);
-}
-
-.search-input {
-    border: none;
-    background: transparent;
-    padding: .5rem 0;
-    font-size: .85rem;
-    width: 100%;
-    outline: none;
-    font-family: var(--font);
-    color: var(--color-text-main);
-}
-
-.btn-export {
-    display: flex;
-    align-items: center;
-    gap: .4rem;
-    padding: .5rem 1rem;
-    border-radius: var(--radius-md);
-    border: 1px solid #3b753c;
-    background: #fff;
-    color: #3b753c;
-    font-weight: 600;
-    font-size: .85rem;
-    cursor: pointer;
-    transition: all .2s;
-}
-
-.btn-export:hover {
-    background: #3b753c;
-    color: #fff;
-}
-
-.btn-email {
-    display: flex;
-    align-items: center;
-    gap: .4rem;
-    padding: .5rem 1rem;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-primary);
-    background: #fff;
-    color: var(--color-primary);
-    font-weight: 600;
-    font-size: .85rem;
-    cursor: pointer;
-    transition: all .2s;
-}
-
-.btn-email:not(:disabled):hover {
-    background: var(--color-primary);
-    color: #fff;
-}
-
-.btn-email:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    border-color: var(--color-panel-border);
-    color: var(--color-text-muted);
-}
-
-.table-wrapper {
-    overflow-x: auto;
-    max-height: 600px;
-}
-
-.user-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: .85rem;
-}
-
-.user-table th {
-    position: sticky;
-    top: 0;
-    background: #f8fafc;
-    padding: 1rem;
-    text-align: left;
-    font-weight: 700;
-    color: var(--color-text-muted);
-    border-bottom: 2px solid var(--color-panel-border);
-    text-transform: uppercase;
-    font-size: .75rem;
-    letter-spacing: .05em;
-    z-index: 1;
-}
-
-.user-table td {
-    padding: 1rem;
-    border-bottom: 1px solid var(--color-panel-border);
-    color: var(--color-text-main);
-}
-
-.user-table tr:hover td {
-    background-color: #f1f5f9;
-}
-
-/* Status Badges */
-.badge {
-    padding: .25rem .75rem;
-    border-radius: 99px;
-    font-size: .75rem;
-    font-weight: 700;
-    display: inline-block;
-}
-
-.badge--active   { background: var(--c-active-bg);   color: var(--c-active); }
-.badge--warning  { background: var(--c-warning-bg);  color: var(--c-warning); }
-.badge--critical { background: var(--c-critical-bg); color: var(--c-critical); }
-.badge--never    { background: var(--c-never-bg);    color: var(--c-never); }
-
-.user-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.user-name { font-weight: 700; color: var(--color-primary); }
-.user-email { font-size: .75rem; color: var(--color-text-muted); }
-
-/* Utility Classes */
-.skeleton {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
-    border-radius: 4px;
-    color: transparent !important;
-}
-
-@keyframes skeleton-loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.loading svg { animation: spin 1s linear infinite; }
-
-/* Responsive */
-@media (max-width: 768px) {
-    .main-nav { padding: 0 1rem; }
-    .summary-strip { padding: 1rem 1rem 0; }
-    .charts-section { grid-template-columns: 1fr; padding: 1rem 1rem 0; }
-    .table-section { padding: 1rem; }
-}
-
-/* ─── USER CARD GRID ────────────────────────────────────────────────────────── */
-.user-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 1.5rem;
-    padding: 1.5rem;
-    background: #f8fafc;
-}
-
-.user-card {
-    background: #fff;
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-lg);
-    border: 2px solid transparent;
-    border-top: 5px solid var(--status-color, var(--color-primary));
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    position: relative;
-    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-    cursor: pointer;
-}
-
-.user-card--selected {
-    border-color: var(--color-primary);
-    background: var(--color-primary-glow);
-}
-
-.user-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
-}
-
-.user-card__header {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    padding-left: 1.75rem; /* Space for checkbox */
-}
-
-.user-card__avatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: var(--status-color, var(--color-primary));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: 800;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.user-card__info {
-    flex: 1;
-}
-
-.user-card__name {
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: var(--color-primary);
-    margin-bottom: 0.15rem;
-}
-
-.user-card__email {
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
-    word-break: break-all;
-}
-
-.user-card__phone {
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-    font-weight: 500;
-}
-
-.user-card__phone svg {
-    color: #d53f8c; /* Pink color as in image */
-}
-
-.user-card__checkbox {
-    position: absolute;
-    top: 1.25rem;
-    left: 1.25rem;
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    border: 2px solid #cbd5e1;
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    z-index: 10;
-}
-
-.user-card--selected .user-card__checkbox {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: #fff;
-}
-
-.user-card__checkbox i {
-    display: none;
-}
-
-.user-card--selected .user-card__checkbox i {
-    display: block;
-}
-
-.user-card__badge-status {
-    position: absolute;
-    top: 1.25rem;
-    right: 1.25rem;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.8rem;
-    border-radius: 99px;
-    font-size: 0.75rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: #fff;
-    background: var(--status-color);
-}
-
-.user-card__body {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    border-top: 1px solid #f1f5f9;
-    padding-top: 1.25rem;
-}
-
-.user-card__data-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-}
-
-.user-card__label {
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: #94a3b8;
-    letter-spacing: 0.025em;
-}
-
-.user-card__value {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--color-text-main);
-    line-height: 1.3;
-}
-
-.user-card__driver-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.2rem 0.75rem;
-    border-radius: 99px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    background: #f0fff4;
-    color: #2f855a;
-}
-
-.user-card__footer {
-    margin-top: auto;
-    border-top: 1px solid #f1f5f9;
-    padding-top: 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.user-card__last-access {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
-}
-
-.user-card__days-badge {
-    padding: 0.4rem 0.75rem;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    background: #fff5eb;
-    color: #c05621;
-}
-
-/* Status Colors Overrides */
-.user-card--active { --status-color: #3b753c; }
-.user-card--warning { --status-color: #f29300; }
-.user-card--critical { --status-color: #cc0000; }
-.user-card--never { --status-color: #64748b; }
-
-/* ─── MODAL STYLES ─────────────────────────────────────────────────────────── */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-.modal-overlay.active {
-    display: flex;
-}
-
-.modal-content {
-    width: 90%;
-    max-width: 500px;
-    border-radius: var(--radius-xl);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    animation: modal-slide-up 0.3s ease-out;
-}
-
-@keyframes modal-slide-up {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.modal-header {
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--color-panel-border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.modal-header .panel-title-group span {
-    font-size: 1rem;
-}
-
-.btn-close {
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.25rem;
-    border-radius: 50%;
-    transition: all 0.2s;
-}
-
-.btn-close:hover {
-    background: #f1f5f9;
-    color: var(--color-text-main);
-}
-
-.modal-body {
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.form-group label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-}
-
-.form-group input,
-.form-group textarea {
-    padding: 0.75rem;
-    border: 1px solid var(--color-panel-border);
-    border-radius: var(--radius-md);
-    font-family: var(--font);
-    font-size: 0.9rem;
-    outline: none;
-    transition: all 0.2s;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary-glow);
-}
-
-.form-hint {
-    font-size: 0.7rem;
-    color: var(--color-text-muted);
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    margin-top: -0.5rem;
-}
-
-.modal-footer {
-    padding: 1.25rem 1.5rem;
-    border-top: 1px solid var(--color-panel-border);
-    display: flex;
-    justify-content: flex-end;
-}
-
-.btn-save {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: var(--color-primary);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-md);
-    font-family: var(--font);
-    font-weight: 700;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-save:hover {
-    background: #002a50;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-}
-
-.btn-icon-only {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-panel-border);
-    background: #fff;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-icon-only:hover {
-    background: #f1f5f9;
-    color: var(--color-primary);
-    border-color: var(--color-primary);
-}
+"use strict";
+
+geotab.addin.personas = function () {
+    let api;
+    let allUsers = [];
+    let filteredUsers = [];
+    let selectedEmails = new Set();
+    let charts = {
+        inactivity: null,
+        groups: null,
+        orgStacked: null
+    };
+
+    // DOM Refs
+    let btnRefresh, lastUpdatedEl, searchInput, btnExport, btnEmail, btnEmailSettings, userGrid;
+    let modal, btnCloseModal, btnSaveSettings, inputSubject, inputBody;
+    
+    // Multi-select Org Refs
+    let multiSelectContainer, multiSelectTrigger, multiSelectDropdown, orgSearchInput, orgOptionsList, btnClearOrgs, btnApplyOrgs;
+    let selectedOrgs = new Set();
+
+    // Constants
+    const STORAGE_KEY_SUBJECT = "geotab_personas_email_subject";
+    const STORAGE_KEY_BODY = "geotab_personas_email_body";
+    const DEFAULT_SUBJECT = "Dashboard Geotab - Notificación";
+    const DEFAULT_BODY = "Hola,\n\nSe adjunta información relevante sobre su acceso al dashboard de Geotab.";
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+    const formatDate = (dateStr) => {
+        if (!dateStr || dateStr.startsWith("0001")) return "Nunca";
+        const d = new Date(dateStr);
+        return d.toLocaleDateString("es-MX", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    };
+
+    const getInactivityDays = (lastAccess) => {
+        if (!lastAccess || lastAccess.startsWith("0001")) return Infinity;
+        const last = new Date(lastAccess);
+        const now = new Date();
+        const diff = now - last;
+        return Math.floor(diff / (1000 * 60 * 60 * 24));
+    };
+
+    const getStatusInfo = (days) => {
+        if (days === Infinity) return { label: "Nunca", class: "badge--never" };
+        if (days < 7) return { label: "Activo", class: "badge--active" };
+        if (days <= 30) return { label: "Inactivo (Medio)", class: "badge--warning" };
+        return { label: "Inactivo (Crítico)", class: "badge--critical" };
+    };
+
+    const translateSecurityGroup = (id) => {
+        if (!id) return "—";
+        if (id.includes("ViewOnlySecurity")) return "Solo ver";
+        if (id.includes("EverythingSecurity")) return "Administrador";
+        if (id.includes("SupervisorSecurity")) return "Supervisor";
+        if (id.includes("b27D1")) return "Solo Ver Custom";
+        return id;
+    };
+
+    const animateCount = (el, target) => {
+        if (!el) return;
+        el.classList.remove("skeleton");
+        const duration = 1000;
+        const start = performance.now();
+        const targetVal = parseInt(target) || 0;
+
+        const step = (now) => {
+            const progress = Math.min((now - start) / duration, 1);
+            const current = Math.floor(targetVal * progress);
+            el.textContent = current.toLocaleString();
+            if (progress < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    };
+
+    const getInitials = (name) => {
+        if (!name) return "?";
+        const parts = name.trim().split(" ");
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    };
+
+    const getStatusType = (label) => {
+        if (label.includes("Activo")) return "active";
+        if (label.includes("Medio")) return "warning";
+        if (label.includes("Crítico")) return "critical";
+        return "never";
+    };
+
+    // ─── Data Processing ─────────────────────────────────────────────────────
+    const processData = (users, groups = []) => {
+        const groupMap = {};
+        groups.forEach(g => {
+            if (g.id && g.name) groupMap[g.id] = g.name;
+        });
+
+        return users.map(u => {
+            const days = getInactivityDays(u.lastAccessDate);
+            return {
+                id: u.id,
+                name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name,
+                email: u.name,
+                employeeNumber: u.employeeNumber || "—",
+                isDriver: u.isDriver ? "Sí" : "No",
+                lastAccess: u.lastAccessDate,
+                daysInactive: days,
+                status: getStatusInfo(days),
+                securityGroups: u.securityGroups ? u.securityGroups.map(g => translateSecurityGroup(g.name || g.id)).join(", ") : "—",
+                organizationGroups: u.companyGroups ? u.companyGroups.map(g => {
+                    const groupId = g.id || g;
+                    return groupMap[groupId] || g.name || groupId;
+                }).join(", ") : "—",
+                phone: u.phoneNumber || "—",
+                timeZone: u.timeZoneId || "—",
+                language: u.language || "—"
+            };
+        }).sort((a, b) => b.daysInactive - a.daysInactive);
+    };
+
+    // ─── Rendering ───────────────────────────────────────────────────────────
+    const renderKPIs = (users) => {
+        const stats = {
+            total: users.length,
+            active: users.filter(u => u.daysInactive < 7).length,
+            warning: users.filter(u => u.daysInactive >= 7 && u.daysInactive <= 30).length,
+            critical: users.filter(u => u.daysInactive > 30).length
+        };
+
+        animateCount(document.getElementById("stat-total"), stats.total);
+        animateCount(document.getElementById("stat-active"), stats.active);
+        animateCount(document.getElementById("stat-warning"), stats.warning);
+        animateCount(document.getElementById("stat-critical"), stats.critical);
+    };
+
+    const renderTable = (users) => {
+        if (!userGrid) return;
+        userGrid.innerHTML = "";
+
+        if (users.length === 0) {
+            userGrid.innerHTML = `
+                <div style="text-align:center; padding: 5rem; width: 100%; color: var(--color-text-muted);">
+                    No se encontraron usuarios que coincidan con la búsqueda.
+                </div>
+            `;
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        users.forEach(u => {
+            const statusType = getStatusType(u.status.label);
+            const initials = getInitials(u.name);
+            const phone = u.phone && u.phone !== "—" ? u.phone : "+52 00 0000 0000"; 
+            const isSelected = selectedEmails.has(u.email);
+            
+            const card = document.createElement("div");
+            card.className = `user-card user-card--${statusType} ${isSelected ? 'user-card--selected' : ''}`;
+            card.dataset.email = u.email;
+            card.innerHTML = `
+                <div class="user-card__checkbox">
+                    <i data-lucide="check" width="14" height="14"></i>
+                </div>
+                <div class="user-card__badge-status">
+                    <i data-lucide="${statusType === 'active' ? 'check-circle' : statusType === 'warning' ? 'alert-circle' : 'alert-triangle'}" width="14" height="14"></i>
+                    <span>${u.status.label.split(" (")[0]}</span>
+                </div>
+
+                <div class="user-card__header">
+                    <div class="user-card__avatar">${initials}</div>
+                    <div class="user-card__info">
+                        <div class="user-card__name">${u.name}</div>
+                        <div class="user-card__email">${u.email}</div>
+                        <div class="user-card__phone">
+                            <i data-lucide="phone" width="14" height="14"></i>
+                            <span>${phone}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-card__body">
+                    <div class="user-card__data-group">
+                        <div class="user-card__label">Organización</div>
+                        <div class="user-card__value">${u.organizationGroups}</div>
+                    </div>
+                    <div class="user-card__data-group">
+                        <div class="user-card__label">Seguridad</div>
+                        <div class="user-card__value">${u.securityGroups}</div>
+                    </div>
+                    <div class="user-card__data-group">
+                        <div class="user-card__label">Conductor</div>
+                        <div class="user-card__value">
+                            <span class="user-card__driver-badge" style="background: ${u.isDriver === 'Sí' ? '#f0fff4' : '#fef2f2'}; color: ${u.isDriver === 'Sí' ? '#2f855a' : '#991b1b'};">
+                                ${u.isDriver}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-card__footer">
+                    <div class="user-card__last-access">
+                        <i data-lucide="clock" width="14" height="14"></i>
+                        <span>Último acceso: ${formatDate(u.lastAccess).toLowerCase()}</span>
+                    </div>
+                    <div class="user-card__days-badge" style="background: ${statusType === 'active' ? '#f0fff4' : statusType === 'warning' ? '#fff9db' : '#fff5f5'}; color: ${statusType === 'active' ? '#2f855a' : statusType === 'warning' ? '#f08c00' : '#c53030'};">
+                        Hace ${u.daysInactive === Infinity ? "—" : u.daysInactive} días
+                    </div>
+                </div>
+            `;
+
+            card.addEventListener("click", (e) => {
+                toggleSelection(u.email, card);
+            });
+
+            fragment.appendChild(card);
+        });
+        userGrid.appendChild(fragment);
+
+        // Re-initialize icons
+        if (window.lucide) window.lucide.createIcons();
+    };
+
+    const toggleSelection = (email, card) => {
+        if (selectedEmails.has(email)) {
+            selectedEmails.delete(email);
+            card.classList.remove("user-card--selected");
+        } else {
+            selectedEmails.add(email);
+            card.classList.add("user-card--selected");
+        }
+        updateEmailButton();
+    };
+
+    const updateEmailButton = () => {
+        if (!btnEmail) return;
+        const count = selectedEmails.size;
+        btnEmail.disabled = count === 0;
+        btnEmail.querySelector("span").textContent = `Enviar Correo (${count})`;
+    };
+
+    const loadEmailSettings = () => {
+        const savedSubject = localStorage.getItem(STORAGE_KEY_SUBJECT) || DEFAULT_SUBJECT;
+        const savedBody = localStorage.getItem(STORAGE_KEY_BODY) || DEFAULT_BODY;
+        
+        if (inputSubject) inputSubject.value = savedSubject;
+        if (inputBody) inputBody.value = savedBody;
+        
+        return { subject: savedSubject, body: savedBody };
+    };
+
+    const saveEmailSettings = () => {
+        const subject = inputSubject.value.trim() || DEFAULT_SUBJECT;
+        const body = inputBody.value.trim() || DEFAULT_BODY;
+        
+        localStorage.setItem(STORAGE_KEY_SUBJECT, subject);
+        localStorage.setItem(STORAGE_KEY_BODY, body);
+        
+        modal.classList.remove("active");
+        alert("Configuración guardada correctamente.");
+    };
+
+    const handleSendEmail = () => {
+        if (selectedEmails.size === 0) return;
+        
+        // Separador estándar (coma) para Thunderbird
+        const emails = Array.from(selectedEmails).join(","); 
+        
+        const settings = loadEmailSettings();
+        const subject = encodeURIComponent(settings.subject);
+        const body = encodeURIComponent(settings.body);
+        
+        // URL mailto: completa
+        const mailtoUrl = `mailto:?bcc=${emails}&subject=${subject}&body=${body}`;
+        
+        // Límite de seguridad para Thunderbird en Windows (~2000 chars)
+        // Si se supera, el sistema operativo o Thunderbird pueden ignorar la llamada
+        const URL_LIMIT = 2000;
+        const isUrlTooLong = mailtoUrl.length > URL_LIMIT;
+
+        // Siempre intentamos copiar al portapapeles como respaldo seguro
+        navigator.clipboard.writeText(emails).then(() => {
+            console.log("Emails copiados al portapapeles");
+            
+            if (isUrlTooLong) {
+                // Si es muy largo, no intentamos abrir el enlace porque fallará silenciosamente
+                // y confundirá al usuario. Mejor ser directos.
+                alert(`Has seleccionado ${selectedEmails.size} correos.
+
+La lista es demasiado larga para abrirse automáticamente en Thunderbird (límite de longitud de Windows).
+
+ACCIÓN REQUERIDA:
+1. Thunderbird NO se abrirá automáticamente.
+2. Los correos YA están copiados en tu portapapeles.
+3. Abre Thunderbird manualmente y pega (Ctrl+V) en el campo CCO (BCC).`);
+            } else {
+                // Intentar abrir el enlace
+                window.location.href = mailtoUrl;
+            }
+        }).catch(err => {
+            console.error("Error al copiar al portapapeles:", err);
+            
+            if (!isUrlTooLong) {
+                window.location.href = mailtoUrl;
+            } else {
+                alert(`Error al acceder al portapapeles. 
+
+La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y no se pudo copiar automáticamente. Por favor, selecciona menos usuarios.`);
+            }
+        });
+    };
+
+    const renderCharts = (users) => {
+        // Inactivity Distribution
+        const inactivityGroups = {
+            "< 7d": users.filter(u => u.daysInactive < 7).length,
+            "7-30d": users.filter(u => u.daysInactive >= 7 && u.daysInactive <= 30).length,
+            "> 30d": users.filter(u => u.daysInactive > 30 && u.daysInactive !== Infinity).length,
+            "Nunca": users.filter(u => u.daysInactive === Infinity).length
+        };
+
+        const inactivityOptions = {
+            series: Object.values(inactivityGroups),
+            labels: Object.keys(inactivityGroups),
+            chart: { type: 'donut', height: 350 },
+            colors: ['#3b753c', '#f29300', '#cc0000', '#5e6c84'],
+            legend: { position: 'bottom' },
+            dataLabels: { enabled: true, formatter: (val) => val.toFixed(1) + "%" },
+            plotOptions: {
+                pie: {
+                    donut: {
+                        labels: {
+                            show: true,
+                            total: { show: true, label: 'Usuarios' }
+                        }
+                    }
+                }
+            }
+        };
+
+        if (charts.inactivity) charts.inactivity.destroy();
+        charts.inactivity = new ApexCharts(document.getElementById("chart-inactivity"), inactivityOptions);
+        charts.inactivity.render();
+
+        // Security Groups Distribution (Top 10)
+        const groupsCount = {};
+        users.forEach(u => {
+            const groups = u.securityGroups.split(", ");
+            groups.forEach(g => {
+                if (g === "—") return;
+                groupsCount[g] = (groupsCount[g] || 0) + 1;
+            });
+        });
+
+        const sortedGroups = Object.entries(groupsCount)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+        const groupOptions = {
+            series: [{ data: sortedGroups.map(g => g[1]) }],
+            chart: { type: 'bar', height: 350 },
+            plotOptions: { bar: { borderRadius: 4, horizontal: true } },
+            colors: ['#003666'],
+            xaxis: { categories: sortedGroups.map(g => g[0]) },
+            title: { text: 'Top Grupos de Seguridad', align: 'center', style: { fontSize: '12px' } }
+        };
+
+        if (charts.groups) charts.groups.destroy();
+        charts.groups = new ApexCharts(document.getElementById("chart-groups"), groupOptions);
+        charts.groups.render();
+
+        // Stacked Org Chart
+        const orgData = {};
+        users.forEach(u => {
+            const orgs = u.organizationGroups.split(", ");
+            orgs.forEach(org => {
+                if (org === "—") return;
+                if (!orgData[org]) orgData[org] = { active: 0, warning: 0, critical: 0, never: 0, total: 0 };
+                const type = getStatusType(u.status.label);
+                orgData[org][type]++;
+                orgData[org].total++;
+            });
+        });
+
+        const topOrgs = Object.entries(orgData)
+            .sort((a, b) => b[1].total - a[1].total)
+            .slice(0, 15);
+
+        const stackedOptions = {
+            series: [
+                { name: 'Activo', data: topOrgs.map(o => o[1].active) },
+                { name: 'Moderado', data: topOrgs.map(o => o[1].warning) },
+                { name: 'Crítico', data: topOrgs.map(o => o[1].critical) },
+                { name: 'Nunca', data: topOrgs.map(o => o[1].never) }
+            ],
+            chart: {
+                type: 'bar',
+                height: 450,
+                stacked: true,
+                stackType: '100%',
+                toolbar: { show: true }
+            },
+            plotOptions: {
+                bar: {
+                    horizontal: false,
+                    columnWidth: '60%'
+                }
+            },
+            colors: ['#3b753c', '#f29300', '#cc0000', '#5e6c84'],
+            xaxis: {
+                categories: topOrgs.map(o => o[0]),
+                labels: { rotate: -45, style: { fontSize: '10px' } }
+            },
+            yaxis: { title: { text: 'Porcentaje de Usuarios' } },
+            legend: { position: 'top', horizontalAlign: 'center' },
+            fill: { opacity: 1 },
+            tooltip: {
+                y: {
+                    formatter: (val) => `${val} usuarios`
+                }
+            }
+        };
+
+        if (charts.orgStacked) charts.orgStacked.destroy();
+        charts.orgStacked = new ApexCharts(document.getElementById("chart-org-stacked"), stackedOptions);
+        charts.orgStacked.render();
+    };
+
+    // ─── Actions ─────────────────────────────────────────────────────────────
+    const loadData = () => {
+        if (!api) return;
+        btnRefresh.classList.add("loading");
+
+        api.multiCall([
+            ["Get", { typeName: "User", search: { isBasicAuthentication: false } }],
+            ["Get", { typeName: "Group" }]
+        ], (results) => {
+            const users = results[0];
+            const groups = results[1];
+
+            allUsers = processData(users, groups);
+            
+            // Populate organization filter
+            if (orgOptionsList) {
+                const orgs = [...new Set(allUsers.flatMap(u => u.organizationGroups.split(", ")))].filter(o => o !== "—").sort();
+                renderOrgOptions(orgs);
+            }
+
+            filteredUsers = [...allUsers];
+            selectedEmails.clear();
+            updateEmailButton();
+
+            renderKPIs(allUsers);
+            renderTable(allUsers);
+            renderCharts(allUsers);
+
+            lastUpdatedEl.textContent = `Actualizado: ${new Date().toLocaleTimeString()}`;
+            btnRefresh.classList.remove("loading");
+        }, (err) => {
+            console.error("Error fetching data:", err);
+            btnRefresh.classList.remove("loading");
+            alert("Error al cargar los datos.");
+        });
+    };
+
+    const applyFilters = () => {
+        const query = searchInput.value.toLowerCase();
+
+        filteredUsers = allUsers.filter(u => {
+            const matchesSearch = u.name.toLowerCase().includes(query) || 
+                                 u.email.toLowerCase().includes(query) ||
+                                 u.phone.toLowerCase().includes(query);
+            
+            let matchesOrg = true;
+            if (selectedOrgs.size > 0) {
+                const userGroups = u.organizationGroups.split(", ");
+                matchesOrg = Array.from(selectedOrgs).some(org => userGroups.includes(org));
+            }
+            
+            return matchesSearch && matchesOrg;
+        });
+
+        renderKPIs(filteredUsers);
+        renderTable(filteredUsers);
+        renderCharts(filteredUsers);
+    };
+
+    const renderOrgOptions = (orgs) => {
+        if (!orgOptionsList) return;
+        orgOptionsList.innerHTML = "";
+        
+        orgs.forEach(org => {
+            const option = document.createElement("div");
+            option.className = "multi-select__option";
+            option.dataset.value = org;
+            option.innerHTML = `
+                <input type="checkbox" ${selectedOrgs.has(org) ? 'checked' : ''}>
+                <span>${org}</span>
+            `;
+            
+            option.addEventListener("click", (e) => {
+                const cb = option.querySelector("input");
+                if (e.target !== cb) cb.checked = !cb.checked;
+                
+                if (cb.checked) selectedOrgs.add(org);
+                else selectedOrgs.delete(org);
+                
+                updateOrgTriggerLabel();
+            });
+            
+            orgOptionsList.appendChild(option);
+        });
+        updateOrgTriggerLabel();
+    };
+
+    const updateOrgTriggerLabel = () => {
+        const labelEl = multiSelectContainer.querySelector(".multi-select__label");
+        if (selectedOrgs.size === 0) {
+            labelEl.textContent = "Todas las organizaciones";
+        } else if (selectedOrgs.size === 1) {
+            labelEl.textContent = Array.from(selectedOrgs)[0];
+        } else {
+            labelEl.textContent = `${selectedOrgs.size} organizaciones`;
+        }
+    };
+
+    const handleOrgSearch = (e) => {
+        const term = e.target.value.toLowerCase();
+        const options = orgOptionsList.querySelectorAll(".multi-select__option");
+        options.forEach(opt => {
+            const val = opt.dataset.value.toLowerCase();
+            opt.classList.toggle("hidden", !val.includes(term));
+        });
+    };
+
+    const exportToExcel = () => {
+        const data = filteredUsers.map(u => ({
+            "Nombre": u.name,
+            "Email": u.email,
+            "¿Es Conductor?": u.isDriver,
+            "Grupos de Seguridad": u.securityGroups,
+            "Grupos de Organización": u.organizationGroups,
+            "Último Acceso": formatDate(u.lastAccess),
+            "Días Inactivo": u.daysInactive === Infinity ? "Nunca" : u.daysInactive,
+            "Estado": u.status.label,
+            "Teléfono": u.phone
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Usuarios");
+        XLSX.writeFile(wb, `Reporte_Inactividad_Usuarios_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
+
+    // ─── Initialize ──────────────────────────────────────────────────────────
+    return {
+        initialize: function (geotabApi, state, callback) {
+            api = geotabApi;
+
+            // Initialize Lucide icons
+            if (window.lucide) window.lucide.createIcons();
+
+            // Bind DOM
+            btnRefresh = document.getElementById("btn-refresh");
+            lastUpdatedEl = document.getElementById("last-updated-time");
+            searchInput = document.getElementById("search-input");
+            btnExport = document.getElementById("btn-export");
+            btnEmail = document.getElementById("btn-email");
+            btnEmailSettings = document.getElementById("btn-email-settings");
+            userGrid = document.getElementById("user-grid");
+
+            // Multi-select Bind
+            multiSelectContainer = document.getElementById("multi-select-org");
+            multiSelectTrigger = multiSelectContainer.querySelector(".multi-select__trigger");
+            multiSelectDropdown = multiSelectContainer.querySelector(".multi-select__dropdown");
+            orgSearchInput = document.getElementById("org-search-input");
+            orgOptionsList = document.getElementById("org-options-list");
+            btnClearOrgs = document.getElementById("btn-clear-orgs");
+            btnApplyOrgs = document.getElementById("btn-apply-orgs");
+
+            // Modal Refs
+            modal = document.getElementById("email-settings-modal");
+            btnCloseModal = document.getElementById("btn-close-modal");
+            btnSaveSettings = document.getElementById("btn-save-settings");
+            inputSubject = document.getElementById("email-subject");
+            inputBody = document.getElementById("email-body");
+
+            // Events
+            btnRefresh.addEventListener("click", loadData);
+            searchInput.addEventListener("input", applyFilters);
+            btnExport.addEventListener("click", exportToExcel);
+            btnEmail.addEventListener("click", handleSendEmail);
+            
+            // Multi-select events
+            multiSelectTrigger.addEventListener("click", (e) => {
+                e.stopPropagation();
+                multiSelectContainer.classList.toggle("active");
+                if (multiSelectContainer.classList.contains("active")) {
+                    orgSearchInput.focus();
+                }
+            });
+
+            orgSearchInput.addEventListener("input", handleOrgSearch);
+            
+            btnClearOrgs.addEventListener("click", (e) => {
+                e.stopPropagation();
+                selectedOrgs.clear();
+                const checks = orgOptionsList.querySelectorAll("input");
+                checks.forEach(c => c.checked = false);
+                updateOrgTriggerLabel();
+                applyFilters();
+                multiSelectContainer.classList.remove("active");
+            });
+
+            btnApplyOrgs.addEventListener("click", (e) => {
+                e.stopPropagation();
+                applyFilters();
+                multiSelectContainer.classList.remove("active");
+            });
+
+            // Modal events
+            btnEmailSettings.addEventListener("click", () => {
+                loadEmailSettings();
+                modal.classList.add("active");
+            });
+
+            btnCloseModal.addEventListener("click", () => modal.classList.remove("active"));
+            btnSaveSettings.addEventListener("click", saveEmailSettings);
+
+            // Close multi-select on outside click
+            window.addEventListener("click", (e) => {
+                if (!multiSelectContainer.contains(e.target)) {
+                    multiSelectContainer.classList.remove("active");
+                }
+                if (e.target === modal) modal.classList.remove("active");
+            });
+
+            loadEmailSettings();
+
+            loadData();
+            if (callback) callback();
+        },
+        focus: function (api, state) {
+            loadData();
+        },
+        blur: function (api, state) {
+            // Cleanup if needed
+        }
+    };
+};
