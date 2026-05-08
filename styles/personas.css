@@ -277,6 +277,28 @@ body {
     border-color: var(--color-primary);
 }
 
+.btn-clear-all {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    background: #fff;
+    border: 1px solid #e53e3e;
+    border-radius: var(--radius-md);
+    color: #e53e3e;
+    font-family: var(--font);
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .45rem .9rem;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.btn-clear-all:hover {
+    background: #fff5f5;
+    border-color: #c53030;
+    color: #c53030;
+}
+
 /* ─── SUMMARY STRIP ─────────────────────────────────────────────────────────── */
 .summary-strip {
     display: flex;
