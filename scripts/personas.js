@@ -411,6 +411,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                     columnWidth: '55%',
                     borderRadius: 4,
                     dataLabels: {
+                        hideOverflowingLabels: false,
                         total: {
                             enabled: true,
                             formatter: function (val, opts) {
@@ -425,7 +426,18 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                     }
                 }
             },
-            dataLabels: { enabled: false },
+            dataLabels: {
+                enabled: true,
+                formatter: function (val, opts) {
+                    const count = opts.w.config.series[opts.seriesIndex].data[opts.dataPointIndex];
+                    return count > 0 ? count : '';
+                },
+                style: {
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    colors: ['#fff']
+                }
+            },
             colors: ['#10b981', '#f59e0b', '#f43f5e', '#94a3b8'],
             xaxis: {
                 categories: topOrgs.map(o => o[0]),
