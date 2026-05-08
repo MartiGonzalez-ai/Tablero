@@ -11,6 +11,12 @@ geotab.addin.personas = function () {
         orgStacked: null
     };
 
+    let currentFilters = {
+        status: null,
+        securityGroup: null,
+        organization: null
+    };
+
     // DOM Refs
     let btnRefresh, lastUpdatedEl, searchInput, btnExport, btnEmail, btnEmailSettings, userGrid;
     let modal, btnCloseModal, btnSaveSettings, inputSubject, inputBody;
@@ -27,7 +33,7 @@ geotab.addin.personas = function () {
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
     const formatDate = (dateStr) => {
-        if (!dateStr || dateStr.startsWith("0001")) return "Nunca";
+        if (!dateStr || dateStr.startsWith("0001")) return "—";
         const d = new Date(dateStr);
         return d.toLocaleDateString("es-MX", {
             day: "2-digit",
@@ -47,7 +53,6 @@ geotab.addin.personas = function () {
     };
 
     const getStatusInfo = (days) => {
-        if (days === Infinity) return { label: "Nunca", class: "badge--never" };
         if (days <= 4) return { label: "Normal", class: "badge--normal" };
         if (days <= 8) return { label: "Grave", class: "badge--grave" };
         return { label: "Crítico", class: "badge--critical" };
@@ -89,7 +94,7 @@ geotab.addin.personas = function () {
         if (label.includes("Normal")) return "normal";
         if (label.includes("Grave")) return "grave";
         if (label.includes("Crítico")) return "critical";
-        return "never";
+        return "normal";
     };
 
     // ─── Data Processing ─────────────────────────────────────────────────────
@@ -99,8 +104,10 @@ geotab.addin.personas = function () {
             if (g.id && g.name) groupMap[g.id] = g.name;
         });
 
-        return users.map(u => {
-            const days = getInactivityDays(u.lastAccessDate);
+        return users
+            .filter(u => u.lastAccessDate && !u.lastAccessDate.startsWith("0001"))
+            .map(u => {
+                const days = getInactivityDays(u.lastAccessDate);
             return {
                 id: u.id,
                 name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name,
@@ -206,7 +213,7 @@ geotab.addin.personas = function () {
                         <span>Último acceso: ${formatDate(u.lastAccess).toLowerCase()}</span>
                     </div>
                     <div class="user-card__days-badge" style="background: ${statusType === 'normal' ? '#f0fff4' : statusType === 'grave' ? '#fff9db' : '#fff5f5'}; color: ${statusType === 'normal' ? '#2f855a' : statusType === 'grave' ? '#f08c00' : '#c53030'};">
-                        Hace ${u.daysInactive === Infinity ? "—" : u.daysInactive} días
+                        Hace ${u.daysInactive} días
                     </div>
                 </div>
             `;
@@ -315,17 +322,26 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
     const renderCharts = (users) => {
         // Inactivity Distribution
         const inactivityGroups = {
-            "0-4d": users.filter(u => u.daysInactive <= 4).length,
-            "5-8d": users.filter(u => u.daysInactive >= 5 && u.daysInactive <= 8).length,
-            "9+ d": users.filter(u => u.daysInactive >= 9 && u.daysInactive !== Infinity).length,
-            "Nunca": users.filter(u => u.daysInactive === Infinity).length
+            "Normal": users.filter(u => u.daysInactive <= 4).length,
+            "Grave": users.filter(u => u.daysInactive >= 5 && u.daysInactive <= 8).length,
+            "Crítico": users.filter(u => u.daysInactive >= 9).length
         };
 
         const inactivityOptions = {
             series: Object.values(inactivityGroups),
             labels: Object.keys(inactivityGroups),
-            chart: { type: 'donut', height: 350 },
-            colors: ['#10b981', '#f59e0b', '#f43f5e', '#94a3b8'],
+            chart: { 
+                type: 'donut', 
+                height: 350,
+                events: {
+                    dataPointSelection: (event, chartContext, config) => {
+                        const status = config.w.config.labels[config.dataPointIndex];
+                        currentFilters.status = (currentFilters.status === status) ? null : status;
+                        applyFilters();
+                    }
+                }
+            },
+            colors: ['#10b981', '#f59e0b', '#f43f5e'],
             legend: { position: 'bottom' },
             dataLabels: { enabled: true, formatter: (val) => val.toFixed(0) + "%" },
             plotOptions: {
@@ -340,6 +356,9 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                         }
                     }
                 }
+            },
+            states: {
+                active: { filter: { type: 'none' } }
             }
         };
 
@@ -363,7 +382,18 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
 
         const groupOptions = {
             series: [{ data: sortedGroups.map(g => g[1]) }],
-            chart: { type: 'bar', height: 350, toolbar: { show: false } },
+            chart: { 
+                type: 'bar', 
+                height: 350, 
+                toolbar: { show: false },
+                events: {
+                    dataPointSelection: (event, chartContext, config) => {
+                        const group = sortedGroups[config.dataPointIndex][0];
+                        currentFilters.securityGroup = (currentFilters.securityGroup === group) ? null : group;
+                        applyFilters();
+                    }
+                }
+            },
             plotOptions: { bar: { borderRadius: 6, horizontal: true, barHeight: '70%' } },
             colors: ['#1e293b'],
             xaxis: { categories: sortedGroups.map(g => g[0]) },
@@ -380,10 +410,12 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             const orgs = u.organizationGroups.split(", ");
             orgs.forEach(org => {
                 if (org === "—") return;
-                if (!orgData[org]) orgData[org] = { normal: 0, grave: 0, critical: 0, never: 0, total: 0 };
+                if (!orgData[org]) orgData[org] = { normal: 0, grave: 0, critical: 0, total: 0 };
                 const type = getStatusType(u.status.label);
-                orgData[org][type]++;
-                orgData[org].total++;
+                if (type !== 'never') {
+                    orgData[org][type]++;
+                    orgData[org].total++;
+                }
             });
         });
 
@@ -395,14 +427,28 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             series: [
                 { name: 'Normal', data: topOrgs.map(o => o[1].normal || 0) },
                 { name: 'Grave', data: topOrgs.map(o => o[1].grave || 0) },
-                { name: 'Crítico', data: topOrgs.map(o => o[1].critical || 0) },
-                { name: 'Nunca', data: topOrgs.map(o => o[1].never || 0) }
+                { name: 'Crítico', data: topOrgs.map(o => o[1].critical || 0) }
             ],
             chart: {
                 type: 'bar',
                 height: 450,
                 stacked: true,
-                toolbar: { show: true }
+                toolbar: { show: true },
+                events: {
+                    dataPointSelection: (event, chartContext, config) => {
+                        const org = topOrgs[config.dataPointIndex][0];
+                        if (selectedOrgs.has(org)) {
+                            selectedOrgs.delete(org);
+                        } else {
+                            // Si queremos que el gráfico actúe como filtro único o múltiple
+                            // Para consistencia con el multi-select, lo haremos aditivo o toggle
+                            selectedOrgs.clear(); // Filtro único desde el gráfico para mayor claridad
+                            selectedOrgs.add(org);
+                        }
+                        updateOrgTriggerLabel();
+                        applyFilters();
+                    }
+                }
             },
             plotOptions: {
                 bar: {
@@ -434,7 +480,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                     colors: ['#fff']
                 }
             },
-            colors: ['#10b981', '#f59e0b', '#f43f5e', '#94a3b8'],
+            colors: ['#10b981', '#f59e0b', '#f43f5e'],
             xaxis: {
                 categories: topOrgs.map(o => o[0]),
                 labels: { rotate: -45, style: { fontSize: '10px' } }
@@ -495,21 +541,40 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
         const query = searchInput.value.toLowerCase();
 
         filteredUsers = allUsers.filter(u => {
+            // Search filter
             const matchesSearch = u.name.toLowerCase().includes(query) ||
                 u.email.toLowerCase().includes(query) ||
                 u.phone.toLowerCase().includes(query);
 
+            // Organization filter (Multi-select or Chart selection)
             let matchesOrg = true;
             if (selectedOrgs.size > 0) {
                 const userGroups = u.organizationGroups.split(", ");
                 matchesOrg = Array.from(selectedOrgs).some(org => userGroups.includes(org));
             }
 
-            return matchesSearch && matchesOrg;
+            // Status filter (Donut or KPI)
+            let matchesStatus = true;
+            if (currentFilters.status) {
+                matchesStatus = u.status.label === currentFilters.status;
+            }
+
+            // Security Group filter (Bar Chart)
+            let matchesSecurity = true;
+            if (currentFilters.securityGroup) {
+                const userSecurity = u.securityGroups.split(", ");
+                matchesSecurity = userSecurity.includes(currentFilters.securityGroup);
+            }
+
+            return matchesSearch && matchesOrg && matchesStatus && matchesSecurity;
         });
 
         renderKPIs(filteredUsers);
         renderTable(filteredUsers);
+        
+        // When filtering, we update the charts BUT we don't want to lose the current selection visual
+        // ApexCharts will handle the selection state if we manage it correctly.
+        // For now, let's re-render charts with filtered data.
         renderCharts(filteredUsers);
     };
 
@@ -569,7 +634,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             "Grupos de Seguridad": u.securityGroups,
             "Grupos de Organización": u.organizationGroups,
             "Último Acceso": formatDate(u.lastAccess),
-            "Días Inactivo": u.daysInactive === Infinity ? "Nunca" : u.daysInactive,
+            "Días Inactivo": u.daysInactive,
             "Estado": u.status.label,
             "Teléfono": u.phone
         }));
@@ -618,6 +683,32 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             searchInput.addEventListener("input", applyFilters);
             btnExport.addEventListener("click", exportToExcel);
             btnEmail.addEventListener("click", handleSendEmail);
+
+            // KPI click listeners
+            document.querySelectorAll(".stat-card").forEach(card => {
+                card.style.cursor = "pointer";
+                card.addEventListener("click", () => {
+                    const label = card.querySelector(".stat-label").textContent;
+                    let newStatus = null;
+
+                    if (label.includes("Normal")) newStatus = "Normal";
+                    else if (label.includes("Grave")) newStatus = "Grave";
+                    else if (label.includes("Crítica")) newStatus = "Crítico";
+
+                    // Toggle status filter
+                    currentFilters.status = (currentFilters.status === newStatus) ? null : newStatus;
+
+                    // Update UI active state
+                    document.querySelectorAll(".stat-card").forEach(c => c.classList.remove("active"));
+                    if (currentFilters.status) {
+                        card.classList.add("active");
+                    } else if (label.includes("Total")) {
+                        // If clicking total, we already removed active from all
+                    }
+
+                    applyFilters();
+                });
+            });
 
             // Multi-select events
             multiSelectTrigger.addEventListener("click", (e) => {
