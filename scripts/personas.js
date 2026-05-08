@@ -18,7 +18,7 @@ geotab.addin.personas = function () {
     };
 
     // DOM Refs
-    let btnRefresh, lastUpdatedEl, searchInput, btnExport, btnEmail, btnEmailSettings, userGrid;
+    let btnRefresh, btnClearAll, lastUpdatedEl, searchInput, btnExport, btnEmail, btnEmailSettings, userGrid;
     let modal, btnCloseModal, btnSaveSettings, inputSubject, inputBody;
 
     // Multi-select Org Refs
@@ -117,12 +117,12 @@ geotab.addin.personas = function () {
                 lastAccess: u.lastAccessDate,
                 daysInactive: days,
                 status: getStatusInfo(days),
-                securityGroups: u.securityGroups ? u.securityGroups.map(g => translateSecurityGroup(g.name || g.id)).join(", ") : "—",
+                securityGroups: u.securityGroups ? u.securityGroups.map(g => translateSecurityGroup(g.name || g.id)) : [],
                 organizationGroups: u.companyGroups ? u.companyGroups.map(g => {
                     const groupId = g.id || g;
                     return groupMap[groupId] || g.name || groupId;
-                }).join(", ") : "—",
-                phone: u.phoneNumber || "—",
+                }) : [],
+                phone: u.phone || u.phoneNumber || "—",
                 timeZone: u.timeZoneId || "—",
                 language: u.language || "—"
             };
@@ -191,11 +191,11 @@ geotab.addin.personas = function () {
                 <div class="user-card__body">
                     <div class="user-card__data-group">
                         <div class="user-card__label">Organización</div>
-                        <div class="user-card__value">${u.organizationGroups}</div>
+                        <div class="user-card__value">${u.organizationGroups.length > 0 ? u.organizationGroups.join(", ") : "—"}</div>
                     </div>
                     <div class="user-card__data-group">
                         <div class="user-card__label">Seguridad</div>
-                        <div class="user-card__value">${u.securityGroups}</div>
+                        <div class="user-card__value">${u.securityGroups.length > 0 ? u.securityGroups.join(", ") : "—"}</div>
                     </div>
                     <div class="user-card__data-group">
                         <div class="user-card__label">Conductor</div>
@@ -319,12 +319,12 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
         });
     };
 
-    const renderCharts = (users) => {
-        // Inactivity Distribution
+    const renderCharts = (statusUsers, groupUsers, orgUsers) => {
+        // Inactivity Distribution (uses statusUsers, which is filtered by everything EXCEPT status)
         const inactivityGroups = {
-            "Normal": users.filter(u => u.daysInactive <= 4).length,
-            "Grave": users.filter(u => u.daysInactive >= 5 && u.daysInactive <= 8).length,
-            "Crítico": users.filter(u => u.daysInactive >= 9).length
+            "Normal": statusUsers.filter(u => u.daysInactive <= 4).length,
+            "Grave": statusUsers.filter(u => u.daysInactive >= 5 && u.daysInactive <= 8).length,
+            "Crítico": statusUsers.filter(u => u.daysInactive >= 9).length
         };
 
         const inactivityOptions = {
@@ -335,6 +335,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                 height: 350,
                 events: {
                     dataPointSelection: (event, chartContext, config) => {
+                        if (config.dataPointIndex === -1) return;
                         const status = config.w.config.labels[config.dataPointIndex];
                         currentFilters.status = (currentFilters.status === status) ? null : status;
                         applyFilters();
@@ -356,9 +357,6 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                         }
                     }
                 }
-            },
-            states: {
-                active: { filter: { type: 'none' } }
             }
         };
 
@@ -366,12 +364,10 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
         charts.inactivity = new ApexCharts(document.getElementById("chart-inactivity"), inactivityOptions);
         charts.inactivity.render();
 
-        // Security Groups Distribution (Top 10)
+        // Security Groups Distribution (uses groupUsers)
         const groupsCount = {};
-        users.forEach(u => {
-            const groups = u.securityGroups.split(", ");
-            groups.forEach(g => {
-                if (g === "—") return;
+        groupUsers.forEach(u => {
+            u.securityGroups.forEach(g => {
                 groupsCount[g] = (groupsCount[g] || 0) + 1;
             });
         });
@@ -388,6 +384,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                 toolbar: { show: false },
                 events: {
                     dataPointSelection: (event, chartContext, config) => {
+                        if (config.dataPointIndex === -1) return;
                         const group = sortedGroups[config.dataPointIndex][0];
                         currentFilters.securityGroup = (currentFilters.securityGroup === group) ? null : group;
                         applyFilters();
@@ -404,18 +401,14 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
         charts.groups = new ApexCharts(document.getElementById("chart-groups"), groupOptions);
         charts.groups.render();
 
-        // Stacked Org Chart
+        // Stacked Org Chart (uses orgUsers)
         const orgData = {};
-        users.forEach(u => {
-            const orgs = u.organizationGroups.split(", ");
-            orgs.forEach(org => {
-                if (org === "—") return;
+        orgUsers.forEach(u => {
+            u.organizationGroups.forEach(org => {
                 if (!orgData[org]) orgData[org] = { normal: 0, grave: 0, critical: 0, total: 0 };
                 const type = getStatusType(u.status.label);
-                if (type !== 'never') {
-                    orgData[org][type]++;
-                    orgData[org].total++;
-                }
+                orgData[org][type]++;
+                orgData[org].total++;
             });
         });
 
@@ -436,13 +429,12 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                 toolbar: { show: true },
                 events: {
                     dataPointSelection: (event, chartContext, config) => {
+                        if (config.dataPointIndex === -1) return;
                         const org = topOrgs[config.dataPointIndex][0];
                         if (selectedOrgs.has(org)) {
                             selectedOrgs.delete(org);
                         } else {
-                            // Si queremos que el gráfico actúe como filtro único o múltiple
-                            // Para consistencia con el multi-select, lo haremos aditivo o toggle
-                            selectedOrgs.clear(); // Filtro único desde el gráfico para mayor claridad
+                            selectedOrgs.clear();
                             selectedOrgs.add(org);
                         }
                         updateOrgTriggerLabel();
@@ -537,45 +529,51 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
         });
     };
 
-    const applyFilters = () => {
-        const query = searchInput.value.toLowerCase();
+    const getFilteredUsers = (excludeFilter = null) => {
+        const query = (searchInput.value || "").toLowerCase().trim();
 
-        filteredUsers = allUsers.filter(u => {
+        return allUsers.filter(u => {
             // Search filter
-            const matchesSearch = u.name.toLowerCase().includes(query) ||
-                u.email.toLowerCase().includes(query) ||
-                u.phone.toLowerCase().includes(query);
-
-            // Organization filter (Multi-select or Chart selection)
-            let matchesOrg = true;
-            if (selectedOrgs.size > 0) {
-                const userGroups = u.organizationGroups.split(", ");
-                matchesOrg = Array.from(selectedOrgs).some(org => userGroups.includes(org));
+            if (query && excludeFilter !== 'search') {
+                const matchesSearch = u.name.toLowerCase().includes(query) ||
+                    u.email.toLowerCase().includes(query) ||
+                    u.phone.toLowerCase().includes(query);
+                if (!matchesSearch) return false;
             }
 
-            // Status filter (Donut or KPI)
-            let matchesStatus = true;
-            if (currentFilters.status) {
-                matchesStatus = u.status.label === currentFilters.status;
+            // Organization filter
+            if (selectedOrgs.size > 0 && excludeFilter !== 'organization') {
+                const matchesOrg = Array.from(selectedOrgs).some(org => u.organizationGroups.includes(org));
+                if (!matchesOrg) return false;
             }
 
-            // Security Group filter (Bar Chart)
-            let matchesSecurity = true;
-            if (currentFilters.securityGroup) {
-                const userSecurity = u.securityGroups.split(", ");
-                matchesSecurity = userSecurity.includes(currentFilters.securityGroup);
+            // Status filter
+            if (currentFilters.status && excludeFilter !== 'status') {
+                if (u.status.label !== currentFilters.status) return false;
             }
 
-            return matchesSearch && matchesOrg && matchesStatus && matchesSecurity;
+            // Security Group filter
+            if (currentFilters.securityGroup && excludeFilter !== 'securityGroup') {
+                if (!u.securityGroups.includes(currentFilters.securityGroup)) return false;
+            }
+
+            return true;
         });
+    };
+
+    const applyFilters = () => {
+        filteredUsers = getFilteredUsers();
 
         renderKPIs(filteredUsers);
         renderTable(filteredUsers);
         
-        // When filtering, we update the charts BUT we don't want to lose the current selection visual
-        // ApexCharts will handle the selection state if we manage it correctly.
-        // For now, let's re-render charts with filtered data.
-        renderCharts(filteredUsers);
+        // Re-render charts with cross-filtering logic
+        // Each chart shows data filtered by EVERYTHING ELSE except its own category
+        const statusFiltered = getFilteredUsers('status');
+        const orgFiltered = getFilteredUsers('organization');
+        const securityFiltered = getFilteredUsers('securityGroup');
+
+        renderCharts(statusFiltered, orgFiltered, securityFiltered);
     };
 
     const renderOrgOptions = (orgs) => {
@@ -655,6 +653,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
 
             // Bind DOM
             btnRefresh = document.getElementById("btn-refresh");
+            btnClearAll = document.getElementById("btn-clear-all");
             lastUpdatedEl = document.getElementById("last-updated-time");
             searchInput = document.getElementById("search-input");
             btnExport = document.getElementById("btn-export");
@@ -680,6 +679,21 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
 
             // Events
             btnRefresh.addEventListener("click", loadData);
+            btnClearAll.addEventListener("click", () => {
+                // Clear all filters
+                searchInput.value = "";
+                selectedOrgs.clear();
+                currentFilters.status = null;
+                currentFilters.securityGroup = null;
+                currentFilters.organization = null;
+                
+                // Update UI
+                updateOrgTriggerLabel();
+                document.querySelectorAll(".stat-card").forEach(c => c.classList.remove("active"));
+                
+                // Re-apply
+                applyFilters();
+            });
             searchInput.addEventListener("input", applyFilters);
             btnExport.addEventListener("click", exportToExcel);
             btnEmail.addEventListener("click", handleSendEmail);
