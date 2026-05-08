@@ -402,7 +402,6 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                 type: 'bar',
                 height: 450,
                 stacked: true,
-                stackType: '100%',
                 toolbar: { show: true }
             },
             plotOptions: {
@@ -425,13 +424,22 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                     }
                 }
             },
-            dataLabels: { enabled: false },
+            dataLabels: { 
+                enabled: true,
+                formatter: function (val) {
+                    return val > 0 ? val : "";
+                },
+                style: {
+                    fontSize: '10px',
+                    colors: ['#fff']
+                }
+            },
             colors: ['#10b981', '#f59e0b', '#f43f5e', '#94a3b8'],
             xaxis: {
                 categories: topOrgs.map(o => o[0]),
                 labels: { rotate: -45, style: { fontSize: '10px' } }
             },
-            yaxis: { title: { text: 'Porcentaje de Usuarios' } },
+            yaxis: { title: { text: 'Total de Usuarios' } },
             legend: { position: 'top', horizontalAlign: 'center' },
             fill: { opacity: 1 },
             tooltip: {
