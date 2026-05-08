@@ -402,6 +402,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                 type: 'bar',
                 height: 450,
                 stacked: true,
+                stackType: '100%',
                 toolbar: { show: true }
             },
             plotOptions: {
@@ -412,6 +413,9 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                     dataLabels: {
                         total: {
                             enabled: true,
+                            formatter: function (val, opts) {
+                                return opts.w.globals.seriesTotals[opts.dataPointIndex];
+                            },
                             style: {
                                 fontSize: '12px',
                                 fontWeight: 800,
