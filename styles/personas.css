@@ -6,8 +6,8 @@
     --color-panel-border: #d4d9e0;
 
     /* Primario Geotab */
-    --color-primary:      #003666;
-    --color-primary-glow: rgba(0, 54, 102, 0.10);
+    --color-primary:      #1e293b;
+    --color-primary-glow: rgba(30, 41, 59, 0.08);
 
     /* Texto */
     --color-text-main:  #333333;
@@ -15,11 +15,11 @@
     --color-text-sub:   #4a5568;
 
     /* Paleta Inactividad */
-    --c-normal:     #3b753c;  --c-normal-bg:   #ebf1ec;
-    --c-grave:      #f29300;  --c-grave-bg:    #fff0d9;
-    --c-critical:   #cc0000;  --c-critical-bg: #fae6e6;
-    --c-never:      #5e6c84;  --c-never-bg:    #f1f5f9;
-    --c-blue:       #003666;  --c-blue-bg:     #e6ebf0;
+    --c-normal:     #10b981;  --c-normal-bg:   #ecfdf5;
+    --c-grave:      #f59e0b;  --c-grave-bg:    #fffbeb;
+    --c-critical:   #f43f5e;  --c-critical-bg: #fff1f2;
+    --c-never:      #94a3b8;  --c-never-bg:    #f8fafc;
+    --c-blue:       #1e293b;  --c-blue-bg:     #f1f5f9;
 
     /* Radio & sombras */
     --radius-sm: 4px;
