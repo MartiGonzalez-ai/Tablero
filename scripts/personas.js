@@ -48,9 +48,9 @@ geotab.addin.personas = function () {
 
     const getStatusInfo = (days) => {
         if (days === Infinity) return { label: "Nunca", class: "badge--never" };
-        if (days < 7) return { label: "Activo", class: "badge--active" };
-        if (days <= 30) return { label: "Inactivo (Medio)", class: "badge--warning" };
-        return { label: "Inactivo (Crítico)", class: "badge--critical" };
+        if (days <= 4) return { label: "Normal", class: "badge--normal" };
+        if (days <= 8) return { label: "Grave", class: "badge--grave" };
+        return { label: "Crítico", class: "badge--critical" };
     };
 
     const translateSecurityGroup = (id) => {
@@ -86,8 +86,8 @@ geotab.addin.personas = function () {
     };
 
     const getStatusType = (label) => {
-        if (label.includes("Activo")) return "active";
-        if (label.includes("Medio")) return "warning";
+        if (label.includes("Normal")) return "normal";
+        if (label.includes("Grave")) return "grave";
         if (label.includes("Crítico")) return "critical";
         return "never";
     };
@@ -126,14 +126,14 @@ geotab.addin.personas = function () {
     const renderKPIs = (users) => {
         const stats = {
             total: users.length,
-            active: users.filter(u => u.daysInactive < 7).length,
-            warning: users.filter(u => u.daysInactive >= 7 && u.daysInactive <= 30).length,
-            critical: users.filter(u => u.daysInactive > 30).length
+            normal: users.filter(u => u.daysInactive <= 4).length,
+            grave: users.filter(u => u.daysInactive >= 5 && u.daysInactive <= 8).length,
+            critical: users.filter(u => u.daysInactive >= 9).length
         };
 
         animateCount(document.getElementById("stat-total"), stats.total);
-        animateCount(document.getElementById("stat-active"), stats.active);
-        animateCount(document.getElementById("stat-warning"), stats.warning);
+        animateCount(document.getElementById("stat-normal"), stats.normal);
+        animateCount(document.getElementById("stat-grave"), stats.grave);
         animateCount(document.getElementById("stat-critical"), stats.critical);
     };
 
@@ -165,8 +165,8 @@ geotab.addin.personas = function () {
                     <i data-lucide="check" width="14" height="14"></i>
                 </div>
                 <div class="user-card__badge-status">
-                    <i data-lucide="${statusType === 'active' ? 'check-circle' : statusType === 'warning' ? 'alert-circle' : 'alert-triangle'}" width="14" height="14"></i>
-                    <span>${u.status.label.split(" (")[0]}</span>
+                    <i data-lucide="${statusType === 'normal' ? 'check-circle' : statusType === 'grave' ? 'alert-circle' : 'alert-triangle'}" width="14" height="14"></i>
+                    <span>${u.status.label}</span>
                 </div>
 
                 <div class="user-card__header">
@@ -205,7 +205,7 @@ geotab.addin.personas = function () {
                         <i data-lucide="clock" width="14" height="14"></i>
                         <span>Último acceso: ${formatDate(u.lastAccess).toLowerCase()}</span>
                     </div>
-                    <div class="user-card__days-badge" style="background: ${statusType === 'active' ? '#f0fff4' : statusType === 'warning' ? '#fff9db' : '#fff5f5'}; color: ${statusType === 'active' ? '#2f855a' : statusType === 'warning' ? '#f08c00' : '#c53030'};">
+                    <div class="user-card__days-badge" style="background: ${statusType === 'normal' ? '#f0fff4' : statusType === 'grave' ? '#fff9db' : '#fff5f5'}; color: ${statusType === 'normal' ? '#2f855a' : statusType === 'grave' ? '#f08c00' : '#c53030'};">
                         Hace ${u.daysInactive === Infinity ? "—" : u.daysInactive} días
                     </div>
                 </div>
@@ -315,9 +315,9 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
     const renderCharts = (users) => {
         // Inactivity Distribution
         const inactivityGroups = {
-            "< 7d": users.filter(u => u.daysInactive < 7).length,
-            "7-30d": users.filter(u => u.daysInactive >= 7 && u.daysInactive <= 30).length,
-            "> 30d": users.filter(u => u.daysInactive > 30 && u.daysInactive !== Infinity).length,
+            "0-4d": users.filter(u => u.daysInactive <= 4).length,
+            "5-8d": users.filter(u => u.daysInactive >= 5 && u.daysInactive <= 8).length,
+            "9+ d": users.filter(u => u.daysInactive >= 9 && u.daysInactive !== Infinity).length,
             "Nunca": users.filter(u => u.daysInactive === Infinity).length
         };
 
@@ -377,7 +377,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             const orgs = u.organizationGroups.split(", ");
             orgs.forEach(org => {
                 if (org === "—") return;
-                if (!orgData[org]) orgData[org] = { active: 0, warning: 0, critical: 0, never: 0, total: 0 };
+                if (!orgData[org]) orgData[org] = { normal: 0, grave: 0, critical: 0, never: 0, total: 0 };
                 const type = getStatusType(u.status.label);
                 orgData[org][type]++;
                 orgData[org].total++;
@@ -390,10 +390,10 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
 
         const stackedOptions = {
             series: [
-                { name: 'Activo', data: topOrgs.map(o => o[1].active) },
-                { name: 'Moderado', data: topOrgs.map(o => o[1].warning) },
-                { name: 'Crítico', data: topOrgs.map(o => o[1].critical) },
-                { name: 'Nunca', data: topOrgs.map(o => o[1].never) }
+                { name: 'Normal', data: topOrgs.map(o => o[1].normal || 0) },
+                { name: 'Grave', data: topOrgs.map(o => o[1].grave || 0) },
+                { name: 'Crítico', data: topOrgs.map(o => o[1].critical || 0) },
+                { name: 'Nunca', data: topOrgs.map(o => o[1].never || 0) }
             ],
             chart: {
                 type: 'bar',
