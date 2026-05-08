@@ -14,7 +14,7 @@ geotab.addin.personas = function () {
     // DOM Refs
     let btnRefresh, lastUpdatedEl, searchInput, btnExport, btnEmail, btnEmailSettings, userGrid;
     let modal, btnCloseModal, btnSaveSettings, inputSubject, inputBody;
-    
+
     // Multi-select Org Refs
     let multiSelectContainer, multiSelectTrigger, multiSelectDropdown, orgSearchInput, orgOptionsList, btnClearOrgs, btnApplyOrgs;
     let selectedOrgs = new Set();
@@ -154,9 +154,9 @@ geotab.addin.personas = function () {
         users.forEach(u => {
             const statusType = getStatusType(u.status.label);
             const initials = getInitials(u.name);
-            const phone = u.phone && u.phone !== "—" ? u.phone : "+52 00 0000 0000"; 
+            const phone = u.phone && u.phone !== "—" ? u.phone : "+52 00 0000 0000";
             const isSelected = selectedEmails.has(u.email);
-            
+
             const card = document.createElement("div");
             card.className = `user-card user-card--${statusType} ${isSelected ? 'user-card--selected' : ''}`;
             card.dataset.email = u.email;
@@ -244,37 +244,37 @@ geotab.addin.personas = function () {
     const loadEmailSettings = () => {
         const savedSubject = localStorage.getItem(STORAGE_KEY_SUBJECT) || DEFAULT_SUBJECT;
         const savedBody = localStorage.getItem(STORAGE_KEY_BODY) || DEFAULT_BODY;
-        
+
         if (inputSubject) inputSubject.value = savedSubject;
         if (inputBody) inputBody.value = savedBody;
-        
+
         return { subject: savedSubject, body: savedBody };
     };
 
     const saveEmailSettings = () => {
         const subject = inputSubject.value.trim() || DEFAULT_SUBJECT;
         const body = inputBody.value.trim() || DEFAULT_BODY;
-        
+
         localStorage.setItem(STORAGE_KEY_SUBJECT, subject);
         localStorage.setItem(STORAGE_KEY_BODY, body);
-        
+
         modal.classList.remove("active");
         alert("Configuración guardada correctamente.");
     };
 
     const handleSendEmail = () => {
         if (selectedEmails.size === 0) return;
-        
+
         // Separador estándar (coma) para Thunderbird
-        const emails = Array.from(selectedEmails).join(","); 
-        
+        const emails = Array.from(selectedEmails).join(",");
+
         const settings = loadEmailSettings();
         const subject = encodeURIComponent(settings.subject);
         const body = encodeURIComponent(settings.body);
-        
+
         // URL mailto: completa
         const mailtoUrl = `mailto:?bcc=${emails}&subject=${subject}&body=${body}`;
-        
+
         // Límite de seguridad para Thunderbird en Windows (~2000 chars)
         // Si se supera, el sistema operativo o Thunderbird pueden ignorar la llamada
         const URL_LIMIT = 2000;
@@ -283,7 +283,7 @@ geotab.addin.personas = function () {
         // Siempre intentamos copiar al portapapeles como respaldo seguro
         navigator.clipboard.writeText(emails).then(() => {
             console.log("Emails copiados al portapapeles");
-            
+
             if (isUrlTooLong) {
                 // Si es muy largo, no intentamos abrir el enlace porque fallará silenciosamente
                 // y confundirá al usuario. Mejor ser directos.
@@ -301,7 +301,7 @@ ACCIÓN REQUERIDA:
             }
         }).catch(err => {
             console.error("Error al copiar al portapapeles:", err);
-            
+
             if (!isUrlTooLong) {
                 window.location.href = mailtoUrl;
             } else {
@@ -411,7 +411,6 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                     columnWidth: '55%',
                     borderRadius: 4,
                     dataLabels: {
-                        hideOverflowingLabels: false,
                         total: {
                             enabled: true,
                             formatter: function (val, opts) {
@@ -426,18 +425,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                     }
                 }
             },
-            dataLabels: {
-                enabled: true,
-                formatter: function (val, opts) {
-                    const count = opts.w.config.series[opts.seriesIndex].data[opts.dataPointIndex];
-                    return count > 0 ? count : '';
-                },
-                style: {
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    colors: ['#fff']
-                }
-            },
+            dataLabels: { enabled: false },
             colors: ['#10b981', '#f59e0b', '#f43f5e', '#94a3b8'],
             xaxis: {
                 categories: topOrgs.map(o => o[0]),
@@ -471,7 +459,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             const groups = results[1];
 
             allUsers = processData(users, groups);
-            
+
             // Populate organization filter
             if (orgOptionsList) {
                 const orgs = [...new Set(allUsers.flatMap(u => u.organizationGroups.split(", ")))].filter(o => o !== "—").sort();
@@ -499,16 +487,16 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
         const query = searchInput.value.toLowerCase();
 
         filteredUsers = allUsers.filter(u => {
-            const matchesSearch = u.name.toLowerCase().includes(query) || 
-                                 u.email.toLowerCase().includes(query) ||
-                                 u.phone.toLowerCase().includes(query);
-            
+            const matchesSearch = u.name.toLowerCase().includes(query) ||
+                u.email.toLowerCase().includes(query) ||
+                u.phone.toLowerCase().includes(query);
+
             let matchesOrg = true;
             if (selectedOrgs.size > 0) {
                 const userGroups = u.organizationGroups.split(", ");
                 matchesOrg = Array.from(selectedOrgs).some(org => userGroups.includes(org));
             }
-            
+
             return matchesSearch && matchesOrg;
         });
 
@@ -520,7 +508,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
     const renderOrgOptions = (orgs) => {
         if (!orgOptionsList) return;
         orgOptionsList.innerHTML = "";
-        
+
         orgs.forEach(org => {
             const option = document.createElement("div");
             option.className = "multi-select__option";
@@ -529,17 +517,17 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                 <input type="checkbox" ${selectedOrgs.has(org) ? 'checked' : ''}>
                 <span>${org}</span>
             `;
-            
+
             option.addEventListener("click", (e) => {
                 const cb = option.querySelector("input");
                 if (e.target !== cb) cb.checked = !cb.checked;
-                
+
                 if (cb.checked) selectedOrgs.add(org);
                 else selectedOrgs.delete(org);
-                
+
                 updateOrgTriggerLabel();
             });
-            
+
             orgOptionsList.appendChild(option);
         });
         updateOrgTriggerLabel();
@@ -622,7 +610,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             searchInput.addEventListener("input", applyFilters);
             btnExport.addEventListener("click", exportToExcel);
             btnEmail.addEventListener("click", handleSendEmail);
-            
+
             // Multi-select events
             multiSelectTrigger.addEventListener("click", (e) => {
                 e.stopPropagation();
@@ -633,7 +621,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             });
 
             orgSearchInput.addEventListener("input", handleOrgSearch);
-            
+
             btnClearOrgs.addEventListener("click", (e) => {
                 e.stopPropagation();
                 selectedOrgs.clear();
