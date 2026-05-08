@@ -15,8 +15,8 @@
     --color-text-sub:   #4a5568;
 
     /* Paleta Inactividad */
-    --c-active:     #3b753c;  --c-active-bg:   #ebf1ec;
-    --c-warning:    #f29300;  --c-warning-bg:  #fff0d9;
+    --c-normal:     #3b753c;  --c-normal-bg:   #ebf1ec;
+    --c-grave:      #f29300;  --c-grave-bg:    #fff0d9;
     --c-critical:   #cc0000;  --c-critical-bg: #fae6e6;
     --c-never:      #5e6c84;  --c-never-bg:    #f1f5f9;
     --c-blue:       #003666;  --c-blue-bg:     #e6ebf0;
@@ -327,8 +327,8 @@ body {
 }
 
 .stat-icon--total    { background: var(--c-blue-bg);     color: var(--color-primary); }
-.stat-icon--active   { background: var(--c-active-bg);   color: var(--c-active); }
-.stat-icon--warning  { background: var(--c-warning-bg);  color: var(--c-warning); }
+.stat-icon--normal   { background: var(--c-normal-bg);   color: var(--c-normal); }
+.stat-icon--grave    { background: var(--c-grave-bg);    color: var(--c-grave); }
 .stat-icon--critical { background: var(--c-critical-bg); color: var(--c-critical); }
 
 /* ─── CHARTS SECTION ────────────────────────────────────────────────────────── */
@@ -501,8 +501,8 @@ body {
     display: inline-block;
 }
 
-.badge--active   { background: var(--c-active-bg);   color: var(--c-active); }
-.badge--warning  { background: var(--c-warning-bg);  color: var(--c-warning); }
+.badge--normal   { background: var(--c-normal-bg);   color: var(--c-normal); }
+.badge--grave    { background: var(--c-grave-bg);    color: var(--c-grave); }
 .badge--critical { background: var(--c-critical-bg); color: var(--c-critical); }
 .badge--never    { background: var(--c-never-bg);    color: var(--c-never); }
 
@@ -741,8 +741,8 @@ body {
 }
 
 /* Status Colors Overrides */
-.user-card--active { --status-color: #3b753c; }
-.user-card--warning { --status-color: #f29300; }
+.user-card--normal { --status-color: #3b753c; }
+.user-card--grave { --status-color: #f29300; }
 .user-card--critical { --status-color: #cc0000; }
 .user-card--never { --status-color: #64748b; }
 
