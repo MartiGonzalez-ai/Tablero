@@ -325,15 +325,18 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             series: Object.values(inactivityGroups),
             labels: Object.keys(inactivityGroups),
             chart: { type: 'donut', height: 350 },
-            colors: ['#3b753c', '#f29300', '#cc0000', '#5e6c84'],
+            colors: ['#10b981', '#f59e0b', '#f43f5e', '#94a3b8'],
             legend: { position: 'bottom' },
-            dataLabels: { enabled: true, formatter: (val) => val.toFixed(1) + "%" },
+            dataLabels: { enabled: true, formatter: (val) => val.toFixed(0) + "%" },
             plotOptions: {
                 pie: {
                     donut: {
+                        size: '70%',
                         labels: {
                             show: true,
-                            total: { show: true, label: 'Usuarios' }
+                            name: { show: true, fontSize: '14px', fontWeight: 600 },
+                            value: { show: true, fontSize: '20px', fontWeight: 800 },
+                            total: { show: true, label: 'Usuarios', fontSize: '14px', fontWeight: 600 }
                         }
                     }
                 }
@@ -360,9 +363,9 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
 
         const groupOptions = {
             series: [{ data: sortedGroups.map(g => g[1]) }],
-            chart: { type: 'bar', height: 350 },
-            plotOptions: { bar: { borderRadius: 4, horizontal: true } },
-            colors: ['#003666'],
+            chart: { type: 'bar', height: 350, toolbar: { show: false } },
+            plotOptions: { bar: { borderRadius: 6, horizontal: true, barHeight: '70%' } },
+            colors: ['#1e293b'],
             xaxis: { categories: sortedGroups.map(g => g[0]) },
             title: { text: 'Top Grupos de Seguridad', align: 'center', style: { fontSize: '12px' } }
         };
@@ -399,16 +402,27 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                 type: 'bar',
                 height: 450,
                 stacked: true,
-                stackType: '100%',
                 toolbar: { show: true }
             },
             plotOptions: {
                 bar: {
                     horizontal: false,
-                    columnWidth: '60%'
+                    columnWidth: '55%',
+                    borderRadius: 4,
+                    dataLabels: {
+                        total: {
+                            enabled: true,
+                            style: {
+                                fontSize: '12px',
+                                fontWeight: 800,
+                                color: '#1e293b'
+                            }
+                        }
+                    }
                 }
             },
-            colors: ['#3b753c', '#f29300', '#cc0000', '#5e6c84'],
+            dataLabels: { enabled: false },
+            colors: ['#10b981', '#f59e0b', '#f43f5e', '#94a3b8'],
             xaxis: {
                 categories: topOrgs.map(o => o[0]),
                 labels: { rotate: -45, style: { fontSize: '10px' } }
