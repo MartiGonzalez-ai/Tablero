@@ -83,12 +83,6 @@ geotab.addin.personas = function () {
         requestAnimationFrame(step);
     };
 
-    const getInitials = (name) => {
-        if (!name) return "?";
-        const parts = name.trim().split(" ");
-        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    };
 
     const getStatusType = (label) => {
         if (label.includes("Normal")) return "normal";
@@ -160,7 +154,6 @@ geotab.addin.personas = function () {
         const fragment = document.createDocumentFragment();
         users.forEach(u => {
             const statusType = getStatusType(u.status.label);
-            const initials = getInitials(u.name);
             const phone = u.phone && u.phone !== "—" ? u.phone : "+52 00 0000 0000";
             const isSelected = selectedEmails.has(u.email);
 
@@ -177,7 +170,6 @@ geotab.addin.personas = function () {
                 </div>
 
                 <div class="user-card__header">
-                    <div class="user-card__avatar">${initials}</div>
                     <div class="user-card__info">
                         <div class="user-card__name">${u.name}</div>
                         <div class="user-card__email">${u.email}</div>
