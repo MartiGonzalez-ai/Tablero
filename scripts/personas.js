@@ -100,6 +100,18 @@ geotab.addin.personas = function () {
     // ─── Data Processing ─────────────────────────────────────────────────────
     const processData = (users, groups = []) => {
         const groupMap = {};
+        const empresasGroup = groups.find(g => g.name === "EMPRESAS");
+        const validGroupIds = new Set();
+
+        if (empresasGroup) {
+            groups.forEach(g => {
+                const parentId = g.parent ? (g.parent.id || g.parent) : null;
+                if (parentId === empresasGroup.id) {
+                    validGroupIds.add(g.id);
+                }
+            });
+        }
+
         groups.forEach(g => {
             if (g.id && g.name) groupMap[g.id] = g.name;
         });
@@ -108,26 +120,31 @@ geotab.addin.personas = function () {
             .filter(u => u.lastAccessDate && !u.lastAccessDate.startsWith("0001"))
             .map(u => {
                 const days = getInactivityDays(u.lastAccessDate);
-            return {
-                id: u.id,
-                name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name,
-                email: u.name,
-                employeeNumber: u.employeeNumber || "—",
-                isDriver: u.isDriver ? "Sí" : "No",
-                lastAccess: u.lastAccessDate,
-                daysInactive: days,
-                status: getStatusInfo(days),
-                securityGroups: u.securityGroups ? u.securityGroups.map(g => translateSecurityGroup(g.name || g.id)) : [],
-                organizationGroups: u.companyGroups ? u.companyGroups.map(g => {
-                    const groupId = g.id || g;
-                    return groupMap[groupId] || g.name || groupId;
-                }) : [],
-                phone: u.phone || u.phoneNumber || "—",
-                timeZone: u.timeZoneId || "—",
-                language: u.language || "—"
-            };
-        }).sort((a, b) => b.daysInactive - a.daysInactive);
+                const userOrgs = u.companyGroups ? u.companyGroups
+                    .map(g => g.id || g)
+                    .filter(id => validGroupIds.has(id))
+                    .map(id => groupMap[id] || id) : [];
+
+                return {
+                    id: u.id,
+                    name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name,
+                    email: u.name,
+                    employeeNumber: u.employeeNumber || "—",
+                    isDriver: u.isDriver ? "Sí" : "No",
+                    lastAccess: u.lastAccessDate,
+                    daysInactive: days,
+                    status: getStatusInfo(days),
+                    securityGroups: u.securityGroups ? u.securityGroups.map(g => translateSecurityGroup(g.name || g.id)) : [],
+                    organizationGroups: userOrgs,
+                    phone: u.phone || u.phoneNumber || "—",
+                    timeZone: u.timeZoneId || "—",
+                    language: u.language || "—"
+                };
+            })
+            .filter(u => u.organizationGroups.length > 0)
+            .sort((a, b) => b.daysInactive - a.daysInactive);
     };
+
 
     // ─── Rendering ───────────────────────────────────────────────────────────
     const renderKPIs = (users) => {
