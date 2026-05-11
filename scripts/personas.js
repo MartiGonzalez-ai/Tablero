@@ -83,12 +83,6 @@ geotab.addin.personas = function () {
         requestAnimationFrame(step);
     };
 
-    const getInitials = (name) => {
-        if (!name) return "?";
-        const parts = name.trim().split(" ");
-        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    };
 
     const getStatusType = (label) => {
         if (label.includes("Normal")) return "normal";
@@ -99,15 +93,44 @@ geotab.addin.personas = function () {
 
     // ─── Data Processing ─────────────────────────────────────────────────────
     const processData = (users, groups = []) => {
-        const groupMap = {};
+        const groupLookup = {};
+        const empresasGroup = groups.find(g => g.name === "EMPRESAS");
+
+        // Map groups for easy upward traversal
         groups.forEach(g => {
-            if (g.id && g.name) groupMap[g.id] = g.name;
+            if (g.id) groupLookup[g.id] = g;
         });
+
+        const getTopLevelOrg = (groupId) => {
+            if (!empresasGroup) return null;
+            let current = groupLookup[groupId];
+            while (current) {
+                const parentId = current.parent ? (current.parent.id || current.parent) : null;
+                // If this group's parent is EMPRESAS, then this group is the top-level org we want
+                if (parentId === empresasGroup.id) {
+                    return current.name;
+                }
+                // Stop if we reach the root or another branch
+                if (!parentId || parentId === "GroupCompanyId") break;
+                current = groupLookup[parentId];
+            }
+            return null;
+        };
 
         return users
             .filter(u => u.lastAccessDate && !u.lastAccessDate.startsWith("0001"))
             .map(u => {
                 const days = getInactivityDays(u.lastAccessDate);
+                const userOrgsSet = new Set();
+
+                if (u.companyGroups) {
+                    u.companyGroups.forEach(g => {
+                        const topOrg = getTopLevelOrg(g.id || g);
+                        if (topOrg) userOrgsSet.add(topOrg);
+                    });
+                }
+                const userOrgs = Array.from(userOrgsSet);
+
                 return {
                     id: u.id,
                     name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name,
@@ -118,16 +141,16 @@ geotab.addin.personas = function () {
                     daysInactive: days,
                     status: getStatusInfo(days),
                     securityGroups: u.securityGroups ? u.securityGroups.map(g => translateSecurityGroup(g.name || g.id)) : [],
-                    organizationGroups: u.companyGroups ? u.companyGroups.map(g => {
-                        const groupId = g.id || g;
-                        return groupMap[groupId] || g.name || groupId;
-                    }) : [],
+                    organizationGroups: userOrgs,
                     phone: u.phone || u.phoneNumber || "—",
                     timeZone: u.timeZoneId || "—",
                     language: u.language || "—"
                 };
-            }).sort((a, b) => b.daysInactive - a.daysInactive);
+            })
+            .filter(u => u.organizationGroups.length > 0)
+            .sort((a, b) => b.daysInactive - a.daysInactive);
     };
+
 
     // ─── Rendering ───────────────────────────────────────────────────────────
     const renderKPIs = (users) => {
@@ -160,7 +183,6 @@ geotab.addin.personas = function () {
         const fragment = document.createDocumentFragment();
         users.forEach(u => {
             const statusType = getStatusType(u.status.label);
-            const initials = getInitials(u.name);
             const phone = u.phone && u.phone !== "—" ? u.phone : "+52 00 0000 0000";
             const isSelected = selectedEmails.has(u.email);
 
@@ -177,7 +199,6 @@ geotab.addin.personas = function () {
                 </div>
 
                 <div class="user-card__header">
-                    <div class="user-card__avatar">${initials}</div>
                     <div class="user-card__info">
                         <div class="user-card__name">${u.name}</div>
                         <div class="user-card__email">${u.email}</div>
