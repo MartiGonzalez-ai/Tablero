@@ -108,25 +108,25 @@ geotab.addin.personas = function () {
             .filter(u => u.lastAccessDate && !u.lastAccessDate.startsWith("0001"))
             .map(u => {
                 const days = getInactivityDays(u.lastAccessDate);
-            return {
-                id: u.id,
-                name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name,
-                email: u.name,
-                employeeNumber: u.employeeNumber || "—",
-                isDriver: u.isDriver ? "Sí" : "No",
-                lastAccess: u.lastAccessDate,
-                daysInactive: days,
-                status: getStatusInfo(days),
-                securityGroups: u.securityGroups ? u.securityGroups.map(g => translateSecurityGroup(g.name || g.id)) : [],
-                organizationGroups: u.companyGroups ? u.companyGroups.map(g => {
-                    const groupId = g.id || g;
-                    return groupMap[groupId] || g.name || groupId;
-                }) : [],
-                phone: u.phone || u.phoneNumber || "—",
-                timeZone: u.timeZoneId || "—",
-                language: u.language || "—"
-            };
-        }).sort((a, b) => b.daysInactive - a.daysInactive);
+                return {
+                    id: u.id,
+                    name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name,
+                    email: u.name,
+                    employeeNumber: u.employeeNumber || "—",
+                    isDriver: u.isDriver ? "Sí" : "No",
+                    lastAccess: u.lastAccessDate,
+                    daysInactive: days,
+                    status: getStatusInfo(days),
+                    securityGroups: u.securityGroups ? u.securityGroups.map(g => translateSecurityGroup(g.name || g.id)) : [],
+                    organizationGroups: u.companyGroups ? u.companyGroups.map(g => {
+                        const groupId = g.id || g;
+                        return groupMap[groupId] || g.name || groupId;
+                    }) : [],
+                    phone: u.phone || u.phoneNumber || "—",
+                    timeZone: u.timeZoneId || "—",
+                    language: u.language || "—"
+                };
+            }).sort((a, b) => b.daysInactive - a.daysInactive);
     };
 
     // ─── Rendering ───────────────────────────────────────────────────────────
@@ -330,8 +330,8 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
         const inactivityOptions = {
             series: Object.values(inactivityGroups),
             labels: Object.keys(inactivityGroups),
-            chart: { 
-                type: 'donut', 
+            chart: {
+                type: 'donut',
                 height: 350,
                 events: {
                     dataPointSelection: (event, chartContext, config) => {
@@ -378,9 +378,9 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
 
         const groupOptions = {
             series: [{ data: sortedGroups.map(g => g[1]) }],
-            chart: { 
-                type: 'bar', 
-                height: 350, 
+            chart: {
+                type: 'bar',
+                height: 350,
                 toolbar: { show: false },
                 events: {
                     dataPointSelection: (event, chartContext, config) => {
@@ -462,7 +462,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                     }
                 }
             },
-            dataLabels: { 
+            dataLabels: {
                 enabled: true,
                 formatter: function (val) {
                     return val > 0 ? val : "";
@@ -564,7 +564,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
 
         renderKPIs(filteredUsers);
         renderTable(filteredUsers);
-        
+
         // Re-render charts with cross-filtering logic
         // Each chart shows data filtered by EVERYTHING ELSE except its own category
         const statusFiltered = getFilteredUsers('status');
@@ -684,11 +684,11 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
                 currentFilters.status = null;
                 currentFilters.securityGroup = null;
                 currentFilters.organization = null;
-                
+
                 // Update UI
                 updateOrgTriggerLabel();
                 document.querySelectorAll(".stat-card").forEach(c => c.classList.remove("active"));
-                
+
                 // Re-apply
                 applyFilters();
             });
