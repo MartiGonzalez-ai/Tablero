@@ -161,15 +161,18 @@ geotab.addin.personas = function () {
             card.className = `user-card user-card--${statusType} ${isSelected ? 'user-card--selected' : ''}`;
             card.dataset.email = u.email;
             card.innerHTML = `
-                <div class="user-card__checkbox">
-                    <i data-lucide="check" width="14" height="14"></i>
-                </div>
-                <div class="user-card__badge-status">
-                    <i data-lucide="${statusType === 'normal' ? 'check-circle' : statusType === 'grave' ? 'alert-circle' : 'alert-triangle'}" width="14" height="14"></i>
-                    <span>${u.status.label}</span>
-                </div>
-
                 <div class="user-card__header">
+                    <div class="user-card__header-top">
+                        <div class="user-card__checkbox-wrapper">
+                            <div class="user-card__checkbox">
+                                <i data-lucide="check" width="14" height="14"></i>
+                            </div>
+                        </div>
+                        <div class="user-card__badge-status">
+                            <i data-lucide="${statusType === 'normal' ? 'check-circle' : statusType === 'grave' ? 'alert-circle' : 'alert-triangle'}" width="14" height="14"></i>
+                            <span>${u.status.label}</span>
+                        </div>
+                    </div>
                     <div class="user-card__info">
                         <div class="user-card__name">${u.name}</div>
                         <div class="user-card__email">${u.email}</div>
@@ -183,11 +186,11 @@ geotab.addin.personas = function () {
                 <div class="user-card__body">
                     <div class="user-card__data-group">
                         <div class="user-card__label">Organización</div>
-                        <div class="user-card__value">${u.organizationGroups.length > 0 ? u.organizationGroups.join(", ") : "—"}</div>
+                        <div class="user-card__value" title="${u.organizationGroups.join(", ")}">${u.organizationGroups.length > 0 ? u.organizationGroups.join(", ") : "—"}</div>
                     </div>
                     <div class="user-card__data-group">
                         <div class="user-card__label">Seguridad</div>
-                        <div class="user-card__value">${u.securityGroups.length > 0 ? u.securityGroups.join(", ") : "—"}</div>
+                        <div class="user-card__value" title="${u.securityGroups.join(", ")}">${u.securityGroups.length > 0 ? u.securityGroups.join(", ") : "—"}</div>
                     </div>
                     <div class="user-card__data-group">
                         <div class="user-card__label">Conductor</div>
