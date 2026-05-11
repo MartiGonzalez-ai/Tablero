@@ -508,7 +508,7 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
 
             // Populate organization filter
             if (orgOptionsList) {
-                const orgs = [...new Set(allUsers.flatMap(u => u.organizationGroups))].filter(o => o !== "—").sort();
+                const orgs = [...new Set(allUsers.flatMap(u => u.organizationGroups.split(", ")))].filter(o => o !== "—").sort();
                 renderOrgOptions(orgs);
             }
 
@@ -516,7 +516,9 @@ La lista de ${selectedEmails.size} correos es demasiado larga para Thunderbird y
             selectedEmails.clear();
             updateEmailButton();
 
-            applyFilters();
+            renderKPIs(allUsers);
+            renderTable(allUsers);
+            renderCharts(allUsers);
 
             lastUpdatedEl.textContent = `Actualizado: ${new Date().toLocaleTimeString()}`;
             btnRefresh.classList.remove("loading");
