@@ -83,6 +83,12 @@ geotab.addin.personas = function () {
         requestAnimationFrame(step);
     };
 
+    const getInitials = (name) => {
+        if (!name) return "?";
+        const parts = name.trim().split(" ");
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    };
 
     const getStatusType = (label) => {
         if (label.includes("Normal")) return "normal";
@@ -93,52 +99,15 @@ geotab.addin.personas = function () {
 
     // ─── Data Processing ─────────────────────────────────────────────────────
     const processData = (users, groups = []) => {
-        const groupLookup = {};
-        // More robust search for EMPRESAS group
-        const empresasGroup = groups.find(g => g.name && g.name.trim().toUpperCase() === "EMPRESAS");
-
-        // Map groups for easy upward traversal
+        const groupMap = {};
         groups.forEach(g => {
-            if (g.id) groupLookup[g.id] = g;
+            if (g.id && g.name) groupMap[g.id] = g.name;
         });
 
-        const getTopLevelOrg = (groupId) => {
-            if (!empresasGroup) return null;
-            let current = groupLookup[groupId];
-            let depth = 0;
-            while (current && depth < 10) {
-                const parentId = current.parent ? (current.parent.id || current.parent) : null;
-                if (parentId === empresasGroup.id) {
-                    return current.name;
-                }
-                if (!parentId || parentId === "GroupCompanyId") break;
-                current = groupLookup[parentId];
-                depth++;
-            }
-            return null;
-        };
-
-        const processed = users
+        return users
             .filter(u => u.lastAccessDate && !u.lastAccessDate.startsWith("0001"))
             .map(u => {
                 const days = getInactivityDays(u.lastAccessDate);
-                const userOrgsSet = new Set();
-
-                if (u.companyGroups) {
-                    u.companyGroups.forEach(g => {
-                        const id = g.id || g;
-                        const topOrg = getTopLevelOrg(id);
-                        if (topOrg) {
-                            userOrgsSet.add(topOrg);
-                        } else if (!empresasGroup) {
-                            // If EMPRESAS group not found, fallback to original group names
-                            const group = groupLookup[id];
-                            if (group && group.name) userOrgsSet.add(group.name);
-                        }
-                    });
-                }
-                const userOrgs = Array.from(userOrgsSet);
-
                 return {
                     id: u.id,
                     name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.name,
@@ -149,19 +118,16 @@ geotab.addin.personas = function () {
                     daysInactive: days,
                     status: getStatusInfo(days),
                     securityGroups: u.securityGroups ? u.securityGroups.map(g => translateSecurityGroup(g.name || g.id)) : [],
-                    organizationGroups: userOrgs,
+                    organizationGroups: u.companyGroups ? u.companyGroups.map(g => {
+                        const groupId = g.id || g;
+                        return groupMap[groupId] || g.name || groupId;
+                    }) : [],
                     phone: u.phone || u.phoneNumber || "—",
                     timeZone: u.timeZoneId || "—",
                     language: u.language || "—"
                 };
-            });
-
-        // Only filter by organization presence if we actually have an EMPRESAS group to filter by
-        return processed
-            .filter(u => !empresasGroup || u.organizationGroups.length > 0)
-            .sort((a, b) => b.daysInactive - a.daysInactive);
+            }).sort((a, b) => b.daysInactive - a.daysInactive);
     };
-
 
     // ─── Rendering ───────────────────────────────────────────────────────────
     const renderKPIs = (users) => {
@@ -194,6 +160,7 @@ geotab.addin.personas = function () {
         const fragment = document.createDocumentFragment();
         users.forEach(u => {
             const statusType = getStatusType(u.status.label);
+            const initials = getInitials(u.name);
             const phone = u.phone && u.phone !== "—" ? u.phone : "+52 00 0000 0000";
             const isSelected = selectedEmails.has(u.email);
 
@@ -210,6 +177,7 @@ geotab.addin.personas = function () {
                 </div>
 
                 <div class="user-card__header">
+                    <div class="user-card__avatar">${initials}</div>
                     <div class="user-card__info">
                         <div class="user-card__name">${u.name}</div>
                         <div class="user-card__email">${u.email}</div>
