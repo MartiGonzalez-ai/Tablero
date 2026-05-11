@@ -600,12 +600,19 @@ body {
 
 .user-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.12);
 }
 
 .user-card__header {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.user-card__header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
 }
 
 
@@ -614,10 +621,11 @@ body {
 }
 
 .user-card__name {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     font-weight: 800;
     color: var(--color-primary);
-    margin-bottom: 0.15rem;
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
 }
 
 .user-card__email {
@@ -640,20 +648,21 @@ body {
     color: #d53f8c; /* Pink color as in image */
 }
 
+.user-card__checkbox-wrapper {
+    display: flex;
+    align-items: center;
+}
+
 .user-card__checkbox {
-    position: absolute;
-    top: 1.25rem;
-    left: 1.25rem;
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
     border: 2px solid #cbd5e1;
     background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
-    z-index: 10;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .user-card--selected .user-card__checkbox {
@@ -671,19 +680,17 @@ body {
 }
 
 .user-card__badge-status {
-    position: absolute;
-    top: 1.25rem;
-    right: 1.25rem;
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    padding: 0.4rem 0.8rem;
+    padding: 0.35rem 0.75rem;
     border-radius: 99px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 800;
     text-transform: uppercase;
     color: #fff;
     background: var(--status-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .user-card__body {
@@ -709,10 +716,13 @@ body {
 }
 
 .user-card__value {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 700;
     color: var(--color-text-main);
     line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .user-card__driver-badge {
