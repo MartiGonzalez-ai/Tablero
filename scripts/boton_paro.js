@@ -1,3 +1,10 @@
+/* 
+ * ═══════════════════════════════════════════════════════════════
+ * PARO_MOTOR.JS — Fleet Control | Engine Shutdown Command Logic
+ * Geotab Add-In | geotab.addin.paro_motor
+ * ═══════════════════════════════════════════════════════════════
+ */
+
 "use strict";
 
 window.geotab      = window.geotab      || {};
