@@ -297,15 +297,12 @@ body {
 }
 
 .vehicle-card.moving {
-    opacity: 0.55;
-    cursor: not-allowed;
+    opacity: 0.8;
+    cursor: pointer;
 }
 
-.vehicle-card.moving:hover {
-    transform: none;
-    box-shadow: none;
-    background: var(--bg-card);
-    border-color: var(--border);
+.vehicle-drawer.open {
+    /* ensure open class works */
 }
 
 /* Cabecera de la tarjeta */
@@ -949,4 +946,340 @@ body {
 /* Utilidades */
 .hidden {
     display: none !important;
+}
+
+/* ═══════════ DRAWER DE DETALLE DE UNIDAD ═══════════ */
+.drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 8, 18, 0.7);
+    backdrop-filter: blur(8px);
+    z-index: 150;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.drawer-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.vehicle-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 460px;
+    background: linear-gradient(180deg, #101424 0%, #0b0e18 100%);
+    border-left: 1px solid var(--border);
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.65);
+    z-index: 160;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.vehicle-drawer.open {
+    transform: translateX(0);
+}
+
+.drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(16, 20, 36, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+.drawer-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.drawer-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--c-primary);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.drawer-veh-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-1);
+    line-height: 1.25;
+}
+
+.drawer-veh-plate {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-3);
+    letter-spacing: 0.04em;
+}
+
+.drawer-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.drawer-icon-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    cursor: pointer;
+    padding: 0.45rem;
+    border-radius: var(--r-md);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.drawer-icon-btn:hover {
+    color: var(--text-1);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.drawer-icon-btn:active {
+    transform: translateY(0);
+}
+
+.drawer-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Scrollbar para el drawer */
+.drawer-body::-webkit-scrollbar {
+    width: 6px;
+}
+.drawer-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+.drawer-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 99px;
+}
+.drawer-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.drawer-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.drawer-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    padding-bottom: 0.4rem;
+}
+
+.drawer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.drawer-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    transition: all 0.2s ease;
+}
+
+.drawer-item:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(255, 255, 255, 0.12);
+    transform: translateX(2px);
+}
+
+.drawer-item-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.drawer-item-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--r-md);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-2);
+    transition: all 0.2s;
+}
+
+.drawer-item:hover .drawer-item-icon {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-1);
+}
+
+.drawer-item-texts {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.drawer-item-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.drawer-item-id {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-3);
+    margin-top: 0.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.drawer-item-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.drawer-badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* Badges de estado */
+.drawer-badge.active-green {
+    background: rgba(16, 185, 129, 0.09);
+    color: var(--c-active);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+}
+
+.drawer-badge.active-red {
+    background: rgba(239, 68, 68, 0.09);
+    color: var(--c-stopped);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.15);
+}
+
+.drawer-badge.inactive {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-3);
+    border: 1px solid var(--border);
+}
+
+.drawer-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.drawer-badge.active-green .drawer-badge-dot {
+    background: var(--c-active);
+    box-shadow: 0 0 6px var(--c-active);
+}
+
+.drawer-badge.active-red .drawer-badge-dot {
+    background: var(--c-stopped);
+    box-shadow: 0 0 6px var(--c-stopped);
+}
+
+.drawer-badge.inactive .drawer-badge-dot {
+    background: var(--text-3);
+}
+
+.drawer-item-time {
+    font-size: 0.6rem;
+    color: var(--text-3);
+    white-space: nowrap;
+}
+
+/* Estados especiales del drawer */
+.drawer-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 1.5rem;
+    color: var(--text-3);
+    gap: 1rem;
+}
+
+.drawer-loading svg {
+    color: var(--c-primary);
+}
+
+.drawer-no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+    color: var(--text-3);
+    text-align: center;
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px dashed var(--border);
+    border-radius: var(--r-md);
+    gap: 0.75rem;
+}
+
+.drawer-no-data svg {
+    opacity: 0.3;
+}
+
+.drawer-no-data p {
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+.drawer-no-data span {
+    font-size: 0.7rem;
+    color: var(--text-3);
+    opacity: 0.8;
 }
