@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="Fleet Control – Panel de Inmovilización de Motor | Geotab Add-In">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fleet Control | Motor Stop Panel</title>
+    <link rel="stylesheet" href="styles/boton_paro.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+    <!-- ═══════════ HEADER ═══════════ -->
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="brand-icon">
+                <i data-lucide="square" width="20" height="20"></i>
+            </div>
+            <div class="brand-text">
+                <h1>Fleet Control</h1>
+                <p>Motor Stop Panel</p>
+            </div>
+        </div>
+
+        <div class="header-kpis">
+            <div class="kpi-badge activos">
+                <span class="kpi-dot"></span>
+                <span id="kpi-activos">0 activos</span>
+            </div>
+            <div class="kpi-badge inactivos">
+                <span class="kpi-dot"></span>
+                <span id="kpi-inactivos">0 inactivos</span>
+            </div>
+            <div class="kpi-badge detenidos">
+                <span class="kpi-dot"></span>
+                <span id="kpi-detenidos">0 detenidos</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════ CONTENIDO PRINCIPAL ═══════════ -->
+    <main class="main-wrap">
+
+        <!-- Subheader de sección -->
+        <div class="section-header">
+            <span class="section-title">Seleccionar Unidades</span>
+            <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+                <!-- Búsqueda -->
+                <div class="search-input-wrap">
+                    <i data-lucide="search" width="14" height="14"></i>
+                    <input type="text" id="search-input" class="search-input" placeholder="Buscar unidad...">
+                </div>
+                <button type="button" id="btn-select-all" class="btn-select-all">
+                    Seleccionar todas
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid de tarjetas de vehículos -->
+        <!-- Las tarjetas se generan dinámicamente por scripts/boton_paro.js -->
+        <div id="vehicles-grid" class="vehicles-grid">
+            <!-- Estado de carga inicial -->
+            <div class="empty-state" style="grid-column:1/-1">
+                <i data-lucide="loader" width="48" height="48" style="animation: spin 1s linear infinite;"></i>
+                <p style="margin-top:1rem;">Conectando con Geotab...</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ═══════════ BARRA DE ACCIÓN INFERIOR (STICKY) ═══════════ -->
+    <div class="action-bar">
+        <div class="action-info">
+            <div class="sel-count" id="sel-count"><span>0</span> seleccionadas</div>
+            <div class="sel-hint" id="sel-hint">Selecciona una o más unidades para continuar</div>
+        </div>
+        <button type="button" id="btn-stop-motor" class="btn-stop" disabled>
+            <i data-lucide="square" width="16" height="16"></i>
+            DETENER MOTOR
+        </button>
+    </div>
+
+    <!-- ═══════════ MODAL DE CONFIRMACIÓN Y PIN ═══════════ -->
+    <div id="pin-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-box">
+
+            <div class="modal-head">
+                <h3>
+                    <i data-lucide="shield-alert" width="18" height="18" style="color:var(--c-stopped)"></i>
+                    <span id="modal-title">Confirmar Paro de Motor</span>
+                </h3>
+                <button type="button" class="modal-close" aria-label="Cerrar modal">
+                    <i data-lucide="x" width="18" height="18"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Resumen de unidades seleccionadas -->
+                <div id="modal-summary" class="selected-summary">
+                    <!-- Se llena dinámicamente -->
+                </div>
+
+                <!-- Checkbox de aceptación obligatoria -->
+                <label class="compliance-row" for="compliance-checkbox">
+                    <input type="checkbox" id="compliance-checkbox">
+                    <span>Confirmo que la(s) unidad(es) se encuentran <strong>detenidas y en un lugar seguro</strong> antes de ejecutar esta acción.</span>
+                </label>
+
+                <!-- PIN de Supervisor -->
+                <div class="pin-section">
+                    <span class="pin-label">PIN de Autorización del Supervisor</span>
+                    <div class="pin-dots">
+                        <div class="pin-dot"></div>
+                        <div class="pin-dot"></div>
+                        <div class="pin-dot"></div>
+                        <div class="pin-dot"></div>
+                    </div>
+                    <span class="pin-hint">PIN de prueba: 1234</span>
+                </div>
+
+                <!-- Teclado numérico virtual (data-key, sin onclick inline) -->
+                <div class="keypad">
+                    <button type="button" class="key" data-key="1">1</button>
+                    <button type="button" class="key" data-key="2">2</button>
+                    <button type="button" class="key" data-key="3">3</button>
+                    <button type="button" class="key" data-key="4">4</button>
+                    <button type="button" class="key" data-key="5">5</button>
+                    <button type="button" class="key" data-key="6">6</button>
+                    <button type="button" class="key" data-key="7">7</button>
+                    <button type="button" class="key" data-key="8">8</button>
+                    <button type="button" class="key" data-key="9">9</button>
+                    <button type="button" class="key key-action" data-key="clear">⌫ Borrar</button>
+                    <button type="button" class="key" data-key="0">0</button>
+                    <button type="button" class="key key-action" data-key="cancel">Cancelar</button>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel-modal">Abortar</button>
+                <button type="button" class="btn-confirm-modal" id="btn-confirm-modal">
+                    Ejecutar Paro
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ═══════════ LOADING OVERLAY ═══════════ -->
+    <div id="loading-overlay" style="display:none; position:fixed; inset:0; background:rgba(5,8,18,0.88); backdrop-filter:blur(8px); flex-direction:column; justify-content:center; align-items:center; gap:1.25rem; z-index:300;">
+        <div class="spinner red"></div>
+        <div class="loading-text" id="loading-main">Transmitiendo Comando...</div>
+        <div class="loading-sub"  id="loading-sub">Comunicando con la red celular de Geotab</div>
+    </div>
+
+    <!-- ═══════════ TOAST CONTAINER ═══════════ -->
+    <div class="toast-wrap" id="toast-wrap"></div>
+
+    <!-- ═══════════ MODO BADGE OCULTO (para JS) ═══════════ -->
+    <div id="mode-badge" style="display:none;" data-mode="demo">
+        <span id="mode-text">demo</span>
+    </div>
+
+    <!-- Add-In Script -->
+    <script src="scripts/boton_paro.js"></script>
+    <script>
+        // Renderizar iconos Lucide tan pronto como cargue el DOM
+        document.addEventListener("DOMContentLoaded", function () {
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
+</body>
+
+</html>
