@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="Fleet Control – Estado de Entradas y Salidas de Telemetría | Geotab Add-In">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fleet Control | Telemetry I/O Dashboard</title>
+    
+    <!-- Hojas de estilo -->
+    <link rel="stylesheet" href="styles/vendor.css">
+    <link rel="stylesheet" href="styles/entradas.css">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+    <!-- ═══════════ HEADER ═══════════ -->
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="brand-icon">
+                <i data-lucide="toggle-left" width="20" height="20"></i>
+            </div>
+            <div class="brand-text">
+                <h1>Fleet Control</h1>
+                <p>Telemetry I/O Dashboard</p>
+            </div>
+        </div>
+
+        <!-- Controles y Estado de Conexión -->
+        <div class="header-controls">
+            <div class="connection-badge" id="connection-status-badge" data-mode="demo">
+                <span class="pulse-dot"></span>
+                <span id="connection-status-text">Cargando Estado...</span>
+            </div>
+            
+            <button id="btn-refresh" class="btn-refresh" title="Actualizar datos">
+                <i data-lucide="refresh-cw" width="14" height="14"></i>
+                <span>Actualizar</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ═══════════ MAIN CONTENIDO SPLIT LAYOUT ═══════════ -->
+    <main class="main-layout">
+
+        <!-- Panel Izquierdo: Buscador y Lista de Vehículos -->
+        <aside class="sidebar-panel">
+            <div class="sidebar-header">
+                <span class="sidebar-title">Seleccionar Unidad</span>
+                <div class="search-input-wrap">
+                    <i data-lucide="search" width="14" height="14"></i>
+                    <input type="text" id="search-input" class="search-input" placeholder="Buscar unidad...">
+                </div>
+            </div>
+            
+            <!-- Listado de unidades -->
+            <div id="vehicle-list-container" class="vehicle-list">
+                <!-- Se llena dinámicamente por scripts/entradas.js -->
+                <div class="loading-box">
+                    <div class="spinner"></div>
+                    <p style="font-size:0.75rem; margin-top:0.5rem; text-align:center;">Cargando unidades...</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Panel Derecho: Detalle Bento de Entradas y Salidas de la Unidad -->
+        <section class="details-panel" id="details-panel-container">
+            <!-- Estado inicial vacío, se reemplaza al seleccionar una unidad -->
+            <div class="empty-details-state">
+                <i data-lucide="info" width="56" height="56"></i>
+                <h3>Selecciona una unidad</h3>
+                <p>Elige un vehículo de la lista de la izquierda para ver su telemetría en tiempo real, incluyendo el estado de relevadores de motor, salidas de control, sensores digitales y líneas auxiliares.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-wrap" id="toast-wrap"></div>
+
+    <!-- Scripts y Lógica -->
+    <script src="scripts/vendor.js" defer></script>
+    <script src="scripts/entradas.js" defer></script>
+    <script>
+        // Renderizar iconos Lucide al iniciar
+        document.addEventListener("DOMContentLoaded", function () {
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
+</body>
+
+</html>
