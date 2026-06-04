@@ -210,26 +210,31 @@ geotab.addin.ioxOutput = function () {
             resultsLimit: 500,
             search: {
                 deviceSearch: { id: device.id },
+                diagnosticSearch: { id: "aztaiZ_rDlEy5Nsg6UTXc2A" },
                 fromDate: start.toISOString(),
                 toDate:   now.toISOString()
             }
         }, function (results) {
             statusLoading.style.display = "none";
 
-            if (!results || results.length === 0) {
+            var filteredResults = (results || []).filter(function (row) {
+                return row.diagnostic && row.diagnostic.id === "aztaiZ_rDlEy5Nsg6UTXc2A";
+            });
+
+            if (filteredResults.length === 0) {
                 statusEmpty.style.display = "flex";
                 return;
             }
 
             statusTableWrap.style.display = "flex";
-            statusRowCount.textContent = results.length + " registros";
+            statusRowCount.textContent = filteredResults.length + " registros";
 
             // Sort newest first
-            results.sort(function (a, b) {
+            filteredResults.sort(function (a, b) {
                 return new Date(b.dateTime) - new Date(a.dateTime);
             });
 
-            results.forEach(function (row) {
+            filteredResults.forEach(function (row) {
                 var tr = document.createElement("tr");
 
                 // data value
