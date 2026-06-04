@@ -201,17 +201,12 @@ geotab.addin.ioxOutput = function () {
         statusModal.classList.add("open");
         statusOverlay.classList.add("active");
 
-        // Build today’s date range (from midnight to now)
-        var now = new Date();
-        var start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-
+        // Get entire diagnostic history for this device
         api.call("Get", {
             typeName: "StatusData",
             search: {
                 deviceSearch: { id: device.id },
-                diagnosticSearch: { id: "aztaiZ_rDlEy5Nsg6UTXc2A" },
-                fromDate: start.toISOString(),
-                toDate: now.toISOString()
+                diagnosticSearch: { id: "aztaiZ_rDlEy5Nsg6UTXc2A" }
             }
         }, function (results) {
             statusLoading.style.display = "none";
