@@ -14,6 +14,48 @@
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Error Debugging Overlay -->
+    <script>
+        window.addEventListener('error', function(e) {
+            var errDiv = document.createElement('div');
+            errDiv.style.position = 'fixed';
+            errDiv.style.top = '10px';
+            errDiv.style.left = '10px';
+            errDiv.style.right = '10px';
+            errDiv.style.background = '#ef4444';
+            errDiv.style.color = 'white';
+            errDiv.style.padding = '15px';
+            errDiv.style.borderRadius = '8px';
+            errDiv.style.zIndex = '99999';
+            errDiv.style.fontFamily = 'monospace';
+            errDiv.style.fontSize = '12px';
+            errDiv.style.whiteSpace = 'pre-wrap';
+            errDiv.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+            errDiv.style.border = '1px solid rgba(255,255,255,0.2)';
+            errDiv.innerHTML = '<strong>[Error de Script JS]</strong><br>' + e.message + '<br><br>Archivo: ' + e.filename + '<br>Línea: ' + e.lineno + ':' + e.colno;
+            document.body.appendChild(errDiv);
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            var errDiv = document.createElement('div');
+            // Similar styling
+            errDiv.style.position = 'fixed';
+            errDiv.style.top = '10px';
+            errDiv.style.left = '10px';
+            errDiv.style.right = '10px';
+            errDiv.style.background = '#f59e0b';
+            errDiv.style.color = 'white';
+            errDiv.style.padding = '15px';
+            errDiv.style.borderRadius = '8px';
+            errDiv.style.zIndex = '99999';
+            errDiv.style.fontFamily = 'monospace';
+            errDiv.style.fontSize = '12px';
+            errDiv.style.whiteSpace = 'pre-wrap';
+            errDiv.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+            errDiv.innerHTML = '<strong>[Promesa Rechazada No Manejada]</strong><br>' + (e.reason ? (e.reason.message || e.reason) : 'Desconocida');
+            document.body.appendChild(errDiv);
+        });
+    </script>
 </head>
 <body>
 
