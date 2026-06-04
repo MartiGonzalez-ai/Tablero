@@ -365,17 +365,21 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════
-   DRAWER (COMMAND PANEL)
+   MODAL FLOTANTE (COMMAND PANEL)
    ═══════════════════════════════════════════════════ */
 .iox-drawer-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.5);
-    backdrop-filter: blur(4px);
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     z-index: 200;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.28s ease;
+    transition: opacity 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .iox-drawer-overlay.active {
@@ -384,23 +388,26 @@ body {
 }
 
 .iox-drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 360px;
+    position: relative;
+    width: 420px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 48px);
     z-index: 300;
     display: flex;
     flex-direction: column;
-    border-radius: var(--r-xl) 0 0 var(--r-xl);
-    border-right: none;
-    transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(.34,1.2,.64,1);
+    border-radius: var(--r-xl);
     overflow-y: auto;
+    transform: scale(0.88) translateY(16px);
+    opacity: 0;
+    transition:
+        transform 0.3s cubic-bezier(.34,1.4,.64,1),
+        opacity 0.25s ease;
+    /* Posición: centrada la da el overlay flex */
 }
 
 .iox-drawer.open {
-    transform: translateX(0);
+    transform: scale(1) translateY(0);
+    opacity: 1;
 }
 
 /* Drawer Header */
