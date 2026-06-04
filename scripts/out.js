@@ -244,9 +244,14 @@ geotab.addin.ioxOutput = function () {
                 }
 
                 // diagnostic name
-                var diagVal = (row.diagnostic && row.diagnostic.name)
-                    ? row.diagnostic.name
-                    : ((row.diagnostic && row.diagnostic.id) ? row.diagnostic.id : "—");
+                var diagVal = "—";
+                if (row.diagnostic) {
+                    if (row.diagnostic.id === "aztaiZ_rDlEy5Nsg6UTXc2A") {
+                        diagVal = "Paro de motor";
+                    } else {
+                        diagVal = row.diagnostic.name || row.diagnostic.id || "—";
+                    }
+                }
 
                 tr.innerHTML =
                     '<td class="td-data">'  + escapeHtml(String(dataVal)) + '</td>' +
