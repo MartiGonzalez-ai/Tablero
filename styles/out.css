@@ -1,757 +1,368 @@
-/* ═══════════════════════════════════════════════════
-   IOX OUTPUT — Design System & Styles
-   ═══════════════════════════════════════════════════ */
-
-:root {
-    --font: 'Inter', system-ui, sans-serif;
-
-    /* Colors */
-    --bg:          #0d1117;
-    --bg-surface:  #161b22;
-    --bg-card:     #1c2230;
-    --bg-card-h:   #212b3c;
-    --border:      rgba(255, 255, 255, 0.07);
-    --border-h:    rgba(255, 255, 255, 0.14);
-
-    --primary:     #3b82f6;
-    --primary-glow:rgba(59, 130, 246, 0.25);
-    --success:     #22c55e;
-    --success-glow:rgba(34, 197, 94, 0.25);
-    --danger:      #ef4444;
-    --danger-glow: rgba(239, 68, 68, 0.25);
-    --warning:     #f59e0b;
-    --muted:       rgba(255, 255, 255, 0.38);
-    --text:        rgba(255, 255, 255, 0.92);
-    --text-soft:   rgba(255, 255, 255, 0.55);
-
-    /* Radii */
-    --r-sm: 8px;
-    --r-md: 12px;
-    --r-lg: 16px;
-    --r-xl: 20px;
-
-    /* Shadows */
-    --shadow-card: 0 2px 12px rgba(0,0,0,0.35);
-    --shadow-glow-primary: 0 0 24px var(--primary-glow);
-}
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html { font-size: 14px; }
-
-body {
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-}
-
-#ioxOutput {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    padding-bottom: 48px;
-}
-
-/* ─── GLASS PANEL ─── */
-.glass-panel {
-    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-    border: 1px solid var(--border);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-}
-
-/* ═══════════════════════════════════════════════════
-   HEADER
-   ═══════════════════════════════════════════════════ */
-.iox-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 18px 28px;
-    border-radius: 0;
-    border-top: none;
-    border-left: none;
-    border-right: none;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: rgba(13, 17, 23, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-}
-
-.iox-brand {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.iox-brand-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: var(--r-md);
-    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    box-shadow: var(--shadow-glow-primary);
-    flex-shrink: 0;
-}
-
-.iox-brand h1 {
-    font-size: 1.2rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--text);
-}
-
-.iox-subtitle {
-    font-size: 0.78rem;
-    color: var(--text-soft);
-    margin-top: 2px;
-}
-
-.iox-header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.iox-count-badge {
-    background: rgba(59,130,246,0.12);
-    border: 1px solid rgba(59,130,246,0.3);
-    color: var(--primary);
-    padding: 4px 12px;
-    border-radius: 100px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-}
-
-.iox-status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--success);
-    box-shadow: 0 0 8px var(--success-glow);
-    animation: pulse-dot 2s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.6; transform: scale(0.85); }
-}
-
-/* ═══════════════════════════════════════════════════
-   SEARCH BAR
-   ═══════════════════════════════════════════════════ */
-.iox-search-wrap {
-    padding: 20px 28px 0;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.iox-search-box {
-    position: relative;
-    flex: 1;
-    max-width: 520px;
-}
-
-.iox-search-icon {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-soft);
-    pointer-events: none;
-}
-
-.iox-search-input {
-    width: 100%;
-    padding: 11px 40px 11px 42px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--r-lg);
-    color: var(--text);
-    font-family: var(--font);
-    font-size: 0.88rem;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.iox-search-input::placeholder { color: var(--text-soft); }
-
-.iox-search-input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px var(--primary-glow);
-}
-
-.iox-search-clear {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: var(--text-soft);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    display: none;
-    transition: color 0.15s;
-}
-
-.iox-search-clear:hover { color: var(--text); }
-.iox-search-clear.visible { display: flex; }
-
-.iox-filter-info {
-    font-size: 0.78rem;
-    color: var(--text-soft);
-    white-space: nowrap;
-}
-
-/* ═══════════════════════════════════════════════════
-   UNIT GRID
-   ═══════════════════════════════════════════════════ */
-.iox-main {
-    padding: 20px 28px;
-    flex: 1;
-}
-
-.iox-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 14px;
-}
-
-/* ─── Unit Card ─── */
-.unit-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--r-lg);
-    padding: 20px 18px 16px;
-    cursor: pointer;
-    transition:
-        transform 0.18s cubic-bezier(.34,1.56,.64,1),
-        border-color 0.2s,
-        box-shadow 0.2s,
-        background 0.2s;
-    position: relative;
-    overflow: hidden;
-    user-select: none;
-}
-
-.unit-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(135deg, var(--primary-glow) 0%, transparent 60%);
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.unit-card:hover {
-    transform: translateY(-3px) scale(1.01);
-    border-color: rgba(59,130,246,0.4);
-    box-shadow: 0 8px 28px rgba(0,0,0,0.4), var(--shadow-glow-primary);
-    background: var(--bg-card-h);
-}
-
-.unit-card:hover::before { opacity: 1; }
-
-.unit-card:active {
-    transform: translateY(-1px) scale(0.99);
-}
-
-.unit-card--selected {
-    border-color: var(--primary) !important;
-    box-shadow: 0 0 0 2px var(--primary-glow), 0 8px 28px rgba(0,0,0,0.4) !important;
-}
-
-/* Skeleton */
-.unit-card--skeleton {
-    cursor: default;
-    pointer-events: none;
-    height: 110px;
-    background: linear-gradient(
-        90deg,
-        var(--bg-card) 0%,
-        var(--bg-card-h) 50%,
-        var(--bg-card) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.4s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-    0%   { background-position: -200% 0; }
-    100% { background-position:  200% 0; }
-}
-
-/* Card internals */
-.unit-card-avatar {
-    width: 38px;
-    height: 38px;
-    border-radius: var(--r-sm);
-    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: #fff;
-    margin-bottom: 12px;
-    letter-spacing: 0.02em;
-    flex-shrink: 0;
-    text-transform: uppercase;
-}
-
-.unit-card-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text);
-    line-height: 1.3;
-    word-break: break-word;
-    margin-bottom: 6px;
-}
-
-.unit-card-id {
-    font-size: 0.72rem;
-    color: var(--text-soft);
-    font-family: 'Courier New', monospace;
-}
-
-.unit-card-arrow {
-    position: absolute;
-    right: 14px;
-    bottom: 14px;
-    color: var(--primary);
-    opacity: 0;
-    transform: translateX(-4px);
-    transition: opacity 0.2s, transform 0.2s;
-}
-
-.unit-card:hover .unit-card-arrow {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-/* ─── Empty state ─── */
-.iox-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 80px 20px;
-    color: var(--text-soft);
-    text-align: center;
-}
-
-.iox-empty p {
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--text-soft);
-}
-
-.iox-empty span {
-    font-size: 0.82rem;
-    color: var(--muted);
-}
-
-/* ═══════════════════════════════════════════════════
-   MODAL FLOTANTE (COMMAND PANEL)
-   ═══════════════════════════════════════════════════ */
-.iox-drawer-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    z-index: 200;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.iox-drawer-overlay.active {
-    opacity: 1;
-    pointer-events: all;
-}
-
-.iox-drawer {
-    position: relative;
-    width: 420px;
-    max-width: calc(100vw - 32px);
-    max-height: calc(100vh - 48px);
-    z-index: 300;
-    display: flex;
-    flex-direction: column;
-    border-radius: var(--r-xl);
-    overflow-y: auto;
-    transform: scale(0.88) translateY(16px);
-    opacity: 0;
-    transition:
-        transform 0.3s cubic-bezier(.34,1.4,.64,1),
-        opacity 0.25s ease;
-    /* Posición: centrada la da el overlay flex */
-}
-
-.iox-drawer.open {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-}
-
-/* Drawer Header */
-.drawer-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 24px 20px 20px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-}
-
-.drawer-unit-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.drawer-unit-avatar {
-    width: 46px;
-    height: 46px;
-    border-radius: var(--r-md);
-    background: linear-gradient(135deg, #1d4ed8, #6366f1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #fff;
-    text-transform: uppercase;
-    flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(99,102,241,0.35);
-}
-
-.drawer-unit-name {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text);
-    max-width: 200px;
-    word-break: break-word;
-}
-
-.drawer-unit-id {
-    font-size: 0.7rem;
-    color: var(--text-soft);
-    font-family: 'Courier New', monospace;
-    margin-top: 2px;
-}
-
-.drawer-close {
-    width: 34px;
-    height: 34px;
-    border-radius: var(--r-sm);
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-soft);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.15s, color 0.15s;
-    flex-shrink: 0;
-}
-
-.drawer-close:hover {
-    background: rgba(255,255,255,0.08);
-    color: var(--text);
-}
-
-/* Drawer Body */
-.drawer-body {
-    padding: 24px 20px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.drawer-label {
-    font-size: 0.82rem;
-    font-weight: 500;
-    color: var(--text-soft);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-
-/* ON / OFF Toggle Buttons */
-.relay-toggle {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-.relay-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 20px 12px;
-    border-radius: var(--r-lg);
-    border: 2px solid var(--border);
-    background: var(--bg-card);
-    color: var(--text-soft);
-    cursor: pointer;
-    transition:
-        border-color 0.2s,
-        background 0.2s,
-        color 0.2s,
-        box-shadow 0.2s,
-        transform 0.15s;
-    font-family: var(--font);
-    user-select: none;
-}
-
-.relay-btn:hover {
-    transform: translateY(-2px);
-}
-
-.relay-btn:active {
-    transform: translateY(0);
-}
-
-.relay-btn-icon {
-    font-size: 1.6rem;
-    line-height: 1;
-}
-
-.relay-btn-label {
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-}
-
-.relay-btn-sub {
-    font-size: 0.7rem;
-    opacity: 0.7;
-}
-
-/* ON selected */
-.relay-btn--on.selected {
-    border-color: var(--success);
-    background: rgba(34,197,94,0.1);
-    color: var(--success);
-    box-shadow: 0 0 20px var(--success-glow);
-}
-
-/* OFF selected */
-.relay-btn--off.selected {
-    border-color: var(--danger);
-    background: rgba(239,68,68,0.1);
-    color: var(--danger);
-    box-shadow: 0 0 20px var(--danger-glow);
-}
-
-/* ON hover */
-.relay-btn--on:hover:not(.selected) {
-    border-color: rgba(34,197,94,0.4);
-    color: var(--success);
-}
-
-/* OFF hover */
-.relay-btn--off:hover:not(.selected) {
-    border-color: rgba(239,68,68,0.4);
-    color: var(--danger);
-}
-
-/* Selected state row */
-.selected-state-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.82rem;
-}
-
-.selected-state-label {
-    color: var(--text-soft);
-}
-
-.selected-state-badge {
-    padding: 3px 10px;
-    border-radius: 100px;
-    font-weight: 700;
-    font-size: 0.78rem;
-    letter-spacing: 0.05em;
-}
-
-.selected-state-badge.on {
-    background: rgba(34,197,94,0.15);
-    color: var(--success);
-    border: 1px solid rgba(34,197,94,0.3);
-}
-
-.selected-state-badge.off {
-    background: rgba(239,68,68,0.15);
-    color: var(--danger);
-    border: 1px solid rgba(239,68,68,0.3);
-}
-
-/* Send Button */
-.drawer-send-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 14px 20px;
-    border-radius: var(--r-lg);
-    border: none;
-    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-    color: #fff;
-    font-family: var(--font);
-    font-size: 0.92rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
-    box-shadow: 0 4px 16px rgba(59,130,246,0.35);
-    letter-spacing: 0.02em;
-}
-
-.drawer-send-btn:not(:disabled):hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(59,130,246,0.5);
-}
-
-.drawer-send-btn:not(:disabled):active {
-    transform: translateY(0);
-}
-
-.drawer-send-btn:disabled {
-    opacity: 0.38;
-    cursor: not-allowed;
-    box-shadow: none;
-}
-
-/* Sending spinner */
-.drawer-sending {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    font-size: 0.85rem;
-    color: var(--text-soft);
-    padding: 4px 0;
-}
-
-.spinner {
-    width: 18px;
-    height: 18px;
-    border: 2px solid var(--border);
-    border-top-color: var(--primary);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* History */
-.drawer-history-wrap {
-    border-top: 1px solid var(--border);
-    padding-top: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.drawer-history-title {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-soft);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.drawer-history {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 240px;
-    overflow-y: auto;
-}
-
-.history-item {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--r-sm);
-    padding: 10px 12px;
-    font-size: 0.78rem;
-    color: var(--text-soft);
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    animation: slide-in 0.25s ease;
-}
-
-@keyframes slide-in {
-    from { opacity: 0; transform: translateY(-6px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-.history-item-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.history-item-state {
-    font-weight: 700;
-    font-size: 0.7rem;
-    padding: 2px 8px;
-    border-radius: 100px;
-}
-
-.history-item-state.on  { background: rgba(34,197,94,0.12);  color: var(--success); }
-.history-item-state.off { background: rgba(239,68,68,0.12);  color: var(--danger);  }
-
-.history-item-time { font-size: 0.7rem; color: var(--muted); }
-
-.history-item-delivered {
-    font-size: 0.68rem;
-    color: var(--success);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-/* Error */
-.drawer-error {
-    padding: 0 20px 16px;
-    font-size: 0.8rem;
-    color: var(--danger);
-    min-height: 20px;
-}
-
-/* ═══════════════════════════════════════════════════
-   RESPONSIVE
-   ═══════════════════════════════════════════════════ */
-@media (max-width: 600px) {
-    .iox-header { padding: 14px 16px; }
-    .iox-search-wrap { padding: 14px 16px 0; }
-    .iox-main { padding: 14px 16px; }
-    .iox-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-    .iox-drawer { width: 100%; border-radius: var(--r-xl) var(--r-xl) 0 0; top: auto; height: 90vh; }
-}
+/**
+ * Geotab Add-in for IOX Output control.
+ * UI: unit card grid with search + side drawer command panel.
+ */
+"use strict";
+
+geotab.addin.ioxOutput = function () {
+    var api,
+        ioxOutputDiv,
+        grid,
+        emptyEl,
+        searchInput,
+        searchClear,
+        filterInfo,
+        badgeCount,
+        drawer,
+        drawerOverlay,
+        drawerClose,
+        drawerUnitName,
+        drawerUnitId,
+        drawerAvatar,
+        relayBtnOn,
+        relayBtnOff,
+        selectedStateRow,
+        selectedStateBadge,
+        sendBtn,
+        sendingEl,
+        historyEl,
+        errorEl;
+
+    // ─── State ───────────────────────────────────────────
+    var allDevices      = [];   // full device list from API
+    var filteredDevices = [];   // currently shown after search
+    var selectedDevice  = null; // { id, name }
+    var selectedState   = null; // 'On' | 'Off' | null
+
+    // ─── Helpers ─────────────────────────────────────────
+    function showError(msg) {
+        errorEl.textContent = typeof msg === "string" ? msg : JSON.stringify(msg);
+    }
+
+    function clearError() {
+        errorEl.textContent = "";
+    }
+
+    function getInitials(name) {
+        if (!name) return "?";
+        var parts = name.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
+    function sortDevices(a, b) {
+        var na = a.name.toLowerCase();
+        var nb = b.name.toLowerCase();
+        return na < nb ? -1 : na > nb ? 1 : 0;
+    }
+
+    // ─── Render grid ─────────────────────────────────────
+    function renderGrid(devices) {
+        // Remove skeleton cards
+        grid.innerHTML = "";
+        filteredDevices = devices;
+
+        if (devices.length === 0) {
+            emptyEl.style.display = "flex";
+            filterInfo.textContent = "0 resultados";
+            return;
+        }
+
+        emptyEl.style.display = "none";
+        filterInfo.textContent = devices.length + " de " + allDevices.length + " unidades";
+
+        devices.forEach(function (device) {
+            var card = document.createElement("div");
+            card.className = "unit-card";
+            card.dataset.deviceId = device.id;
+
+            // Re-select highlight if this card is already selected
+            if (selectedDevice && selectedDevice.id === device.id) {
+                card.classList.add("unit-card--selected");
+            }
+
+            var initials = getInitials(device.name);
+
+            card.innerHTML =
+                '<div class="unit-card-avatar">' + initials + '</div>' +
+                '<div class="unit-card-name">' + escapeHtml(device.name) + '</div>' +
+                '<div class="unit-card-id">' + device.id + '</div>' +
+                '<svg class="unit-card-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" ' +
+                'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" ' +
+                'stroke-linecap="round" stroke-linejoin="round">' +
+                '<polyline points="9 18 15 12 9 6"/></svg>';
+
+            card.addEventListener("click", function () {
+                openDrawer(device);
+            });
+
+            grid.appendChild(card);
+        });
+    }
+
+    // ─── Filter ───────────────────────────────────────────
+    function applyFilter(query) {
+        var q = (query || "").trim().toLowerCase();
+        if (!q) {
+            renderGrid(allDevices);
+            return;
+        }
+        var filtered = allDevices.filter(function (d) {
+            return d.name.toLowerCase().indexOf(q) !== -1;
+        });
+        renderGrid(filtered);
+    }
+
+    // ─── Drawer ───────────────────────────────────────────
+    function openDrawer(device) {
+        selectedDevice = device;
+        selectedState  = null;
+
+        clearError();
+
+        // Update drawer info
+        drawerUnitName.textContent = device.name;
+        drawerUnitId.textContent   = "ID: " + device.id;
+        drawerAvatar.textContent   = getInitials(device.name);
+
+        // Reset state buttons
+        relayBtnOn.classList.remove("selected");
+        relayBtnOff.classList.remove("selected");
+        selectedStateRow.style.display = "none";
+        selectedStateBadge.textContent = "—";
+        selectedStateBadge.className   = "selected-state-badge";
+        sendBtn.disabled               = true;
+
+        // Reset sending area
+        sendingEl.style.display  = "none";
+        sendBtn.style.display    = "flex";
+
+        // Highlight selected card
+        document.querySelectorAll(".unit-card--selected").forEach(function (el) {
+            el.classList.remove("unit-card--selected");
+        });
+        var activeCard = grid.querySelector('[data-device-id="' + device.id + '"]');
+        if (activeCard) activeCard.classList.add("unit-card--selected");
+
+        // Open
+        drawer.classList.add("open");
+        drawerOverlay.classList.add("active");
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove("open");
+        drawerOverlay.classList.remove("active");
+        document.querySelectorAll(".unit-card--selected").forEach(function (el) {
+            el.classList.remove("unit-card--selected");
+        });
+        selectedDevice = null;
+        selectedState  = null;
+    }
+
+    // ─── State selection ─────────────────────────────────
+    function selectState(state) {
+        selectedState = state;
+
+        relayBtnOn.classList.toggle("selected",  state === "On");
+        relayBtnOff.classList.toggle("selected", state === "Off");
+
+        selectedStateRow.style.display    = "flex";
+        selectedStateBadge.textContent    = state === "On" ? "ACTIVAR (ON)" : "DESACTIVAR (OFF)";
+        selectedStateBadge.className      = "selected-state-badge " + (state === "On" ? "on" : "off");
+
+        sendBtn.disabled = false;
+    }
+
+    // ─── Send command ────────────────────────────────────
+    function sendCommand() {
+        if (!selectedDevice || !selectedState) return;
+
+        clearError();
+        sendBtn.style.display   = "none";
+        sendingEl.style.display = "flex";
+
+        api.call("Add", {
+            typeName: "TextMessage",
+            entity: {
+                device: { id: selectedDevice.id },
+                messageContent: {
+                    isRelayOn: selectedState === "On",
+                    contentType: "IoxOutput"
+                },
+                isDirectionToVehicle: true
+            }
+        }, function (messageId) {
+            sendingEl.style.display = "none";
+            sendBtn.style.display   = "flex";
+            addHistoryItem(messageId, selectedState, selectedDevice.name);
+        }, function (err) {
+            sendingEl.style.display = "none";
+            sendBtn.style.display   = "flex";
+            showError(err);
+        });
+    }
+
+    // ─── History item ─────────────────────────────────────
+    function addHistoryItem(messageId, state, unitName) {
+        var item = document.createElement("div");
+        item.className = "history-item";
+
+        var now = new Date();
+        var timeStr = now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        var stateClass = state === "On" ? "on" : "off";
+        var stateLabel = state === "On" ? "ON" : "OFF";
+
+        item.innerHTML =
+            '<div class="history-item-head">' +
+                '<span class="history-item-state ' + stateClass + '">' + stateLabel + '</span>' +
+                '<span class="history-item-time">' + timeStr + '</span>' +
+            '</div>' +
+            '<div>' + escapeHtml(unitName) + '</div>' +
+            '<div class="history-item-delivered" id="hist-' + messageId + '"></div>';
+
+        // Prepend so newest is on top
+        historyEl.insertBefore(item, historyEl.firstChild);
+
+        // Poll for delivery
+        pollDelivery(messageId, "hist-" + messageId);
+    }
+
+    function pollDelivery(messageId, elementId) {
+        setTimeout(function () {
+            api.call("Get", {
+                typeName: "TextMessage",
+                search: { id: messageId }
+            }, function (result) {
+                if (result && result[0] && result[0].delivered) {
+                    var el = document.getElementById(elementId);
+                    if (el) {
+                        var d = new Date(result[0].delivered);
+                        el.innerHTML = "✓ Entregado: " + d.toLocaleTimeString("es-MX");
+                    }
+                } else {
+                    pollDelivery(messageId, elementId);
+                }
+            }, function () { /* ignore polling errors */ });
+        }, 2000);
+    }
+
+    // ─── Escape HTML ─────────────────────────────────────
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    // ─── Public API ──────────────────────────────────────
+    return {
+        /**
+         * initialize() — called once when the Add-In first loads.
+         */
+        initialize: function (geotabApi, state, initializeCallback) {
+            api = geotabApi;
+
+            // DOM references
+            ioxOutputDiv      = document.getElementById("ioxOutput");
+            grid              = document.getElementById("iox-grid");
+            emptyEl           = document.getElementById("iox-empty");
+            searchInput       = document.getElementById("iox-search");
+            searchClear       = document.getElementById("iox-search-clear");
+            filterInfo        = document.getElementById("filter-info");
+            badgeCount        = document.getElementById("badge-count");
+            drawer            = document.getElementById("iox-drawer");
+            drawerOverlay     = document.getElementById("iox-overlay");
+            drawerClose       = document.getElementById("drawer-close");
+            drawerUnitName    = document.getElementById("drawer-unit-name");
+            drawerUnitId      = document.getElementById("drawer-unit-id");
+            drawerAvatar      = document.getElementById("drawer-avatar");
+            relayBtnOn        = document.getElementById("btn-on");
+            relayBtnOff       = document.getElementById("btn-off");
+            selectedStateRow  = document.getElementById("selected-state-row");
+            selectedStateBadge= document.getElementById("selected-state-badge");
+            sendBtn           = document.getElementById("drawer-send");
+            sendingEl         = document.getElementById("drawer-sending");
+            historyEl         = document.getElementById("drawer-history");
+            errorEl           = document.getElementById("ioxoutput-error");
+
+            // ── Events ──
+            // Search live filter
+            searchInput.addEventListener("input", function () {
+                var val = this.value;
+                searchClear.classList.toggle("visible", val.length > 0);
+                applyFilter(val);
+            });
+
+            searchClear.addEventListener("click", function () {
+                searchInput.value = "";
+                searchClear.classList.remove("visible");
+                searchInput.focus();
+                applyFilter("");
+            });
+
+            // Close modal when clicking the overlay background
+            drawerClose.addEventListener("click", closeDrawer);
+            drawerOverlay.addEventListener("click", closeDrawer);
+            // Prevent clicks inside the modal from bubbling to overlay
+            document.getElementById("iox-drawer").addEventListener("click", function (e) {
+                e.stopPropagation();
+            });
+
+            // State selection
+            relayBtnOn.addEventListener("click", function () { selectState("On"); });
+            relayBtnOff.addEventListener("click", function () { selectState("Off"); });
+
+            // Send
+            sendBtn.addEventListener("click", sendCommand);
+
+            initializeCallback();
+        },
+
+        /**
+         * focus() — called every time the user navigates to the Add-In.
+         */
+        focus: function (geotabApi, state) {
+            api = geotabApi;
+
+            // Show skeleton while loading
+            grid.innerHTML =
+                '<div class="unit-card unit-card--skeleton"></div>'.repeat(8);
+            emptyEl.style.display = "none";
+
+            api.call("Get", {
+                typeName: "Device",
+                resultsLimit: 1000,
+                search: {
+                    fromDate: (new Date()).toISOString(),
+                    groups: state.getGroupFilter()
+                }
+            }, function (devices) {
+                allDevices = (devices || []).sort(sortDevices);
+
+                badgeCount.textContent = allDevices.length + " unidades";
+
+                if (allDevices.length === 0) {
+                    grid.innerHTML = "";
+                    emptyEl.style.display = "flex";
+                    document.getElementById("iox-empty-hint").textContent =
+                        "No se encontraron dispositivos en el grupo seleccionado.";
+                    return;
+                }
+
+                renderGrid(allDevices);
+                ioxOutputDiv.style.display = "";
+            }, showError);
+        },
+
+        /**
+         * blur() — called when the user navigates away.
+         */
+        blur: function () {
+            closeDrawer();
+            ioxOutputDiv.style.display = "none";
+            allDevices      = [];
+            filteredDevices = [];
+        }
+    };
+};
