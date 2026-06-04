@@ -209,6 +209,7 @@ geotab.addin.ioxOutput = function () {
             typeName: "StatusData",
             search: {
                 deviceSearch: { id: device.id },
+                diagnosticSearch: { id: "aztaiZ_rDlEy5Nsg6UTXc2A" },
                 fromDate: start.toISOString(),
                 toDate: now.toISOString()
             }
