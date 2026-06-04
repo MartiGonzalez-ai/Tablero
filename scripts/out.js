@@ -210,31 +210,26 @@ geotab.addin.ioxOutput = function () {
             resultsLimit: 500,
             search: {
                 deviceSearch: { id: device.id },
-                diagnosticSearch: { id: "aztaiZ_rDlEy5Nsg6UTXc2A" },
                 fromDate: start.toISOString(),
                 toDate:   now.toISOString()
             }
         }, function (results) {
             statusLoading.style.display = "none";
 
-            var filteredResults = (results || []).filter(function (row) {
-                return row.diagnostic && row.diagnostic.id === "aztaiZ_rDlEy5Nsg6UTXc2A";
-            });
-
-            if (filteredResults.length === 0) {
+            if (!results || results.length === 0) {
                 statusEmpty.style.display = "flex";
                 return;
             }
 
             statusTableWrap.style.display = "flex";
-            statusRowCount.textContent = filteredResults.length + " registros";
+            statusRowCount.textContent = results.length + " registros";
 
             // Sort newest first
-            filteredResults.sort(function (a, b) {
+            results.sort(function (a, b) {
                 return new Date(b.dateTime) - new Date(a.dateTime);
             });
 
-            filteredResults.forEach(function (row) {
+            results.forEach(function (row) {
                 var tr = document.createElement("tr");
 
                 // data value
@@ -249,14 +244,9 @@ geotab.addin.ioxOutput = function () {
                 }
 
                 // diagnostic name
-                var diagVal = "—";
-                if (row.diagnostic) {
-                    if (row.diagnostic.id === "aztaiZ_rDlEy5Nsg6UTXc2A") {
-                        diagVal = "Paro de motor";
-                    } else {
-                        diagVal = row.diagnostic.name || row.diagnostic.id || "—";
-                    }
-                }
+                var diagVal = (row.diagnostic && row.diagnostic.name)
+                    ? row.diagnostic.name
+                    : ((row.diagnostic && row.diagnostic.id) ? row.diagnostic.id : "—");
 
                 tr.innerHTML =
                     '<td class="td-data">'  + escapeHtml(String(dataVal)) + '</td>' +
