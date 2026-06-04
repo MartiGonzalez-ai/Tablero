@@ -26,7 +26,21 @@ geotab.addin.ioxOutput = function () {
         sendBtn,
         sendingEl,
         historyEl,
-        errorEl;
+        errorEl,
+        // StatusData modal
+        statusOverlay,
+        statusModal,
+        statusClose,
+        statusRelayBtn,
+        statusAvatar,
+        statusUnitName,
+        statusUnitId,
+        statusLoading,
+        statusEmpty,
+        statusTableWrap,
+        statusTbody,
+        statusRowCount,
+        statusError;
 
     // ─── State ───────────────────────────────────────────
     var allDevices      = [];   // full device list from API
@@ -93,7 +107,7 @@ geotab.addin.ioxOutput = function () {
                 '<polyline points="9 18 15 12 9 6"/></svg>';
 
             card.addEventListener("click", function () {
-                openDrawer(device);
+                openStatusModal(device);
             });
 
             grid.appendChild(card);
@@ -157,6 +171,104 @@ geotab.addin.ioxOutput = function () {
         });
         selectedDevice = null;
         selectedState  = null;
+    }
+
+    // ─── StatusData Modal ─────────────────────────────────────────
+    function openStatusModal(device) {
+        selectedDevice = device;
+
+        // Fill header
+        statusUnitName.textContent = device.name;
+        statusUnitId.textContent   = "ID: " + device.id;
+        statusAvatar.textContent   = getInitials(device.name);
+        statusError.textContent    = "";
+
+        // Reset table
+        statusLoading.style.display   = "flex";
+        statusEmpty.style.display     = "none";
+        statusTableWrap.style.display = "none";
+        statusTbody.innerHTML         = "";
+        statusRowCount.textContent    = "";
+
+        // Highlight card
+        document.querySelectorAll(".unit-card--selected").forEach(function (el) {
+            el.classList.remove("unit-card--selected");
+        });
+        var activeCard = grid.querySelector('[data-device-id="' + device.id + '"]');
+        if (activeCard) activeCard.classList.add("unit-card--selected");
+
+        // Open modal
+        statusModal.classList.add("open");
+        statusOverlay.classList.add("active");
+
+        // Build today’s date range (from midnight to now)
+        var now   = new Date();
+        var start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+
+        api.call("Get", {
+            typeName: "StatusData",
+            resultsLimit: 500,
+            search: {
+                deviceSearch: { id: device.id },
+                fromDate: start.toISOString(),
+                toDate:   now.toISOString()
+            }
+        }, function (results) {
+            statusLoading.style.display = "none";
+
+            if (!results || results.length === 0) {
+                statusEmpty.style.display = "flex";
+                return;
+            }
+
+            statusTableWrap.style.display = "flex";
+            statusRowCount.textContent = results.length + " registros";
+
+            // Sort newest first
+            results.sort(function (a, b) {
+                return new Date(b.dateTime) - new Date(a.dateTime);
+            });
+
+            results.forEach(function (row) {
+                var tr = document.createElement("tr");
+
+                // data value
+                var dataVal = row.data !== undefined && row.data !== null ? row.data : "—";
+
+                // datetime
+                var dtVal = "—";
+                if (row.dateTime) {
+                    var d = new Date(row.dateTime);
+                    dtVal = d.toLocaleDateString("es-MX") + " " +
+                            d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                }
+
+                // diagnostic name
+                var diagVal = (row.diagnostic && row.diagnostic.name)
+                    ? row.diagnostic.name
+                    : ((row.diagnostic && row.diagnostic.id) ? row.diagnostic.id : "—");
+
+                tr.innerHTML =
+                    '<td class="td-data">'  + escapeHtml(String(dataVal)) + '</td>' +
+                    '<td class="td-dt">'    + escapeHtml(dtVal)           + '</td>' +
+                    '<td class="td-diag">'  + escapeHtml(String(diagVal)) + '</td>';
+
+                statusTbody.appendChild(tr);
+            });
+
+        }, function (err) {
+            statusLoading.style.display = "none";
+            statusError.textContent     = typeof err === "string" ? err : JSON.stringify(err);
+        });
+    }
+
+    function closeStatusModal() {
+        statusModal.classList.remove("open");
+        statusOverlay.classList.remove("active");
+        document.querySelectorAll(".unit-card--selected").forEach(function (el) {
+            el.classList.remove("unit-card--selected");
+        });
+        selectedDevice = null;
     }
 
     // ─── State selection ─────────────────────────────────
@@ -285,6 +397,20 @@ geotab.addin.ioxOutput = function () {
             sendingEl         = document.getElementById("drawer-sending");
             historyEl         = document.getElementById("drawer-history");
             errorEl           = document.getElementById("ioxoutput-error");
+            // StatusData modal
+            statusOverlay    = document.getElementById("status-overlay");
+            statusModal      = document.getElementById("status-modal");
+            statusClose      = document.getElementById("status-close");
+            statusRelayBtn   = document.getElementById("status-relay-btn");
+            statusAvatar     = document.getElementById("status-avatar");
+            statusUnitName   = document.getElementById("status-unit-name");
+            statusUnitId     = document.getElementById("status-unit-id");
+            statusLoading    = document.getElementById("status-loading");
+            statusEmpty      = document.getElementById("status-empty");
+            statusTableWrap  = document.getElementById("status-table-wrap");
+            statusTbody      = document.getElementById("status-tbody");
+            statusRowCount   = document.getElementById("status-row-count");
+            statusError      = document.getElementById("status-error");
 
             // ── Events ──
             // Search live filter
@@ -301,9 +427,26 @@ geotab.addin.ioxOutput = function () {
                 applyFilter("");
             });
 
-            // Close drawer
+            // Close modal when clicking the overlay background
             drawerClose.addEventListener("click", closeDrawer);
             drawerOverlay.addEventListener("click", closeDrawer);
+            // Prevent clicks inside the modal from bubbling to overlay
+            document.getElementById("iox-drawer").addEventListener("click", function (e) {
+                e.stopPropagation();
+            });
+
+            // StatusData modal events
+            statusClose.addEventListener("click", closeStatusModal);
+            statusOverlay.addEventListener("click", closeStatusModal);
+            document.getElementById("status-modal").addEventListener("click", function (e) {
+                e.stopPropagation();
+            });
+            statusRelayBtn.addEventListener("click", function () {
+                // Keep selectedDevice, close status modal then open relay drawer
+                var dev = selectedDevice;
+                closeStatusModal();
+                openDrawer(dev);
+            });
 
             // State selection
             relayBtnOn.addEventListener("click", function () { selectState("On"); });
