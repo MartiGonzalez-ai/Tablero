@@ -1,7 +1,7 @@
 /* 
  * ═══════════════════════════════════════════════════════════════
- * OUT.JS — Fleet Control | IOX Output Command Sender
- * Geotab Add-In | geotab.addin.out
+ * BOTON_PARO.JS — Fleet Control | Motor Stop Panel
+ * Geotab Add-In | geotab.addin.boton_paro
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -10,35 +10,86 @@
 window.geotab = window.geotab || {};
 geotab.addin = geotab.addin || {};
 
-geotab.addin.out = (function () {
+geotab.addin.boton_paro = (function () {
 
     // ── Estado global ────────────────────────────────────────────
     let api = null;
     let isDemoMode = false;
     let isInitialized = false;
 
-    let allVehicles = [];      // [{ id, name, plate, type, speed, isMoving, ignition }]
-    let activeVehicleId = null;
+    let allVehicles = [];   // [{ id, name, plate, type, speed, isMoving, outputState }]
+    let selectedIds = new Set();
     let telemetryTimer = null;
+    let activeVehicleId = null;
 
-    // Parámetros del Comando Activo
-    const commandState = {
-        moutput: 1,
-        state: 1, // 1 = ON, 0 = OFF
-        duration: 0 // 0 = Permanente
-    };
+    const SECURITY_PIN = "1234";
+    let pinBuffer = "";
+    let pendingAction = "";   // "stop" | "restore"
 
-    // ── Datos simulados para Demo ────────────────────────────────
-    const MOCK_VEHICLES = [
-        { id: "b101", name: "Volvo 01", plate: "YUC-001", type: "Camión", speed: 0, isMoving: false, ignition: false },
-        { id: "b102", name: "Kenworth 02", plate: "YUC-022", type: "Tractocamión", speed: 62, isMoving: true, ignition: true },
-        { id: "b103", name: "Ford 03", plate: "YUC-183", type: "Pickup", speed: 0, isMoving: false, ignition: false },
-        { id: "b104", name: "Isuzu 04", plate: "YUC-214", type: "Caja seca", speed: 0, isMoving: false, ignition: true },
-        { id: "b105", name: "Mercedes 05", plate: "YUC-300", type: "Camión", speed: 0, isMoving: false, ignition: false },
-        { id: "b106", name: "RAM 06", plate: "YUC-411", type: "Pickup", speed: 0, isMoving: false, ignition: false },
+    const IO_DIAGNOSTICS = [
+        "DiagnosticDeviceRelayStateId",
+        "DiagnosticDigitalOutput1StateId",
+        "DiagnosticDigitalOutput2StateId",
+        "DiagnosticDigitalOutput3StateId",
+        "DiagnosticDigitalOutput4StateId",
+        "DiagnosticDigitalInput1StateId",
+        "DiagnosticDigitalInput2StateId",
+        "DiagnosticDigitalInput3StateId",
+        "DiagnosticDigitalInput4StateId",
+        "DiagnosticDigitalInput5StateId",
+        "DiagnosticDigitalInput6StateId",
+        "DiagnosticDigitalInput7StateId",
+        "DiagnosticDigitalInput8StateId",
+        "DiagnosticAux1Id",
+        "DiagnosticAux2Id",
+        "DiagnosticAux3Id",
+        "DiagnosticAux4Id",
+        "DiagnosticAux5Id",
+        "DiagnosticAux6Id",
+        "DiagnosticAux7Id",
+        "DiagnosticAux8Id",
+        "DiagnosticIgnitionId"
     ];
 
-    // ── Toast System ─────────────────────────────────────────────
+    const DIAG_LABELS = {
+        "DiagnosticDeviceRelayStateId": { name: "Relay de Paro de Motor", type: "output" },
+        "DiagnosticDigitalOutput1StateId": { name: "Salida Digital 1 (Cable Amarillo)", type: "output" },
+        "DiagnosticDigitalOutput2StateId": { name: "Salida Digital 2", type: "output" },
+        "DiagnosticDigitalOutput3StateId": { name: "Salida Digital 3", type: "output" },
+        "DiagnosticDigitalOutput4StateId": { name: "Salida Digital 4", type: "output" },
+        
+        "DiagnosticDigitalInput1StateId": { name: "Entrada Digital 1", type: "input" },
+        "DiagnosticDigitalInput2StateId": { name: "Entrada Digital 2", type: "input" },
+        "DiagnosticDigitalInput3StateId": { name: "Entrada Digital 3", type: "input" },
+        "DiagnosticDigitalInput4StateId": { name: "Entrada Digital 4", type: "input" },
+        "DiagnosticDigitalInput5StateId": { name: "Entrada Digital 5", type: "input" },
+        "DiagnosticDigitalInput6StateId": { name: "Entrada Digital 6", type: "input" },
+        "DiagnosticDigitalInput7StateId": { name: "Entrada Digital 7", type: "input" },
+        "DiagnosticDigitalInput8StateId": { name: "Entrada Digital 8", type: "input" },
+        
+        "DiagnosticAux1Id": { name: "Entrada Auxiliar 1", type: "input" },
+        "DiagnosticAux2Id": { name: "Entrada Auxiliar 2", type: "input" },
+        "DiagnosticAux3Id": { name: "Entrada Auxiliar 3", type: "input" },
+        "DiagnosticAux4Id": { name: "Entrada Auxiliar 4", type: "input" },
+        "DiagnosticAux5Id": { name: "Entrada Auxiliar 5", type: "input" },
+        "DiagnosticAux6Id": { name: "Entrada Auxiliar 6", type: "input" },
+        "DiagnosticAux7Id": { name: "Entrada Auxiliar 7", type: "input" },
+        "DiagnosticAux8Id": { name: "Entrada Auxiliar 8", type: "input" },
+        
+        "DiagnosticIgnitionId": { name: "Estado de Ignición (Motor)", type: "ignition" }
+    };
+
+    // ── Datos simulados ──────────────────────────────────────────
+    const MOCK_VEHICLES = [
+        { id: "b101", name: "Volvo 01", plate: "YUC-001", type: "Camión", speed: 0, isMoving: false, outputState: 0, ignition: false },
+        { id: "b102", name: "Kenworth 02", plate: "YUC-022", type: "Tractocamión", speed: 62, isMoving: true, outputState: 0, ignition: true },
+        { id: "b103", name: "Ford 03", plate: "YUC-183", type: "Pickup", speed: 0, isMoving: false, outputState: 0, ignition: false },
+        { id: "b104", name: "Isuzu 04", plate: "YUC-214", type: "Caja seca", speed: 0, isMoving: false, outputState: 0, ignition: true },
+        { id: "b105", name: "Mercedes 05", plate: "YUC-300", type: "Camión", speed: 0, isMoving: false, outputState: 0, ignition: false },
+        { id: "b106", name: "RAM 06", plate: "YUC-411", type: "Pickup", speed: 0, isMoving: false, outputState: 1, ignition: false },
+    ];
+
+    // ── Toast ────────────────────────────────────────────────────
     const toast = (msg, type = "info") => {
         const wrap = document.getElementById("toast-wrap");
         if (!wrap) return;
@@ -49,591 +100,197 @@ geotab.addin.out = (function () {
         wrap.appendChild(el);
         if (window.lucide) lucide.createIcons();
         setTimeout(() => el.classList.add("show"), 10);
-        setTimeout(() => { 
-            el.classList.remove("show"); 
-            setTimeout(() => el.remove(), 300); 
-        }, 4500);
+        setTimeout(() => { el.classList.remove("show"); setTimeout(() => el.remove(), 300); }, 4500);
     };
 
-    // ── Renderizar lista lateral de vehículos ─────────────────────
-    const renderVehicleList = (filter = "") => {
-        const listContainer = document.getElementById("vehicle-list-container");
-        if (!listContainer) return;
+    // ── KPI Header ───────────────────────────────────────────────
+    const updateKPIs = () => {
+        const activos = allVehicles.filter(v => v.isMoving || (v.ignition && v.outputState === 0)).length;
+        const detenidos = allVehicles.filter(v => v.outputState === 1).length;
+        const inactivos = allVehicles.length - activos - detenidos;
+
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        set("kpi-activos", activos + " activo" + (activos !== 1 ? "s" : ""));
+        set("kpi-inactivos", inactivos + " inactivo" + (inactivos !== 1 ? "s" : ""));
+        set("kpi-detenidos", detenidos + " detenido" + (detenidos !== 1 ? "s" : ""));
+    };
+
+    // ── Renderizar tarjetas ──────────────────────────────────────
+    const renderCards = (filter = "") => {
+        const grid = document.getElementById("vehicles-grid");
+        if (!grid) return;
 
         const q = filter.toLowerCase().trim();
-        const filtered = q
+        const list = q
             ? allVehicles.filter(v => v.name.toLowerCase().includes(q) || v.plate.toLowerCase().includes(q) || v.type.toLowerCase().includes(q))
             : allVehicles;
 
-        if (filtered.length === 0) {
-            listContainer.innerHTML = `
-                <div style="text-align:center; padding: 2rem 1rem; color:var(--text-3); font-size:0.85rem;">
-                    No se encontraron unidades.
-                </div>
-            `;
+        if (list.length === 0) {
+            grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+                <i data-lucide="search" width="48" height="48"></i>
+                <p>No se encontraron unidades.</p>
+            </div>`;
+            if (window.lucide) lucide.createIcons();
             return;
         }
 
-        listContainer.innerHTML = filtered.map(v => {
-            const isSelected = v.id === activeVehicleId;
-            let statusClass = "inactive";
-            let statusLabel = "Inactivo";
+        grid.innerHTML = list.map(v => {
+            const isSelected = selectedIds.has(v.id);
+            const isStopped = v.outputState === 1;
+            const isMoving = v.isMoving;
 
-            if (v.isMoving) {
-                statusClass = "moving";
-                statusLabel = `Moviéndose (${v.speed} km/h)`;
+            // Determinar clase CSS de estado
+            let statusClass, statusLabel;
+            if (isStopped) {
+                statusClass = "stopped"; statusLabel = "Motor Detenido";
+            } else if (isMoving) {
+                statusClass = "moving"; statusLabel = `En Movimiento (${v.speed} km/h)`;
             } else if (v.ignition) {
-                statusClass = "active";
-                statusLabel = "Ignición ON";
+                statusClass = "active"; statusLabel = "Motor Activo";
+            } else {
+                statusClass = "inactive"; statusLabel = "Inactivo";
             }
+
+            const canSelect = !isMoving;
 
             return `
-                <div class="vehicle-item${isSelected ? " selected" : ""}" data-id="${v.id}">
-                    <div class="vehicle-item-header">
-                        <span class="vehicle-item-name">${v.name}</span>
-                        <span class="vehicle-item-plate">${v.plate}</span>
-                    </div>
-                    <div class="vehicle-item-footer">
-                        <span class="vehicle-item-type">${v.type}</span>
-                        <span class="vehicle-item-status ${statusClass}">
-                            <span class="dot"></span>
-                            ${statusLabel}
-                        </span>
+            <div class="vehicle-card${isSelected ? " selected" : ""}${isMoving ? " moving" : ""}"
+                 data-id="${v.id}" role="checkbox" aria-checked="${isSelected}" tabindex="0">
+                <div class="card-top">
+                    <span class="card-unit-id">${v.plate}</span>
+                    <div class="card-checkbox">
+                        <i data-lucide="check" width="11" height="11" style="color:#fff;stroke-width:3"></i>
                     </div>
                 </div>
-            `;
+                <div class="card-name">${v.name}</div>
+                <div class="card-tags">
+                    <span class="tag">${v.plate}</span>
+                    <span class="tag">${v.type}</span>
+                    ${isStopped ? '<span class="tag" style="color:var(--c-stopped);border-color:rgba(239,68,68,0.25);background:rgba(239,68,68,0.1)">🔒 IOX Bloqueado</span>' : ""}
+                </div>
+                <div class="card-status ${statusClass}">
+                    <span class="status-dot"></span>
+                    ${statusLabel.toUpperCase()}
+                </div>
+                ${isMoving ? `<div class="moving-overlay"><span class="moving-chip">⚡ En tránsito — Ver I/O</span></div>` : ""}
+            </div>`;
         }).join("");
 
-        // Agregar listeners de clic a cada vehículo de la lista
-        listContainer.querySelectorAll(".vehicle-item").forEach(item => {
-            item.addEventListener("click", () => {
-                selectVehicle(item.dataset.id);
-            });
-        });
-    };
-
-    // ── Seleccionar un vehículo ──────────────────────────────────
-    const selectVehicle = (deviceId) => {
-        activeVehicleId = deviceId;
-        
-        // Actualizar estado activo en sidebar
-        document.querySelectorAll(".vehicle-item").forEach(item => {
-            item.classList.toggle("selected", item.dataset.id === deviceId);
-        });
-
-        const v = allVehicles.find(x => x.id === deviceId);
-        if (!v) return;
-
-        renderControlPanel(v);
-        updateCommandPreview();
-    };
-
-    // ── Renderizar Panel de Control Derecho ────────────────────────
-    const renderControlPanel = (vehicle) => {
-        const detailsContainer = document.getElementById("details-panel-container");
-        if (!detailsContainer) return;
-
-        detailsContainer.innerHTML = `
-            <div class="details-container">
-                
-                <!-- 1. Tarjeta de Identidad del Vehículo Seleccionado -->
-                <div class="glass-card identity-card">
-                    <div class="identity-main">
-                        <div class="identity-avatar" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.2); color: #a855f7;">
-                            <i data-lucide="cpu" width="22" height="22"></i>
-                        </div>
-                        <div class="identity-texts">
-                            <h2 class="identity-name">${vehicle.name}</h2>
-                            <div class="identity-meta">
-                                <span>${vehicle.plate}</span>
-                                <span class="separator">·</span>
-                                <span>${vehicle.type}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="identity-kpis">
-                        <div class="identity-kpi">
-                            <span class="identity-kpi-label">Ignición</span>
-                            <span class="identity-kpi-value" style="color:${vehicle.ignition ? 'var(--c-active)' : 'var(--text-3)'}">
-                                <i data-lucide="key" width="14" height="14"></i>
-                                ${vehicle.ignition ? "ENCENDIDO" : "APAGADO"}
-                            </span>
-                        </div>
-                        <div class="identity-kpi">
-                            <span class="identity-kpi-label">Velocidad</span>
-                            <span class="identity-kpi-value" style="color:${vehicle.isMoving ? 'var(--c-moving)' : 'var(--text-2)'}">
-                                <i data-lucide="gauge" width="14" height="14"></i>
-                                ${vehicle.speed} km/h
-                            </span>
-                        </div>
-                        <div class="identity-kpi">
-                            <span class="identity-kpi-label">ID Geotab</span>
-                            <span class="identity-kpi-value" style="font-family:var(--font-mono); font-size:0.85rem; color:var(--text-2)">
-                                ${vehicle.id}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. Grid de dos columnas: Configuración y Previsualización -->
-                <div class="bento-grid">
-                    
-                    <!-- Tarjeta de Configuración de Comando -->
-                    <div class="glass-card control-grid-wrapper">
-                        <div class="panel-header" style="margin-bottom: 0.5rem;">
-                            <div class="panel-title-group">
-                                <i data-lucide="sliders" width="15" height="15" style="color:#a855f7;"></i>
-                                <span>Configuración del Comando</span>
-                            </div>
-                        </div>
-
-                        <!-- Selector de Canal Auxiliar (moutput) -->
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i data-lucide="layers" width="12" height="12"></i>
-                                Canal de Salida (moutput)
-                                <span class="desc">Mapeado en el módulo IOX</span>
-                            </label>
-                            <div class="channel-selector" id="cmd-channel-selector">
-                                ${[1, 2, 3, 4, 5, 6, 7, 8].map(ch => `
-                                    <button type="button" class="channel-btn${ch === commandState.moutput ? ' active' : ''}" data-channel="${ch}">
-                                        ${ch}
-                                    </button>
-                                `).join("")}
-                            </div>
-                        </div>
-
-                        <!-- Selector de Estado de Relevador (state) -->
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i data-lucide="power" width="12" height="12"></i>
-                                Estado del Relevador
-                            </label>
-                            <div class="state-segment-control">
-                                <button type="button" class="state-btn state-off${commandState.state === 0 ? ' active' : ''}" data-state="0">
-                                    <i data-lucide="unlock" width="14" height="14"></i>
-                                    Desactivar (OFF)
-                                </button>
-                                <button type="button" class="state-btn state-on${commandState.state === 1 ? ' active' : ''}" data-state="1">
-                                    <i data-lucide="lock" width="14" height="14"></i>
-                                    Activar (ON)
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Selector de Duración (duration) -->
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i data-lucide="clock" width="12" height="12"></i>
-                                Duración
-                                <span class="desc">Segundos (0 = permanente)</span>
-                            </label>
-                            <div class="slider-container">
-                                <input type="range" class="duration-slider" id="cmd-duration-slider" min="0" max="300" step="5" value="${commandState.duration}">
-                                <div class="duration-value-box" id="cmd-duration-value">
-                                    ${commandState.duration === 0 ? 'Permanente' : commandState.duration + ' s'}
-                                </div>
-                            </div>
-                            <div class="preset-row">
-                                <button type="button" class="preset-btn${commandState.duration === 0 ? ' active' : ''}" data-preset="0">Permanente</button>
-                                <button type="button" class="preset-btn${commandState.duration === 30 ? ' active' : ''}" data-preset="30">30 seg</button>
-                                <button type="button" class="preset-btn${commandState.duration === 60 ? ' active' : ''}" data-preset="60">1 min</button>
-                                <button type="button" class="preset-btn${commandState.duration === 300 ? ' active' : ''}" data-preset="300">5 min</button>
-                            </div>
-                        </div>
-
-                        <!-- Nota de instalación -->
-                        <div class="command-notice">
-                            <strong>Nota física:</strong> Comprueba con los instaladores si <code>state=1</code> activa el corte de corriente (Bloqueo) o si actúa en lógica inversa.
-                        </div>
-                    </div>
-
-                    <!-- Tarjeta de Previsualización Técnica del SDK -->
-                    <div class="glass-card terminal-card" style="display:flex; flex-direction:column;">
-                        <div class="terminal-header">
-                            <div class="terminal-dots">
-                                <span class="terminal-dot red"></span>
-                                <span class="terminal-dot yellow"></span>
-                                <span class="terminal-dot green"></span>
-                            </div>
-                            <span class="terminal-label">Payload de Geotab API</span>
-                        </div>
-                        <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
-                            <pre class="payload-preview" id="sdk-payload-preview">Cargando preview...</pre>
-                        </div>
-                    </div>
-
-                    <!-- Tarjeta de Seguridad y Envío -->
-                    <div class="glass-card safety-card bento-col-span-2">
-                        <div class="safety-checkbox-wrap" id="safety-check-container">
-                            <input type="checkbox" id="safety-confirm-checkbox">
-                            <div class="safety-checkbox-label">
-                                <strong>Confirmar Envío de Comando Auxiliar</strong>
-                                <span>Entiendo que al enviar este comando se transmitirá una señal celular al vehículo y se alterará el circuito eléctrico del dispositivo GO (IOX-OUTPUTM) de manera inmediata.</span>
-                            </div>
-                        </div>
-
-                        <button type="button" class="btn-submit-command" id="btn-submit-command" disabled>
-                            <i data-lucide="send" width="16" height="16"></i>
-                            <span id="submit-btn-text">Bloqueado - Confirme Casilla</span>
-                        </button>
-                    </div>
-
-                    <!-- Tarjeta de Historial / Cola de Entrega (Queue Logger) -->
-                    <div class="glass-card logger-card bento-col-span-2" id="logger-panel" style="display:none;">
-                        <div class="panel-header" style="margin-bottom:0.75rem;">
-                            <div class="panel-title-group">
-                                <i data-lucide="radio" width="15" height="15" style="color:var(--c-info);"></i>
-                                <span>Monitoreo de Entrega en Red Geotab</span>
-                            </div>
-                        </div>
-                        
-                        <div class="log-steps">
-                            <!-- Paso 1 -->
-                            <div class="log-step" id="log-step-1">
-                                <div class="log-step-circle">1</div>
-                                <div class="log-step-texts">
-                                    <span class="log-step-name">Generando Comando local</span>
-                                    <span class="log-step-desc" id="log-step-1-desc">Codificando sintaxis del comando #setmoutput...</span>
-                                </div>
-                            </div>
-                            <!-- Paso 2 -->
-                            <div class="log-step" id="log-step-2">
-                                <div class="log-step-circle">2</div>
-                                <div class="log-step-texts">
-                                    <span class="log-step-name">Enviando a Geotab API</span>
-                                    <span class="log-step-desc" id="log-step-2-desc">Estableciendo comunicación por HTTP POST con los servidores de Geotab...</span>
-                                </div>
-                            </div>
-                            <!-- Paso 3 -->
-                            <div class="log-step" id="log-step-3">
-                                <div class="log-step-circle">3</div>
-                                <div class="log-step-texts">
-                                    <span class="log-step-name">Encolado en Servidor (Geotab Queue)</span>
-                                    <span class="log-step-desc" id="log-step-3-desc">Esperando ID de mensaje y acuse de confirmación en la base de datos...</span>
-                                </div>
-                            </div>
-                            <!-- Paso 4 -->
-                            <div class="log-step" id="log-step-4">
-                                <div class="log-step-circle">4</div>
-                                <div class="log-step-texts">
-                                    <span class="log-step-name">Entrega al Dispositivo GO</span>
-                                    <span class="log-step-desc" id="log-step-4-desc">Pendiente de que el vehículo realice conexión telemática (Pull celular).</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        `;
-
         if (window.lucide) lucide.createIcons();
-        bindCommandFormEvents();
-    };
+        updateActionBar();
+        updateKPIs();
 
-    // ── Formatear JSON con resaltado de sintaxis HTML ─────────────
-    const highlightJSON = (jsonObj) => {
-        let jsonStr = JSON.stringify(jsonObj, null, 2);
-        
-        // Sanitizar HTML primero
-        jsonStr = jsonStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        
-        // Expresión regular para encontrar llaves, strings, números y booleanos
-        return jsonStr.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
-            let cls = 'syntax-num';
-            if (/^"/.test(match)) {
-                if (/:$/.test(match)) {
-                    cls = 'syntax-key';
+        // Vincular eventos de clic y teclado a las tarjetas
+        grid.querySelectorAll(".vehicle-card").forEach(card => {
+            card.addEventListener("click", (e) => {
+                const isCheckbox = e.target.closest(".card-checkbox");
+                if (isCheckbox) {
+                    e.stopPropagation();
+                    if (!card.classList.contains("moving")) {
+                        toggleSelect(card.dataset.id);
+                    } else {
+                        toast("No se puede detener una unidad en movimiento", "error");
+                    }
                 } else {
-                    cls = 'syntax-string';
+                    openVehicleDrawer(card.dataset.id);
                 }
-            } else if (/true|false/.test(match)) {
-                cls = 'syntax-bool';
-            } else if (/null/.test(match)) {
-                cls = 'syntax-null';
-            }
-            return '<span class="' + cls + '">' + match + '</span>';
-        });
-    };
-
-    // ── Actualizar Previsualización del Payload ────────────────────
-    const updateCommandPreview = () => {
-        const previewEl = document.getElementById("sdk-payload-preview");
-        if (!previewEl) return;
-
-        const cmdText = `#setmoutput:moutput=${commandState.moutput}&state=${commandState.state}&duration=${commandState.duration}`;
-        
-        const payload = {
-            typeName: "TextMessage",
-            entity: {
-                device: {
-                    id: activeVehicleId || "SELECCIONAR_UNIDAD"
-                },
-                isDirectionToDevice: true,
-                text: cmdText,
-                isResponseRequired: false
-            }
-        };
-
-        previewEl.innerHTML = highlightJSON(payload);
-    };
-
-    // ── Vincular Eventos de Entrada del Formulario de Comando ───────
-    const bindCommandFormEvents = () => {
-        const channelBtns = document.querySelectorAll("#cmd-channel-selector .channel-btn");
-        const stateBtns = document.querySelectorAll(".state-segment-control .state-btn");
-        const durationSlider = document.getElementById("cmd-duration-slider");
-        const durationVal = document.getElementById("cmd-duration-value");
-        const presetBtns = document.querySelectorAll(".preset-row .preset-btn");
-        const safetyCheckbox = document.getElementById("safety-confirm-checkbox");
-        const submitBtn = document.getElementById("btn-submit-command");
-        const submitText = document.getElementById("submit-btn-text");
-
-        // Canales (moutput)
-        channelBtns.forEach(btn => {
-            btn.addEventListener("click", () => {
-                channelBtns.forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-                commandState.moutput = parseInt(btn.dataset.channel, 10);
-                updateCommandPreview();
             });
-        });
 
-        // Estado (state)
-        stateBtns.forEach(btn => {
-            btn.addEventListener("click", () => {
-                stateBtns.forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-                commandState.state = parseInt(btn.dataset.state, 10);
-                
-                // Cambiar textos y clases de submit dinámicamente si el botón ya está activo
-                updateSubmitButtonState(safetyCheckbox.checked);
-                updateCommandPreview();
-            });
-        });
-
-        // Slider de duración
-        if (durationSlider) {
-            durationSlider.addEventListener("input", (e) => {
-                const val = parseInt(e.target.value, 10);
-                commandState.duration = val;
-                if (durationVal) {
-                    durationVal.textContent = val === 0 ? "Permanente" : val + " s";
-                }
-                
-                // Desactivar presets activos
-                presetBtns.forEach(b => {
-                    b.classList.toggle("active", parseInt(b.dataset.preset, 10) === val);
-                });
-                updateCommandPreview();
-            });
-        }
-
-        // Botones rápidos de preset
-        presetBtns.forEach(btn => {
-            btn.addEventListener("click", () => {
-                presetBtns.forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-                
-                const val = parseInt(btn.dataset.preset, 10);
-                commandState.duration = val;
-                
-                if (durationSlider) durationSlider.value = val;
-                if (durationVal) {
-                    durationVal.textContent = val === 0 ? "Permanente" : val + " s";
-                }
-                updateCommandPreview();
-            });
-        });
-
-        // Checkbox de seguridad
-        if (safetyCheckbox) {
-            safetyCheckbox.addEventListener("change", (e) => {
-                const isChecked = e.target.checked;
-                updateSubmitButtonState(isChecked);
-            });
-        }
-
-        // Botón de Enviar Comando
-        if (submitBtn) {
-            submitBtn.addEventListener("click", () => {
-                if (submitBtn.disabled) return;
-                sendIOXCommand();
-            });
-        }
-    };
-
-    // Actualiza la visualización y estado del botón de envío
-    const updateSubmitButtonState = (isChecked) => {
-        const submitBtn = document.getElementById("btn-submit-command");
-        const submitText = document.getElementById("submit-btn-text");
-        if (!submitBtn || !submitText) return;
-
-        submitBtn.disabled = !isChecked;
-        submitBtn.classList.toggle("unlocked", isChecked);
-
-        // Remover estilos de estado anteriores
-        submitBtn.classList.remove("state-deactivate");
-
-        if (isChecked) {
-            if (commandState.state === 1) {
-                submitText.textContent = "Transmitir: ACTIVAR (Corte)";
-            } else {
-                submitBtn.classList.add("state-deactivate");
-                submitText.textContent = "Transmitir: DESACTIVAR (Restaurar)";
-            }
-        } else {
-            submitText.textContent = "Bloqueado - Confirme Casilla";
-        }
-    };
-
-    // ── Lógica de Envío del Comando IOX (Geotab API / Demo) ────────
-    const sendIOXCommand = () => {
-        const submitBtn = document.getElementById("btn-submit-command");
-        const safetyCheckbox = document.getElementById("safety-confirm-checkbox");
-        if (submitBtn) submitBtn.disabled = true;
-        if (safetyCheckbox) safetyCheckbox.disabled = true;
-
-        const cmdText = `#setmoutput:moutput=${commandState.moutput}&state=${commandState.state}&duration=${commandState.duration}`;
-        
-        // Mostrar y resetear panel de monitoreo
-        const loggerPanel = document.getElementById("logger-panel");
-        if (loggerPanel) loggerPanel.style.display = "block";
-        resetLoggerSteps();
-
-        // 1. Paso local
-        updateLoggerStep(1, "done", `Comando generado con éxito: "${cmdText}"`);
-
-        // 2. Paso envío servidor
-        updateLoggerStep(2, "active");
-
-        if (isDemoMode) {
-            // Simulación de flujo celular / API
-            setTimeout(() => {
-                updateLoggerStep(2, "done", "Llamada Add TextMessage exitosa.");
-                updateLoggerStep(3, "active");
-
-                setTimeout(() => {
-                    const msgId = "m" + Math.floor(100000 + Math.random() * 900000);
-                    updateLoggerStep(3, "done", `Registrado en base de datos Geotab. ID de Mensaje: ${msgId}`);
-                    updateLoggerStep(4, "active");
-
-                    // Reactivar controles
-                    if (safetyCheckbox) {
-                        safetyCheckbox.checked = false;
-                        safetyCheckbox.disabled = false;
+            card.addEventListener("keydown", e => {
+                if (e.key === " " || e.key === "Enter") {
+                    e.preventDefault();
+                    // Si presionan espacio en la tarjeta (o enter en el checkbox), se selecciona.
+                    // Si presionan enter en el cuerpo de la tarjeta, se abre el drawer.
+                    const isCheckbox = e.target.closest(".card-checkbox");
+                    if (e.key === " " || isCheckbox) {
+                        if (!card.classList.contains("moving")) {
+                            toggleSelect(card.dataset.id);
+                        }
+                    } else {
+                        openVehicleDrawer(card.dataset.id);
                     }
-                    updateSubmitButtonState(false);
-
-                    toast(`Comando encolado con éxito. ID: ${msgId}`, "success");
-                    
-                    // Nota descriptiva final
-                    const p4Desc = document.getElementById("log-step-4-desc");
-                    if (p4Desc) {
-                        p4Desc.innerHTML = `Comando pendiente de descarga. El dispositivo GO recibirá e iniciará <code>state=${commandState.state}</code> la próxima vez que se comunique con la red celular (comúnmente < 15 segundos con ignición ON).`;
-                    }
-                }, 1500);
-
-            }, 1200);
-        } else {
-            // Envío real a la API de Geotab
-            api.call("Add", {
-                typeName: "TextMessage",
-                entity: {
-                    device: {
-                        id: activeVehicleId
-                    },
-                    isDirectionToDevice: true,
-                    text: cmdText,
-                    isResponseRequired: false
                 }
-            }, function (result) {
-                // Éxito en la llamada
-                updateLoggerStep(2, "done", "Llamada Add TextMessage exitosa.");
-                updateLoggerStep(3, "done", `Registrado en Geotab con éxito. ID de Mensaje: ${result}`);
-                updateLoggerStep(4, "active");
-
-                if (safetyCheckbox) {
-                    safetyCheckbox.checked = false;
-                    safetyCheckbox.disabled = false;
-                }
-                updateSubmitButtonState(false);
-
-                toast(`Comando encolado con éxito. ID de Mensaje: ${result}`, "success");
-
-                const p4Desc = document.getElementById("log-step-4-desc");
-                if (p4Desc) {
-                    p4Desc.innerHTML = `Comando pendiente de descarga celular por la unidad. El dispositivo GO recibirá y ejecutará el comando la próxima vez que conecte.`;
-                }
-
-            }, function (error) {
-                // Error en la llamada
-                updateLoggerStep(2, "error", `Error de API: ${error.message || error}`);
-                toast("Error al enviar comando: " + (error.message || error), "error");
-
-                if (safetyCheckbox) {
-                    safetyCheckbox.disabled = false;
-                }
-                updateSubmitButtonState(safetyCheckbox.checked);
             });
-        }
+        });
     };
 
-    // Helpers para actualizar el Queue Logger
-    const resetLoggerSteps = () => {
-        for (let i = 1; i <= 4; i++) {
-            const stepEl = document.getElementById(`log-step-${i}`);
-            const descEl = document.getElementById(`log-step-${i}-desc`);
-            if (stepEl) {
-                stepEl.className = "log-step";
-            }
-            if (descEl) {
-                // Restaurar descripciones iniciales
-                if (i === 1) descEl.textContent = "Codificando sintaxis del comando #setmoutput...";
-                if (i === 2) descEl.textContent = "Estableciendo comunicación por HTTP POST con los servidores de Geotab...";
-                if (i === 3) descEl.textContent = "Esperando ID de mensaje y acuse de confirmación en la base de datos...";
-                if (i === 4) descEl.textContent = "Pendiente de que el vehículo realice conexión telemática (Pull celular).";
-            }
-        }
+    const toggleSelect = (id) => {
+        if (selectedIds.has(id)) selectedIds.delete(id);
+        else selectedIds.add(id);
+
+        const card = document.querySelector(`.vehicle-card[data-id="${id}"]`);
+        if (card) card.classList.toggle("selected", selectedIds.has(id));
+
+        updateActionBar();
     };
 
-    const updateLoggerStep = (stepNumber, status, customDesc = null) => {
-        const stepEl = document.getElementById(`log-step-${stepNumber}`);
-        const descEl = document.getElementById(`log-step-${stepNumber}-desc`);
-        if (!stepEl) return;
+    const selectAll = () => {
+        const canSelect = allVehicles.filter(v => !v.isMoving);
+        const allSel = canSelect.every(v => selectedIds.has(v.id));
 
-        stepEl.className = `log-step ${status}`;
-        if (customDesc && descEl) {
-            descEl.innerHTML = customDesc;
+        if (allSel) {
+            canSelect.forEach(v => selectedIds.delete(v.id));
+        } else {
+            canSelect.forEach(v => selectedIds.add(v.id));
         }
+
+        renderCards(document.getElementById("search-input")?.value || "");
     };
 
-    // ── Cargar dispositivos reales de Geotab (Live) ──────────────
+    // ── Barra de Acción Inferior ─────────────────────────────────
+    const updateActionBar = () => {
+        const count = selectedIds.size;
+        const countEl = document.getElementById("sel-count");
+        const hintEl = document.getElementById("sel-hint");
+        const stopBtn = document.getElementById("btn-stop-motor");
+
+        if (countEl) countEl.innerHTML = `<span>${count}</span> seleccionada${count !== 1 ? "s" : ""}`;
+        if (hintEl) hintEl.textContent = count === 0 ? "Selecciona una o más unidades para continuar" : `Listas para enviar comando de paro`;
+
+        if (!stopBtn) return;
+        stopBtn.classList.remove("armed", "restore");
+
+        if (count === 0) {
+            stopBtn.textContent = "DETENER MOTOR";
+            stopBtn.disabled = true;
+            return;
+        }
+
+        stopBtn.disabled = false;
+
+        // Si todas las seleccionadas están detenidas → modo restore
+        const selVehicles = allVehicles.filter(v => selectedIds.has(v.id));
+        const allStopped = selVehicles.every(v => v.outputState === 1);
+
+        if (allStopped) {
+            stopBtn.classList.add("restore");
+            stopBtn.innerHTML = `<i data-lucide="unlock" width="16" height="16"></i> RESTABLECER MOTOR`;
+        } else {
+            stopBtn.classList.add("armed");
+            stopBtn.innerHTML = `<i data-lucide="square" width="16" height="16"></i> DETENER MOTOR`;
+        }
+        if (window.lucide) lucide.createIcons();
+    };
+
+    // ── Cargar dispositivos reales ───────────────────────────────
     const loadDevices = () => {
-        const listContainer = document.getElementById("vehicle-list-container");
-        if (listContainer) {
-            listContainer.innerHTML = `
-                <div class="loading-box">
-                    <div class="spinner"></div>
-                    <p style="font-size:0.75rem; margin-top:0.5rem; text-align:center;">Cargando flota de Geotab...</p>
-                </div>
-            `;
-        }
+        showLoading("Cargando flota desde Geotab...", "Consultando dispositivos y estado...");
 
+        // Llamada múltiple: Devices + DeviceStatusInfo
         api.multiCall([
             ["Get", { typeName: "Device" }],
             ["Get", { typeName: "DeviceStatusInfo" }]
         ], (results) => {
+            hideLoading();
             const devices = results[0] || [];
             const statuses = results[1] || [];
 
+            // Mapa rápido id -> statusInfo
             const statusMap = {};
             statuses.forEach(s => { statusMap[s.device.id] = s; });
 
             allVehicles = devices
-                .filter(d => d.id !== "b0") // Excluir nodo raíz
+                .filter(d => d.id !== "b0") // excluir dispositivo raíz
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map(d => {
                     const s = statusMap[d.id] || {};
@@ -645,196 +302,553 @@ geotab.addin.out = (function () {
                         type: d.vehicleType || "Vehículo",
                         speed: speed,
                         isMoving: s.isDeviceMoving || speed > 0,
-                        ignition: s.isDeviceCommunicating || speed > 0
+                        ignition: s.isDeviceCommunicating || speed > 0,
+                        outputState: 0 // El estado IOX se consulta por separado si se requiere
                     };
                 });
 
-            renderVehicleList();
-            toast(`${allVehicles.length} unidades cargadas de Geotab.`, "success");
-
-            // Seleccionar el primero automáticamente
-            if (allVehicles.length > 0) {
-                selectVehicle(allVehicles[0].id);
-            } else {
-                const detailsContainer = document.getElementById("details-panel-container");
-                if (detailsContainer) {
-                    detailsContainer.innerHTML = `
-                        <div class="empty-details-state">
-                            <i data-lucide="truck-off" width="48" height="48"></i>
-                            <h3>No hay vehículos disponibles</h3>
-                            <p>Tu cuenta de Geotab no tiene dispositivos asignados o visibles.</p>
-                        </div>
-                    `;
-                    if (window.lucide) lucide.createIcons();
-                }
-            }
-
-            startPolling();
-
+            renderCards();
+            startTelemetryPoll();
+            toast(`${allVehicles.length} unidades cargadas.`, "success");
         }, (err) => {
-            console.error("Error al cargar flota de Geotab:", err);
+            hideLoading();
+            console.error("Error cargando flota:", err);
             toast("Error al cargar unidades: " + err, "error");
         });
     };
 
-    // ── Cargar dispositivos simulados (Demo) ─────────────────────
-    const loadDemoDevices = () => {
-        allVehicles = MOCK_VEHICLES.map(v => ({ ...v }));
-        renderVehicleList();
-        toast("Flota simulada cargada (Modo Demo).", "info");
-
-        if (allVehicles.length > 0) {
-            selectVehicle(allVehicles[0].id);
-        }
-
-        startPolling();
+    // ── Telemetría en Polling ────────────────────────────────────
+    const startTelemetryPoll = () => {
+        if (telemetryTimer) clearInterval(telemetryTimer);
+        telemetryTimer = setInterval(() => {
+            if (isDemoMode) return;
+            api.call("Get", { typeName: "DeviceStatusInfo" }, (results) => {
+                (results || []).forEach(s => {
+                    const v = allVehicles.find(x => x.id === s.device.id);
+                    if (v) {
+                        const speed = Math.round(s.speed || 0);
+                        v.speed = speed;
+                        v.isMoving = s.isDeviceMoving || speed > 0;
+                        v.ignition = s.isDeviceCommunicating || speed > 0;
+                    }
+                });
+                updateKPIs();
+                renderCards(document.getElementById("search-input")?.value || "");
+            }, () => { });
+        }, 10000); // Cada 10 segundos
     };
 
-    // ── Polling / Actualizaciones en segundo plano ────────────────
-    const startPolling = () => {
-        if (telemetryTimer) clearInterval(telemetryTimer);
+    // ── Demo mode ────────────────────────────────────────────────
+    const loadDemoDevices = () => {
+        allVehicles = MOCK_VEHICLES.map(v => ({ ...v }));
+        renderCards();
+        toast("Flota simulada cargada (Modo Demo).", "info");
+    };
 
-        telemetryTimer = setInterval(() => {
-            if (isDemoMode) {
-                // Simular pequeñas fluctuaciones de telemetría de fondo
-                allVehicles.forEach(v => {
-                    if (Math.random() > 0.85) {
-                        if (v.isMoving) {
-                            v.speed = Math.max(0, v.speed + Math.round((Math.random() - 0.5) * 10));
-                            if (v.speed === 0) {
-                                v.isMoving = false;
-                                v.ignition = Math.random() > 0.3;
-                            }
-                        } else {
-                            if (v.ignition && Math.random() > 0.75) {
-                                v.isMoving = true;
-                                v.speed = 10 + Math.round(Math.random() * 50);
-                            } else {
-                                v.ignition = Math.random() > 0.65;
-                            }
-                        }
+    // ── Modal de confirmación + PIN ──────────────────────────────
+    const openConfirmModal = () => {
+        const selVehicles = allVehicles.filter(v => selectedIds.has(v.id));
+        const allStopped = selVehicles.every(v => v.outputState === 1);
+        pendingAction = allStopped ? "restore" : "stop";
+
+        pinBuffer = "";
+        updatePinDots();
+        const checkbox = document.getElementById("compliance-checkbox");
+        if (checkbox) checkbox.checked = false;
+
+        const summaryEl = document.getElementById("modal-summary");
+        const confirmBtn = document.getElementById("btn-confirm-modal");
+        const titleEl = document.getElementById("modal-title");
+
+        if (pendingAction === "stop") {
+            if (titleEl) titleEl.textContent = "Confirmar Paro de Motor";
+            if (summaryEl) {
+                summaryEl.className = "selected-summary";
+                summaryEl.innerHTML = `
+                    <strong>⚠ OPERACIÓN CRÍTICA:</strong> Se enviará el comando <code>SetOutput:1</code> vía celular a:<br>
+                    <div class="selected-names">${selVehicles.map(v => v.name).join(" · ")}</div>
+                `;
+            }
+            if (confirmBtn) { confirmBtn.className = "btn-confirm-modal"; confirmBtn.textContent = "Ejecutar Paro"; }
+        } else {
+            if (titleEl) titleEl.textContent = "Confirmar Restablecimiento";
+            if (summaryEl) {
+                summaryEl.className = "selected-summary restore";
+                summaryEl.innerHTML = `
+                    Se enviará el comando <code>SetOutput:0</code> para reconectar el circuito en:<br>
+                    <div class="selected-names">${selVehicles.map(v => v.name).join(" · ")}</div>
+                `;
+            }
+            if (confirmBtn) { confirmBtn.className = "btn-confirm-modal restore-mode"; confirmBtn.textContent = "Restablecer Motor"; }
+        }
+
+        const modal = document.getElementById("pin-modal");
+        if (modal) modal.classList.add("open");
+    };
+
+    const closeModal = () => {
+        const modal = document.getElementById("pin-modal");
+        if (modal) modal.classList.remove("open");
+        pinBuffer = "";
+        updatePinDots();
+    };
+
+    const pressKey = (key) => {
+        if (key === "clear") { pinBuffer = pinBuffer.slice(0, -1); }
+        else if (key === "cancel") { closeModal(); return; }
+        else if (pinBuffer.length < 4) { pinBuffer += key; }
+        updatePinDots();
+    };
+
+    const updatePinDots = () => {
+        document.querySelectorAll(".pin-dot").forEach((dot, i) => {
+            dot.classList.toggle("filled", i < pinBuffer.length);
+        });
+    };
+
+    const executeAction = () => {
+        const checked = document.getElementById("compliance-checkbox")?.checked;
+        if (!checked) { toast("Debe confirmar la casilla de seguridad.", "error"); return; }
+        if (pinBuffer !== SECURITY_PIN) {
+            toast("PIN incorrecto. Inténtelo de nuevo.", "error");
+            pinBuffer = ""; updatePinDots(); return;
+        }
+
+        closeModal();
+
+        const isStopping = pendingAction === "stop";
+        const cmdText = isStopping ? "SetOutput:1" : "SetOutput:0";
+        const selVehicles = allVehicles.filter(v => selectedIds.has(v.id));
+
+        showLoading(
+            isStopping ? "ENVIANDO COMANDO DE PARO..." : "RESTABLECIENDO CIRCUITO...",
+            `Transmitiendo a ${selVehicles.length} unidad${selVehicles.length > 1 ? "es" : ""}...`
+        );
+
+        if (isDemoMode) {
+            // Simular latencia celular
+            const steps = [
+                { t: 600, txt: "Encolando TextCommand en base de datos Geotab..." },
+                { t: 1400, txt: "Transmitiendo por red celular a dispositivos GO..." },
+                { t: 2200, txt: `Comando "${cmdText}" recibido. Activando relevadores IOX-OUTPUTM...` }
+            ];
+            steps.forEach(s => setTimeout(() => {
+                const sub = document.getElementById("loading-sub");
+                if (sub) sub.textContent = s.txt;
+            }, s.t));
+
+            setTimeout(() => {
+                hideLoading();
+                selVehicles.forEach(v => { v.outputState = isStopping ? 1 : 0; });
+                selectedIds.clear();
+                renderCards();
+                toast(
+                    isStopping
+                        ? `${selVehicles.length} unidad${selVehicles.length > 1 ? "es detenidas" : " detenida"} correctamente.`
+                        : `Motor restablecido en ${selVehicles.length} unidad${selVehicles.length > 1 ? "es" : ""}.`,
+                    "success"
+                );
+            }, 2800);
+
+        } else {
+            // Envío real en paralelo a todas las unidades seleccionadas
+            const calls = selVehicles.map(v => ["Add", {
+                typeName: "TextCommand",
+                entity: { device: { id: v.id }, text: cmdText }
+            }]);
+
+            api.multiCall(calls, (results) => {
+                console.log("Comandos enviados:", results);
+                hideLoading();
+                selVehicles.forEach(v => { v.outputState = isStopping ? 1 : 0; });
+                selectedIds.clear();
+                renderCards();
+                toast(
+                    isStopping
+                        ? `Comando de paro encolado en ${selVehicles.length} unidad${selVehicles.length > 1 ? "es" : ""}.`
+                        : `Restablecimiento encolado en ${selVehicles.length} unidad${selVehicles.length > 1 ? "es" : ""}.`,
+                    "success"
+                );
+            }, (err) => {
+                hideLoading();
+                console.error("Error multiCall:", err);
+                toast("Error al enviar comandos: " + err, "error");
+            });
+        }
+    };
+
+    // ── Helpers de Loading ───────────────────────────────────────
+    const showLoading = (main, sub) => {
+        const ov = document.getElementById("loading-overlay");
+        if (!ov) return;
+        document.getElementById("loading-main").textContent = main;
+        document.getElementById("loading-sub").textContent = sub;
+        ov.style.display = "flex";
+    };
+
+    const hideLoading = () => {
+        const ov = document.getElementById("loading-overlay");
+        if (ov) ov.style.display = "none";
+    };
+
+    // ── Lógica del Drawer de Diagnóstico I/O ──────────────────────
+    const openVehicleDrawer = (deviceId) => {
+        activeVehicleId = deviceId;
+        const v = allVehicles.find(x => x.id === deviceId);
+        if (!v) return;
+
+        const nameEl = document.getElementById("drawer-veh-name");
+        const plateEl = document.getElementById("drawer-veh-plate");
+        const bodyEl = document.getElementById("drawer-body");
+        const overlay = document.getElementById("drawer-overlay");
+        const drawer = document.getElementById("vehicle-drawer");
+
+        if (nameEl) nameEl.textContent = v.name;
+        if (plateEl) plateEl.textContent = `${v.plate} · ${v.type}`;
+
+        if (overlay) overlay.classList.add("open");
+        if (drawer) drawer.classList.add("open");
+
+        // Mostrar cargando
+        if (bodyEl) {
+            bodyEl.innerHTML = `
+                <div class="drawer-loading">
+                    <i data-lucide="loader" width="36" height="36" style="animation: spin 1s linear infinite;"></i>
+                    <p>Consultando base de datos de Geotab...</p>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // Consultar datos
+        fetchVehicleDiagnostics(deviceId);
+    };
+
+    const closeVehicleDrawer = () => {
+        activeVehicleId = null;
+        const overlay = document.getElementById("drawer-overlay");
+        const drawer = document.getElementById("vehicle-drawer");
+        if (overlay) overlay.classList.remove("open");
+        if (drawer) drawer.classList.remove("open");
+    };
+
+    const fetchVehicleDiagnostics = (deviceId) => {
+        if (isDemoMode) {
+            // Modo Demo: Simular respuesta telemática
+            setTimeout(() => {
+                if (activeVehicleId !== deviceId) return; // Se cerró o cambió de dispositivo
+
+                const mockResults = {};
+                // Generar datos aleatorios coherentes
+                IO_DIAGNOSTICS.forEach(diagId => {
+                    // Ciertos vehículos tienen ciertos puertos
+                    const isRelay = diagId === "DiagnosticDeviceRelayStateId";
+                    const isOut1 = diagId === "DiagnosticDigitalOutput1StateId";
+                    const isIn1 = diagId === "DiagnosticDigitalInput1StateId";
+                    const isIgnition = diagId === "DiagnosticIgnitionId";
+                    
+                    let hasData = false;
+                    let value = 0;
+                    
+                    if (deviceId === "b101") {
+                        // Volvo 01: relay activo, output 1 activo, input 1 activo, ignición inactiva
+                        if (isRelay || isOut1 || isIn1) { hasData = true; value = 1; }
+                        else if (isIgnition) { hasData = true; value = 0; }
+                        else if (diagId === "DiagnosticAux1Id") { hasData = true; value = 0; }
+                    } else if (deviceId === "b106") {
+                        // RAM 06: relay activo, output 1 activo, ignición inactiva
+                        if (isRelay || isOut1) { hasData = true; value = 1; }
+                        else if (isIgnition) { hasData = true; value = 0; }
+                        else if (isIn1) { hasData = true; value = 0; }
+                    } else if (deviceId === "b102") {
+                        // Kenworth 02: ignición activa (en movimiento)
+                        if (isIgnition) { hasData = true; value = 1; }
+                        else if (isRelay || isOut1 || isIn1 || diagId === "DiagnosticAux1Id") { hasData = true; value = 0; }
+                    } else {
+                        // Otros: ignición según objeto v.ignition
+                        const vObj = allVehicles.find(x => x.id === deviceId);
+                        if (isIgnition) { hasData = true; value = (vObj && vObj.ignition) ? 1 : 0; }
+                        else if (isRelay || isOut1) { hasData = true; value = (vObj && vObj.outputState === 1) ? 1 : 0; }
+                        else if (isIn1 || diagId === "DiagnosticAux1Id") { hasData = true; value = 0; }
+                    }
+
+                    if (hasData) {
+                        mockResults[diagId] = {
+                            value: value,
+                            dateTime: new Date(Date.now() - Math.random() * 3600000).toISOString() // hace < 1 hora
+                        };
                     }
                 });
 
-                renderVehicleList(document.getElementById("search-input")?.value || "");
-                
-                // Actualizar panel de vehículo activo si está visible
-                if (activeVehicleId) {
-                    const activeV = allVehicles.find(x => x.id === activeVehicleId);
-                    const kpiIgnition = document.querySelector(".identity-kpi:nth-child(1) .identity-kpi-value");
-                    const kpiSpeed = document.querySelector(".identity-kpi:nth-child(2) .identity-kpi-value");
-                    
-                    if (kpiIgnition && activeV) {
-                        kpiIgnition.style.color = activeV.ignition ? 'var(--c-active)' : 'var(--text-3)';
-                        kpiIgnition.innerHTML = `<i data-lucide="key" width="14" height="14"></i> ${activeV.ignition ? "ENCENDIDO" : "APAGADO"}`;
+                renderDiagnostics(mockResults);
+            }, 750);
+        } else {
+            // Modo Live: Consulta real al API de Geotab
+            const calls = IO_DIAGNOSTICS.map(diagId => [
+                "Get",
+                {
+                    typeName: "StatusData",
+                    search: {
+                        deviceSearch: { id: deviceId },
+                        diagnosticSearch: { id: diagId }
+                    },
+                    resultsLimit: 1
+                }
+            ]);
+
+            api.multiCall(calls, (results) => {
+                if (activeVehicleId !== deviceId) return;
+
+                const processedResults = {};
+                IO_DIAGNOSTICS.forEach((diagId, idx) => {
+                    const records = results[idx] || [];
+                    if (records.length > 0) {
+                        const record = records[0];
+                        processedResults[diagId] = {
+                            value: record.data,
+                            dateTime: record.dateTime
+                        };
                     }
-                    if (kpiSpeed && activeV) {
-                        kpiSpeed.style.color = activeV.isMoving ? 'var(--c-moving)' : 'var(--text-2)';
-                        kpiSpeed.innerHTML = `<i data-lucide="gauge" width="14" height="14"></i> ${activeV.speed} km/h`;
-                    }
+                });
+
+                renderDiagnostics(processedResults);
+            }, (err) => {
+                console.error("Error al consultar diagnósticos I/O:", err);
+                const bodyEl = document.getElementById("drawer-body");
+                if (bodyEl) {
+                    bodyEl.innerHTML = `
+                        <div class="drawer-no-data">
+                            <i data-lucide="alert-triangle" width="36" height="36" style="color:var(--c-stopped);"></i>
+                            <p>Error de comunicación al consultar el API de Geotab.</p>
+                            <span>${err.message || err}</span>
+                        </div>
+                    `;
                     if (window.lucide) lucide.createIcons();
                 }
-            } else {
-                // Live Polling
-                api.call("Get", { typeName: "DeviceStatusInfo" }, (statuses) => {
-                    let changed = false;
-                    (statuses || []).forEach(s => {
-                        const v = allVehicles.find(x => x.id === s.device.id);
-                        if (v) {
-                            const speed = Math.round(s.speed || 0);
-                            const isMoving = s.isDeviceMoving || speed > 0;
-                            const ignition = s.isDeviceCommunicating || speed > 0;
-                            
-                            if (v.speed !== speed || v.isMoving !== isMoving || v.ignition !== ignition) {
-                                v.speed = speed;
-                                v.isMoving = isMoving;
-                                v.ignition = ignition;
-                                changed = true;
-                            }
-                        }
-                    });
-
-                    if (changed) {
-                        renderVehicleList(document.getElementById("search-input")?.value || "");
-                        // Actualizar encabezados del vehículo activo
-                        if (activeVehicleId) {
-                            const activeV = allVehicles.find(x => x.id === activeVehicleId);
-                            const kpiIgnition = document.querySelector(".identity-kpi:nth-child(1) .identity-kpi-value");
-                            const kpiSpeed = document.querySelector(".identity-kpi:nth-child(2) .identity-kpi-value");
-                            
-                            if (kpiIgnition && activeV) {
-                                kpiIgnition.style.color = activeV.ignition ? 'var(--c-active)' : 'var(--text-3)';
-                                kpiIgnition.innerHTML = `<i data-lucide="key" width="14" height="14"></i> ${activeV.ignition ? "ENCENDIDO" : "APAGADO"}`;
-                            }
-                            if (kpiSpeed && activeV) {
-                                kpiSpeed.style.color = activeV.isMoving ? 'var(--c-moving)' : 'var(--text-2)';
-                                kpiSpeed.innerHTML = `<i data-lucide="gauge" width="14" height="14"></i> ${activeV.speed} km/h`;
-                            }
-                            if (window.lucide) lucide.createIcons();
-                        }
-                    }
-                }, () => {});
-            }
-        }, 10000);
+            });
+        }
     };
 
-    // ── Vincular Eventos de Búsqueda y Refresco de Página ──────────
+    const renderDiagnostics = (data) => {
+        const bodyEl = document.getElementById("drawer-body");
+        if (!bodyEl) return;
+
+        const hasKeys = Object.keys(data).length > 0;
+        if (!hasKeys) {
+            bodyEl.innerHTML = `
+                <div class="drawer-no-data">
+                    <i data-lucide="help-circle" width="36" height="36"></i>
+                    <p>No se encontraron registros de entradas o salidas telemáticas para esta unidad en Geotab.</p>
+                    <span>La unidad podría no tener módulos IOX o puertos auxiliares configurados.</span>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+            return;
+        }
+
+        // Clasificar diagnósticos
+        const outputs = [];
+        const inputs = [];
+        
+        Object.entries(data).forEach(([diagId, info]) => {
+            const labelMeta = DIAG_LABELS[diagId];
+            if (!labelMeta) return;
+
+            const item = {
+                id: diagId,
+                name: labelMeta.name,
+                value: info.value,
+                dateTime: info.dateTime
+            };
+
+            if (labelMeta.type === "output") {
+                outputs.push(item);
+            } else if (labelMeta.type === "input" || labelMeta.type === "ignition") {
+                inputs.push(item);
+            }
+        });
+
+        // Ordenar: Primero los activos (1), luego inactivos (0)
+        outputs.sort((a, b) => b.value - a.value);
+        inputs.sort((a, b) => b.value - a.value);
+
+        const formatTime = (isoString) => {
+            if (!isoString) return "";
+            const d = new Date(isoString);
+            return d.toLocaleString("es-MX", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit"
+            });
+        };
+
+        const renderItemHTML = (item) => {
+            const isActive = item.value === 1 || item.value === true;
+            let badgeClass = "inactive";
+            let badgeText = "INACTIVO";
+            let iconColor = "var(--text-3)";
+            
+            if (isActive) {
+                if (item.id === "DiagnosticDeviceRelayStateId" || item.id.includes("Output")) {
+                    badgeClass = "active-red";
+                    badgeText = "ACTIVO (1)";
+                    iconColor = "var(--c-stopped)";
+                } else {
+                    badgeClass = "active-green";
+                    badgeText = "ACTIVO (1)";
+                    iconColor = "var(--c-active)";
+                }
+            } else {
+                badgeText = "INACTIVO (0)";
+            }
+
+            // Seleccionar icono lucide adecuado
+            let iconName = "arrow-right-circle";
+            if (item.id === "DiagnosticDeviceRelayStateId") iconName = "cpu";
+            else if (item.id === "DiagnosticIgnitionId") iconName = "key";
+            else if (item.id.includes("Input")) iconName = "arrow-left-circle";
+            else if (item.id.includes("Aux")) iconName = "activity";
+
+            return `
+                <div class="drawer-item">
+                    <div class="drawer-item-info">
+                        <div class="drawer-item-icon" style="color: ${iconColor}; border-color: ${isActive ? 'rgba(255,255,255,0.08)' : 'var(--border)'}">
+                            <i data-lucide="${iconName}" width="16" height="16"></i>
+                        </div>
+                        <div class="drawer-item-texts">
+                            <span class="drawer-item-name">${item.name}</span>
+                            <span class="drawer-item-id">${item.id}</span>
+                        </div>
+                    </div>
+                    <div class="drawer-item-meta">
+                        <span class="drawer-badge ${badgeClass}">
+                            <span class="drawer-badge-dot"></span>
+                            ${badgeText}
+                        </span>
+                        <span class="drawer-item-time" title="Hora de lectura telemática">${formatTime(item.dateTime)}</span>
+                    </div>
+                </div>
+            `;
+        };
+
+        let html = "";
+
+        if (outputs.length > 0) {
+            html += `
+                <div class="drawer-section">
+                    <h3 class="drawer-section-title">
+                        <i data-lucide="arrow-right" width="13" height="13"></i>
+                        Salidas de Control / Relays (${outputs.length})
+                    </h3>
+                    <div class="drawer-list">
+                        ${outputs.map(renderItemHTML).join("")}
+                    </div>
+                </div>
+            `;
+        }
+
+        if (inputs.length > 0) {
+            html += `
+                <div class="drawer-section">
+                    <h3 class="drawer-section-title">
+                        <i data-lucide="arrow-left" width="13" height="13"></i>
+                        Entradas Digitales / Sensores (${inputs.length})
+                    </h3>
+                    <div class="drawer-list">
+                        ${inputs.map(renderItemHTML).join("")}
+                    </div>
+                </div>
+            `;
+        }
+
+        html += `
+            <div style="font-size:0.68rem; color:var(--text-3); text-align:center; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.03);">
+                * Solo se muestran los puertos con telemetría registrada en Geotab.
+            </div>
+        `;
+
+        bodyEl.innerHTML = html;
+        if (window.lucide) lucide.createIcons();
+    };
+
+    // ── Vincular eventos del DOM ─────────────────────────────────
     const bindEvents = () => {
         if (bindEvents._done) return;
         bindEvents._done = true;
 
+        // Seleccionar todas
+        const btnAll = document.getElementById("btn-select-all");
+        if (btnAll) btnAll.addEventListener("click", selectAll);
+
+        // Búsqueda
         const searchInput = document.getElementById("search-input");
-        if (searchInput) {
-            searchInput.addEventListener("input", (e) => {
-                renderVehicleList(e.target.value);
-            });
-        }
+        if (searchInput) searchInput.addEventListener("input", e => renderCards(e.target.value));
 
-        const btnRefresh = document.getElementById("btn-refresh");
-        if (btnRefresh) {
-            btnRefresh.addEventListener("click", () => {
-                btnRefresh.disabled = true;
-                
-                const icon = btnRefresh.querySelector("i");
-                if (icon) {
-                    icon.style.transition = "transform 0.8s ease";
-                    icon.style.transform = "rotate(360deg)";
-                }
+        // Botón detener / restablecer
+        const stopBtn = document.getElementById("btn-stop-motor");
+        if (stopBtn) stopBtn.addEventListener("click", openConfirmModal);
 
-                setTimeout(() => {
-                    if (icon) icon.style.transform = "none";
-                    btnRefresh.disabled = false;
-                }, 800);
+        // Modal: cerrar
+        document.querySelectorAll(".modal-close, .btn-cancel-modal").forEach(btn => {
+            btn.addEventListener("click", closeModal);
+        });
 
-                if (isDemoMode) {
-                    loadDemoDevices();
-                } else {
-                    loadDevices();
+        // Confirmar acción
+        const confirmBtn = document.getElementById("btn-confirm-modal");
+        if (confirmBtn) confirmBtn.addEventListener("click", executeAction);
+
+        // Teclado numérico (data-key)
+        document.querySelectorAll(".key[data-key]").forEach(btn => {
+            btn.addEventListener("click", () => pressKey(btn.dataset.key));
+        });
+
+        // Cerrar drawer de unidad
+        const btnCloseDrawer = document.getElementById("drawer-close");
+        if (btnCloseDrawer) btnCloseDrawer.addEventListener("click", closeVehicleDrawer);
+
+        const overlayDrawer = document.getElementById("drawer-overlay");
+        if (overlayDrawer) overlayDrawer.addEventListener("click", closeVehicleDrawer);
+
+        // Refrescar drawer de unidad
+        const btnRefreshDrawer = document.getElementById("drawer-refresh");
+        if (btnRefreshDrawer) {
+            btnRefreshDrawer.addEventListener("click", () => {
+                if (activeVehicleId) {
+                    const bodyEl = document.getElementById("drawer-body");
+                    if (bodyEl) {
+                        bodyEl.innerHTML = `
+                            <div class="drawer-loading">
+                                <i data-lucide="loader" width="36" height="36" style="animation: spin 1s linear infinite;"></i>
+                                <p>Actualizando lecturas telemáticas...</p>
+                            </div>
+                        `;
+                        if (window.lucide) lucide.createIcons();
+                    }
+                    fetchVehicleDiagnostics(activeVehicleId);
                 }
             });
         }
     };
 
-    // ── Standalone Fallback ──────────────────────────────────────
+    // ── Standalone Fallback (abierto fuera del portal) ───────────
     document.addEventListener("DOMContentLoaded", () => {
         if (window.lucide) lucide.createIcons();
 
         setTimeout(() => {
             if (!isInitialized) {
                 isDemoMode = true;
-                const modeBadge = document.getElementById("connection-status-badge");
-                const modeText = document.getElementById("connection-status-text");
-                if (modeBadge) {
-                    modeBadge.dataset.mode = "demo";
-                    if (modeText) modeText.textContent = "Demo (Standalone)";
-                }
+                const modeBadge = document.getElementById("mode-badge");
+                if (modeBadge) { modeBadge.dataset.mode = "demo"; document.getElementById("mode-text").textContent = "Demo (Standalone)"; }
                 bindEvents();
                 loadDemoDevices();
             }
         }, 600);
     });
 
-    // ── Retornar API del Add-In ──────────────────────────────────
+    // ── Retornar API del Add-In para MyGeotab ────────────────────
     return function () {
         return {
             initialize(geotabApi, state, callback) {
@@ -842,12 +856,8 @@ geotab.addin.out = (function () {
                 api = geotabApi;
                 isDemoMode = false;
 
-                const modeBadge = document.getElementById("connection-status-badge");
-                const modeText = document.getElementById("connection-status-text");
-                if (modeBadge) {
-                    modeBadge.dataset.mode = "live";
-                    if (modeText) modeText.textContent = "Geotab Live";
-                }
+                const modeBadge = document.getElementById("mode-badge");
+                if (modeBadge) { modeBadge.dataset.mode = "live"; document.getElementById("mode-text").textContent = "Geotab Live"; }
 
                 bindEvents();
                 loadDevices();
