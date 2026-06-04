@@ -43,10 +43,10 @@ geotab.addin.ioxOutput = function () {
         statusError;
 
     // ─── State ───────────────────────────────────────────
-    var allDevices      = [];   // full device list from API
+    var allDevices = [];   // full device list from API
     var filteredDevices = [];   // currently shown after search
-    var selectedDevice  = null; // { id, name }
-    var selectedState   = null; // 'On' | 'Off' | null
+    var selectedDevice = null; // { id, name }
+    var selectedState = null; // 'On' | 'Off' | null
 
     // ─── Helpers ─────────────────────────────────────────
     function showError(msg) {
@@ -130,26 +130,26 @@ geotab.addin.ioxOutput = function () {
     // ─── Drawer ───────────────────────────────────────────
     function openDrawer(device) {
         selectedDevice = device;
-        selectedState  = null;
+        selectedState = null;
 
         clearError();
 
         // Update drawer info
         drawerUnitName.textContent = device.name;
-        drawerUnitId.textContent   = "ID: " + device.id;
-        drawerAvatar.textContent   = getInitials(device.name);
+        drawerUnitId.textContent = "ID: " + device.id;
+        drawerAvatar.textContent = getInitials(device.name);
 
         // Reset state buttons
         relayBtnOn.classList.remove("selected");
         relayBtnOff.classList.remove("selected");
         selectedStateRow.style.display = "none";
         selectedStateBadge.textContent = "—";
-        selectedStateBadge.className   = "selected-state-badge";
-        sendBtn.disabled               = true;
+        selectedStateBadge.className = "selected-state-badge";
+        sendBtn.disabled = true;
 
         // Reset sending area
-        sendingEl.style.display  = "none";
-        sendBtn.style.display    = "flex";
+        sendingEl.style.display = "none";
+        sendBtn.style.display = "flex";
 
         // Highlight selected card
         document.querySelectorAll(".unit-card--selected").forEach(function (el) {
@@ -170,7 +170,7 @@ geotab.addin.ioxOutput = function () {
             el.classList.remove("unit-card--selected");
         });
         selectedDevice = null;
-        selectedState  = null;
+        selectedState = null;
     }
 
     // ─── StatusData Modal ─────────────────────────────────────────
@@ -179,16 +179,16 @@ geotab.addin.ioxOutput = function () {
 
         // Fill header
         statusUnitName.textContent = device.name;
-        statusUnitId.textContent   = "ID: " + device.id;
-        statusAvatar.textContent   = getInitials(device.name);
-        statusError.textContent    = "";
+        statusUnitId.textContent = "ID: " + device.id;
+        statusAvatar.textContent = getInitials(device.name);
+        statusError.textContent = "";
 
         // Reset table
-        statusLoading.style.display   = "flex";
-        statusEmpty.style.display     = "none";
+        statusLoading.style.display = "flex";
+        statusEmpty.style.display = "none";
         statusTableWrap.style.display = "none";
-        statusTbody.innerHTML         = "";
-        statusRowCount.textContent    = "";
+        statusTbody.innerHTML = "";
+        statusRowCount.textContent = "";
 
         // Highlight card
         document.querySelectorAll(".unit-card--selected").forEach(function (el) {
@@ -202,7 +202,7 @@ geotab.addin.ioxOutput = function () {
         statusOverlay.classList.add("active");
 
         // Build today’s date range (from midnight to now)
-        var now   = new Date();
+        var now = new Date();
         var start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
 
         api.call("Get", {
@@ -211,7 +211,7 @@ geotab.addin.ioxOutput = function () {
             search: {
                 deviceSearch: { id: device.id },
                 fromDate: start.toISOString(),
-                toDate:   now.toISOString()
+                toDate: now.toISOString()
             }
         }, function (results) {
             statusLoading.style.display = "none";
@@ -240,7 +240,7 @@ geotab.addin.ioxOutput = function () {
                 if (row.dateTime) {
                     var d = new Date(row.dateTime);
                     dtVal = d.toLocaleDateString("es-MX") + " " +
-                            d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                        d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
                 }
 
                 // diagnostic name
@@ -249,16 +249,16 @@ geotab.addin.ioxOutput = function () {
                     : ((row.diagnostic && row.diagnostic.id) ? row.diagnostic.id : "—");
 
                 tr.innerHTML =
-                    '<td class="td-data">'  + escapeHtml(String(dataVal)) + '</td>' +
-                    '<td class="td-dt">'    + escapeHtml(dtVal)           + '</td>' +
-                    '<td class="td-diag">'  + escapeHtml(String(diagVal)) + '</td>';
+                    '<td class="td-data">' + escapeHtml(String(dataVal)) + '</td>' +
+                    '<td class="td-dt">' + escapeHtml(dtVal) + '</td>' +
+                    '<td class="td-diag">' + escapeHtml(String(diagVal)) + '</td>';
 
                 statusTbody.appendChild(tr);
             });
 
         }, function (err) {
             statusLoading.style.display = "none";
-            statusError.textContent     = typeof err === "string" ? err : JSON.stringify(err);
+            statusError.textContent = typeof err === "string" ? err : JSON.stringify(err);
         });
     }
 
@@ -275,12 +275,12 @@ geotab.addin.ioxOutput = function () {
     function selectState(state) {
         selectedState = state;
 
-        relayBtnOn.classList.toggle("selected",  state === "On");
+        relayBtnOn.classList.toggle("selected", state === "On");
         relayBtnOff.classList.toggle("selected", state === "Off");
 
-        selectedStateRow.style.display    = "flex";
-        selectedStateBadge.textContent    = state === "On" ? "ACTIVAR (ON)" : "DESACTIVAR (OFF)";
-        selectedStateBadge.className      = "selected-state-badge " + (state === "On" ? "on" : "off");
+        selectedStateRow.style.display = "flex";
+        selectedStateBadge.textContent = state === "On" ? "ACTIVAR (ON)" : "DESACTIVAR (OFF)";
+        selectedStateBadge.className = "selected-state-badge " + (state === "On" ? "on" : "off");
 
         sendBtn.disabled = false;
     }
@@ -290,7 +290,7 @@ geotab.addin.ioxOutput = function () {
         if (!selectedDevice || !selectedState) return;
 
         clearError();
-        sendBtn.style.display   = "none";
+        sendBtn.style.display = "none";
         sendingEl.style.display = "flex";
 
         api.call("Add", {
@@ -305,11 +305,11 @@ geotab.addin.ioxOutput = function () {
             }
         }, function (messageId) {
             sendingEl.style.display = "none";
-            sendBtn.style.display   = "flex";
+            sendBtn.style.display = "flex";
             addHistoryItem(messageId, selectedState, selectedDevice.name);
         }, function (err) {
             sendingEl.style.display = "none";
-            sendBtn.style.display   = "flex";
+            sendBtn.style.display = "flex";
             showError(err);
         });
     }
@@ -326,8 +326,8 @@ geotab.addin.ioxOutput = function () {
 
         item.innerHTML =
             '<div class="history-item-head">' +
-                '<span class="history-item-state ' + stateClass + '">' + stateLabel + '</span>' +
-                '<span class="history-item-time">' + timeStr + '</span>' +
+            '<span class="history-item-state ' + stateClass + '">' + stateLabel + '</span>' +
+            '<span class="history-item-time">' + timeStr + '</span>' +
             '</div>' +
             '<div>' + escapeHtml(unitName) + '</div>' +
             '<div class="history-item-delivered" id="hist-' + messageId + '"></div>';
@@ -376,41 +376,41 @@ geotab.addin.ioxOutput = function () {
             api = geotabApi;
 
             // DOM references
-            ioxOutputDiv      = document.getElementById("ioxOutput");
-            grid              = document.getElementById("iox-grid");
-            emptyEl           = document.getElementById("iox-empty");
-            searchInput       = document.getElementById("iox-search");
-            searchClear       = document.getElementById("iox-search-clear");
-            filterInfo        = document.getElementById("filter-info");
-            badgeCount        = document.getElementById("badge-count");
-            drawer            = document.getElementById("iox-drawer");
-            drawerOverlay     = document.getElementById("iox-overlay");
-            drawerClose       = document.getElementById("drawer-close");
-            drawerUnitName    = document.getElementById("drawer-unit-name");
-            drawerUnitId      = document.getElementById("drawer-unit-id");
-            drawerAvatar      = document.getElementById("drawer-avatar");
-            relayBtnOn        = document.getElementById("btn-on");
-            relayBtnOff       = document.getElementById("btn-off");
-            selectedStateRow  = document.getElementById("selected-state-row");
-            selectedStateBadge= document.getElementById("selected-state-badge");
-            sendBtn           = document.getElementById("drawer-send");
-            sendingEl         = document.getElementById("drawer-sending");
-            historyEl         = document.getElementById("drawer-history");
-            errorEl           = document.getElementById("ioxoutput-error");
+            ioxOutputDiv = document.getElementById("ioxOutput");
+            grid = document.getElementById("iox-grid");
+            emptyEl = document.getElementById("iox-empty");
+            searchInput = document.getElementById("iox-search");
+            searchClear = document.getElementById("iox-search-clear");
+            filterInfo = document.getElementById("filter-info");
+            badgeCount = document.getElementById("badge-count");
+            drawer = document.getElementById("iox-drawer");
+            drawerOverlay = document.getElementById("iox-overlay");
+            drawerClose = document.getElementById("drawer-close");
+            drawerUnitName = document.getElementById("drawer-unit-name");
+            drawerUnitId = document.getElementById("drawer-unit-id");
+            drawerAvatar = document.getElementById("drawer-avatar");
+            relayBtnOn = document.getElementById("btn-on");
+            relayBtnOff = document.getElementById("btn-off");
+            selectedStateRow = document.getElementById("selected-state-row");
+            selectedStateBadge = document.getElementById("selected-state-badge");
+            sendBtn = document.getElementById("drawer-send");
+            sendingEl = document.getElementById("drawer-sending");
+            historyEl = document.getElementById("drawer-history");
+            errorEl = document.getElementById("ioxoutput-error");
             // StatusData modal
-            statusOverlay    = document.getElementById("status-overlay");
-            statusModal      = document.getElementById("status-modal");
-            statusClose      = document.getElementById("status-close");
-            statusRelayBtn   = document.getElementById("status-relay-btn");
-            statusAvatar     = document.getElementById("status-avatar");
-            statusUnitName   = document.getElementById("status-unit-name");
-            statusUnitId     = document.getElementById("status-unit-id");
-            statusLoading    = document.getElementById("status-loading");
-            statusEmpty      = document.getElementById("status-empty");
-            statusTableWrap  = document.getElementById("status-table-wrap");
-            statusTbody      = document.getElementById("status-tbody");
-            statusRowCount   = document.getElementById("status-row-count");
-            statusError      = document.getElementById("status-error");
+            statusOverlay = document.getElementById("status-overlay");
+            statusModal = document.getElementById("status-modal");
+            statusClose = document.getElementById("status-close");
+            statusRelayBtn = document.getElementById("status-relay-btn");
+            statusAvatar = document.getElementById("status-avatar");
+            statusUnitName = document.getElementById("status-unit-name");
+            statusUnitId = document.getElementById("status-unit-id");
+            statusLoading = document.getElementById("status-loading");
+            statusEmpty = document.getElementById("status-empty");
+            statusTableWrap = document.getElementById("status-table-wrap");
+            statusTbody = document.getElementById("status-tbody");
+            statusRowCount = document.getElementById("status-row-count");
+            statusError = document.getElementById("status-error");
 
             // ── Events ──
             // Search live filter
@@ -500,7 +500,7 @@ geotab.addin.ioxOutput = function () {
         blur: function () {
             closeDrawer();
             ioxOutputDiv.style.display = "none";
-            allDevices      = [];
+            allDevices = [];
             filteredDevices = [];
         }
     };
