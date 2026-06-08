@@ -1234,3 +1234,68 @@ body {
     .iox-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
     .iox-drawer { width: 100%; border-radius: var(--r-xl) var(--r-xl) 0 0; top: auto; height: 90vh; }
 }
+
+/* Groups row button & Groups Modal */
+.card-groups-btn {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: var(--primary);
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    font-family: var(--font);
+}
+.card-groups-btn:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: var(--primary);
+}
+
+.groups-list-ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.group-item-li {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 10px 14px;
+    font-size: 0.84rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.group-item-li:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.group-item-icon {
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.group-item-name {
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.group-item-id {
+    font-size: 0.68rem;
+    color: var(--text-soft);
+    margin-left: auto;
+    font-family: 'Courier New', monospace;
+}
