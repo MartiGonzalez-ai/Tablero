@@ -337,12 +337,8 @@ geotab.addin.ioxOutput = function () {
                 var userVal = (row.user && row.user.id) ? row.user.id : "—";
 
                 tr.innerHTML =
-                    '<td class="td-data" style="font-family:\'Courier New\', monospace; font-size:0.75rem;">' + escapeHtml(String(idVal)) + '</td>' +
-                    '<td style="white-space:nowrap;">' + escapeHtml(directionVal) + '</td>' +
-                    '<td>' + escapeHtml(sentVal) + '</td>' +
                     '<td>' + escapeHtml(deliveredVal) + '</td>' +
-                    '<td style="font-weight:500;">' + escapeHtml(contentVal) + '</td>' +
-                    '<td>' + escapeHtml(userVal) + '</td>';
+                    '<td style="font-weight:500;">' + escapeHtml(contentVal) + '</td>';
 
                 statusTbody.appendChild(tr);
             });
