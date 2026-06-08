@@ -76,44 +76,6 @@ geotab.addin.ioxOutput = function () {
         return (val !== undefined && val !== null && val !== "") ? String(val) : null;
     }
 
-    function fuelLabel(fuelType) {
-        var labels = {
-            "Diesel": "Diesel",
-            "NaturalGas": "Gas Natural",
-            "Gasoline": "Gasolina",
-            "Hybrid": "Híbrido",
-            "Electric": "Eléctrico",
-            "HybridElectric": "Híbrido Eléctrico",
-            "LPG": "LPG",
-            "Hydrogen": "Hidrógeno",
-            "None": "Sin combustible"
-        };
-        return labels[fuelType] || safeVal(fuelType);
-    }
-
-    function vehicleTypeLabel(vt) {
-        var labels = {
-            "Truck": "Camión",
-            "Car": "Auto",
-            "Bus": "Autobús",
-            "Van": "Camioneta",
-            "Motorcycle": "Motocicleta",
-            "Trailer": "Remolque",
-            "None": "N/A"
-        };
-        return labels[vt] || safeVal(vt);
-    }
-
-    function engineTypeLabel(et) {
-        var labels = {
-            "Combustion": "Combustión",
-            "Electric": "Eléctrico",
-            "Hybrid": "Híbrido",
-            "FuelCell": "Celda de combustible",
-            "None": "N/A"
-        };
-        return labels[et] || safeVal(et);
-    }
 
     // ─── Render grid ─────────────────────────────────────
     function renderGrid(devices) {
@@ -174,31 +136,6 @@ geotab.addin.ioxOutput = function () {
                 makeModelYear ? escapeHtml(makeModelYear) : '<span class="card-null">—</span>'
             );
 
-            // Tipo de vehículo  (vinInfoVehicleType)
-            var vt = safeVal(device.vinInfoVehicleType);
-            rows += buildRow(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
-                "Tipo de vehículo",
-                vt ? escapeHtml(vt) : '<span class="card-null">—</span>'
-            );
-
-            // Tipo de activo  (vinInfoVehicleType — misma fuente, campo de categoría)
-            var assetType = safeVal(device.vinInfoVehicleType);
-            rows += buildRow(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
-                "Tipo de activo",
-                assetType ? escapeHtml(assetType) : '<span class="card-null">—</span>'
-            );
-
-            // Motopropulsor / Combustible
-            var engine = engineTypeLabel(device.engineType);
-            var fuel = fuelLabel(device.fuelType);
-            var propulsion = [engine, fuel].filter(Boolean).join(" · ");
-            rows += buildRow(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2v7H6V2"/><path d="M6 9H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/><path d="M16 2l4 4-4 4"/><path d="M20 6H13"/></svg>',
-                "Motopropulsor / Combustible",
-                propulsion ? escapeHtml(propulsion) : '<span class="card-null">—</span>'
-            );
 
             // Placa
             var plate = safeVal(device.licensePlate);
