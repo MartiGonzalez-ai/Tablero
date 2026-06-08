@@ -16,6 +16,7 @@ geotab.addin.ioxOutput = function () {
         drawer,
         drawerOverlay,
         drawerClose,
+        drawerHistoryBtn,
         drawerUnitName,
         drawerUnitId,
         drawerAvatar,
@@ -154,6 +155,14 @@ geotab.addin.ioxOutput = function () {
                 groupValueHtml
             );
 
+            // Historial
+            var historyValueHtml = '<button class="card-groups-btn card-history-btn">Ver historial</button>';
+            rows += buildRow(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+                "Historial",
+                historyValueHtml
+            );
+
             card.innerHTML =
                 '<div class="unit-card-header">' +
                 '  <div class="unit-card-title-wrap">' +
@@ -176,8 +185,16 @@ geotab.addin.ioxOutput = function () {
                 });
             }
 
+            var historyBtn = card.querySelector(".card-history-btn");
+            if (historyBtn) {
+                historyBtn.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    openStatusModal(device);
+                });
+            }
+
             card.addEventListener("click", function () {
-                openStatusModal(device);
+                openDrawer(device);
             });
 
             grid.appendChild(card);
@@ -533,6 +550,7 @@ geotab.addin.ioxOutput = function () {
             drawer = document.getElementById("iox-drawer");
             drawerOverlay = document.getElementById("iox-overlay");
             drawerClose = document.getElementById("drawer-close");
+            drawerHistoryBtn = document.getElementById("drawer-history-btn");
             drawerUnitName = document.getElementById("drawer-unit-name");
             drawerUnitId = document.getElementById("drawer-unit-id");
             drawerAvatar = document.getElementById("drawer-avatar");
@@ -581,6 +599,14 @@ geotab.addin.ioxOutput = function () {
             document.getElementById("iox-drawer").addEventListener("click", function (e) {
                 e.stopPropagation();
             });
+
+            if (drawerHistoryBtn) {
+                drawerHistoryBtn.addEventListener("click", function () {
+                    var dev = selectedDevice;
+                    closeDrawer();
+                    openStatusModal(dev);
+                });
+            }
 
             // StatusData modal events
             statusClose.addEventListener("click", closeStatusModal);
