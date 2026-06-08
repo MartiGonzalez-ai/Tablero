@@ -102,8 +102,6 @@ geotab.addin.ioxOutput = function () {
                 card.classList.add("unit-card--selected");
             }
 
-            var initials = getInitials(device.name);
-
             // ── Movement status ──
             var statusInfo = statusInfoMap[device.id];
             var isMoving = statusInfo && statusInfo.isDeviceCommunicating &&
@@ -136,7 +134,6 @@ geotab.addin.ioxOutput = function () {
                 makeModelYear ? escapeHtml(makeModelYear) : '<span class="card-null">—</span>'
             );
 
-
             // Placa
             var plate = safeVal(device.licensePlate);
             rows += buildRow(
@@ -146,25 +143,21 @@ geotab.addin.ioxOutput = function () {
             );
 
             // Grupo
-            var groupName = "—";
-            if (device.groups && device.groups.length > 0) {
-                var groupNames = device.groups.map(function (g) {
-                    return safeVal(g.name) || safeVal(g.id) || "—";
-                }).filter(Boolean);
-                groupName = groupNames.join(", ") || "—";
+            var numGroups = device.groups ? device.groups.length : 0;
+            var groupValueHtml = '<span class="card-null">—</span>';
+            if (numGroups > 0) {
+                groupValueHtml = '<button class="card-groups-btn">Ver grupos (' + numGroups + ')</button>';
             }
             rows += buildRow(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
                 "Grupo",
-                groupName !== "—" ? escapeHtml(groupName) : '<span class="card-null">—</span>'
+                groupValueHtml
             );
 
             card.innerHTML =
                 '<div class="unit-card-header">' +
-                '  <div class="unit-card-avatar">' + initials + '</div>' +
                 '  <div class="unit-card-title-wrap">' +
                 '    <div class="unit-card-name">' + escapeHtml(device.name) + '</div>' +
-                '    <div class="unit-card-id">' + escapeHtml(device.id) + '</div>' +
                 '  </div>' +
                 '  <span class="unit-card-status ' + movingClass + '">' + movingIcon + movingLabel + '</span>' +
                 '</div>' +
@@ -174,6 +167,14 @@ geotab.addin.ioxOutput = function () {
                 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" ' +
                 'stroke-linecap="round" stroke-linejoin="round">' +
                 '<polyline points="9 18 15 12 9 6"/></svg>';
+
+            var groupsBtn = card.querySelector(".card-groups-btn");
+            if (groupsBtn) {
+                groupsBtn.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    openGroupsModal(device);
+                });
+            }
 
             card.addEventListener("click", function () {
                 openStatusModal(device);
@@ -337,6 +338,66 @@ geotab.addin.ioxOutput = function () {
     function closeStatusModal() {
         statusModal.classList.remove("open");
         statusOverlay.classList.remove("active");
+        document.querySelectorAll(".unit-card--selected").forEach(function (el) {
+            el.classList.remove("unit-card--selected");
+        });
+        selectedDevice = null;
+    }
+
+    function openGroupsModal(device) {
+        selectedDevice = device;
+
+        var nameEl = document.getElementById("groups-unit-name");
+        if (nameEl) nameEl.textContent = device.name;
+        
+        var listUl = document.getElementById("groups-list");
+        if (listUl) {
+            listUl.innerHTML = "";
+
+            if (device.groups && device.groups.length > 0) {
+                device.groups.forEach(function (g) {
+                    var name = safeVal(g.name) || safeVal(g.id) || "—";
+                    var id = safeVal(g.id) || "";
+                    var li = document.createElement("li");
+                    li.className = "group-item-li";
+                    li.innerHTML = 
+                        '<span class="group-item-icon">' +
+                        '  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' +
+                        '</span>' +
+                        '<span class="group-item-name">' + escapeHtml(name) + '</span>' +
+                        (id ? '<span class="group-item-id">' + escapeHtml(id) + '</span>' : '');
+                    listUl.appendChild(li);
+                });
+            } else {
+                var emptyLi = document.createElement("li");
+                emptyLi.style.textAlign = "center";
+                emptyLi.style.padding = "20px";
+                emptyLi.style.color = "var(--text-soft)";
+                emptyLi.textContent = "La unidad no pertenece a ningún grupo.";
+                listUl.appendChild(emptyLi);
+            }
+        }
+
+        // Highlight card
+        document.querySelectorAll(".unit-card--selected").forEach(function (el) {
+            el.classList.remove("unit-card--selected");
+        });
+        var activeCard = grid.querySelector('[data-device-id="' + device.id + '"]');
+        if (activeCard) activeCard.classList.add("unit-card--selected");
+
+        // Open modal
+        var gModal = document.getElementById("groups-modal");
+        var gOverlay = document.getElementById("groups-overlay");
+        if (gModal) gModal.classList.add("open");
+        if (gOverlay) gOverlay.classList.add("active");
+    }
+
+    function closeGroupsModal() {
+        var gModal = document.getElementById("groups-modal");
+        var gOverlay = document.getElementById("groups-overlay");
+        if (gModal) gModal.classList.remove("open");
+        if (gOverlay) gOverlay.classList.remove("active");
+
         document.querySelectorAll(".unit-card--selected").forEach(function (el) {
             el.classList.remove("unit-card--selected");
         });
@@ -520,6 +581,19 @@ geotab.addin.ioxOutput = function () {
                 openDrawer(dev);
             });
 
+            // Groups modal events
+            var groupsOverlay = document.getElementById("groups-overlay");
+            var groupsModal = document.getElementById("groups-modal");
+            var groupsClose = document.getElementById("groups-close");
+
+            if (groupsClose) groupsClose.addEventListener("click", closeGroupsModal);
+            if (groupsOverlay) groupsOverlay.addEventListener("click", closeGroupsModal);
+            if (groupsModal) {
+                groupsModal.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                });
+            }
+
             // State selection
             relayBtnOn.addEventListener("click", function () { selectState("On"); });
             relayBtnOff.addEventListener("click", function () { selectState("Off"); });
@@ -596,6 +670,7 @@ geotab.addin.ioxOutput = function () {
          */
         blur: function () {
             closeDrawer();
+            closeGroupsModal();
             ioxOutputDiv.style.display = "none";
             allDevices = [];
             filteredDevices = [];
