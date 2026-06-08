@@ -144,10 +144,13 @@ geotab.addin.ioxOutput = function () {
             );
 
             // Grupo
-            var numGroups = device.groups ? device.groups.length : 0;
             var groupValueHtml = '<span class="card-null">—</span>';
-            if (numGroups > 0) {
-                groupValueHtml = '<button class="card-show-groups-btn">Ver grupos (' + numGroups + ')</button>';
+            if (device.groups && device.groups.length > 0) {
+                var pills = device.groups.map(function (g) {
+                    var name = safeVal(g.name) || safeVal(g.id) || "—";
+                    return '<span class="card-group-pill" title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</span>';
+                });
+                groupValueHtml = '<div class="card-group-pills-wrap">' + pills.join("") + '</div>';
             }
             rows += buildRow(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
@@ -176,14 +179,6 @@ geotab.addin.ioxOutput = function () {
                 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" ' +
                 'stroke-linecap="round" stroke-linejoin="round">' +
                 '<polyline points="9 18 15 12 9 6"/></svg>';
-
-            var groupsBtn = card.querySelector(".card-show-groups-btn");
-            if (groupsBtn) {
-                groupsBtn.addEventListener("click", function (e) {
-                    e.stopPropagation();
-                    openGroupsModal(device);
-                });
-            }
 
             var historyBtn = card.querySelector(".card-history-btn");
             if (historyBtn) {
