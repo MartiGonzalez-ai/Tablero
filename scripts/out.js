@@ -130,7 +130,7 @@ geotab.addin.ioxOutput = function () {
             var makeModelYear = [make, model, year].filter(Boolean).join(" · ");
             rows += buildRow(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><circle cx="12" cy="20" r="1"/><circle cx="20" cy="20" r="1"/></svg>',
-                "Fabricante / Modelo / Año",
+                "",
                 makeModelYear ? escapeHtml(makeModelYear) : '<span class="card-null">—</span>'
             );
 
@@ -349,7 +349,7 @@ geotab.addin.ioxOutput = function () {
 
         var nameEl = document.getElementById("groups-unit-name");
         if (nameEl) nameEl.textContent = device.name;
-        
+
         var listUl = document.getElementById("groups-list");
         if (listUl) {
             listUl.innerHTML = "";
@@ -360,7 +360,7 @@ geotab.addin.ioxOutput = function () {
                     var id = safeVal(g.id) || "";
                     var li = document.createElement("li");
                     li.className = "group-item-li";
-                    li.innerHTML = 
+                    li.innerHTML =
                         '<span class="group-item-icon">' +
                         '  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' +
                         '</span>' +
