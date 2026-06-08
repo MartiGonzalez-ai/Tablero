@@ -589,6 +589,10 @@ body {
     flex-shrink: 0;
 }
 
+.card-row-label:empty {
+    display: none;
+}
+
 .card-row-value {
     font-size: 0.75rem;
     color: var(--text);
