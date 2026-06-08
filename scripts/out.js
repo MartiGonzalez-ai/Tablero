@@ -145,10 +145,10 @@ geotab.addin.ioxOutput = function () {
             // ── Movement status ──
             var statusInfo = statusInfoMap[device.id];
             var isMoving = statusInfo && statusInfo.isDeviceCommunicating &&
-                           statusInfo.speed !== undefined && statusInfo.speed > 0;
+                statusInfo.speed !== undefined && statusInfo.speed > 0;
             var movingClass = isMoving ? "moving" : "stopped";
             var movingLabel = isMoving ? "En movimiento" : "Detenida";
-            var movingIcon  = isMoving
+            var movingIcon = isMoving
                 ? '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
                 : '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
 
@@ -164,9 +164,9 @@ geotab.addin.ioxOutput = function () {
             );
 
             // Fabricante, modelo, año  (campos vinInfo* de la API de Geotab)
-            var make  = safeVal(device.vinInfoMake);
+            var make = safeVal(device.vinInfoMake);
             var model = safeVal(device.vinInfoModel);
-            var year  = safeVal(device.vinInfoYear);
+            var year = safeVal(device.vinInfoYear);
             var makeModelYear = [make, model, year].filter(Boolean).join(" · ");
             rows += buildRow(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><circle cx="12" cy="20" r="1"/><circle cx="20" cy="20" r="1"/></svg>',
@@ -192,7 +192,7 @@ geotab.addin.ioxOutput = function () {
 
             // Motopropulsor / Combustible
             var engine = engineTypeLabel(device.engineType);
-            var fuel   = fuelLabel(device.fuelType);
+            var fuel = fuelLabel(device.fuelType);
             var propulsion = [engine, fuel].filter(Boolean).join(" · ");
             rows += buildRow(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2v7H6V2"/><path d="M6 9H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/><path d="M16 2l4 4-4 4"/><path d="M20 6H13"/></svg>',
@@ -211,7 +211,7 @@ geotab.addin.ioxOutput = function () {
             // Grupo
             var groupName = "—";
             if (device.groups && device.groups.length > 0) {
-                var groupNames = device.groups.map(function(g) {
+                var groupNames = device.groups.map(function (g) {
                     return safeVal(g.name) || safeVal(g.id) || "—";
                 }).filter(Boolean);
                 groupName = groupNames.join(", ") || "—";
@@ -248,10 +248,10 @@ geotab.addin.ioxOutput = function () {
 
     function buildRow(iconSvg, label, valueHtml) {
         return '<div class="card-row">' +
-               '  <span class="card-row-icon">' + iconSvg + '</span>' +
-               '  <span class="card-row-label">' + escapeHtml(label) + '</span>' +
-               '  <span class="card-row-value">' + valueHtml + '</span>' +
-               '</div>';
+            '  <span class="card-row-icon">' + iconSvg + '</span>' +
+            '  <span class="card-row-label">' + escapeHtml(label) + '</span>' +
+            '  <span class="card-row-value">' + valueHtml + '</span>' +
+            '</div>';
     }
 
     // ─── Filter ───────────────────────────────────────────
