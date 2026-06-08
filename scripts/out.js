@@ -43,10 +43,11 @@ geotab.addin.ioxOutput = function () {
         statusError;
 
     // ─── State ───────────────────────────────────────────
-    var allDevices = [];   // full device list from API
-    var filteredDevices = [];   // currently shown after search
-    var selectedDevice = null; // { id, name }
-    var selectedState = null; // 'On' | 'Off' | null
+    var allDevices = [];      // full device list from API
+    var filteredDevices = []; // currently shown after search
+    var statusInfoMap = {};   // deviceId -> DeviceStatusInfo
+    var selectedDevice = null; // { id, name, ... }
+    var selectedState = null;  // 'On' | 'Off' | null
 
     // ─── Helpers ─────────────────────────────────────────
     function showError(msg) {
@@ -68,6 +69,50 @@ geotab.addin.ioxOutput = function () {
         var na = a.name.toLowerCase();
         var nb = b.name.toLowerCase();
         return na < nb ? -1 : na > nb ? 1 : 0;
+    }
+
+    // ─── Helpers for device fields ────────────────────────
+    function safeVal(val) {
+        return (val !== undefined && val !== null && val !== "") ? String(val) : null;
+    }
+
+    function fuelLabel(fuelType) {
+        var labels = {
+            "Diesel": "Diesel",
+            "NaturalGas": "Gas Natural",
+            "Gasoline": "Gasolina",
+            "Hybrid": "Híbrido",
+            "Electric": "Eléctrico",
+            "HybridElectric": "Híbrido Eléctrico",
+            "LPG": "LPG",
+            "Hydrogen": "Hidrógeno",
+            "None": "Sin combustible"
+        };
+        return labels[fuelType] || safeVal(fuelType);
+    }
+
+    function vehicleTypeLabel(vt) {
+        var labels = {
+            "Truck": "Camión",
+            "Car": "Auto",
+            "Bus": "Autobús",
+            "Van": "Camioneta",
+            "Motorcycle": "Motocicleta",
+            "Trailer": "Remolque",
+            "None": "N/A"
+        };
+        return labels[vt] || safeVal(vt);
+    }
+
+    function engineTypeLabel(et) {
+        var labels = {
+            "Combustion": "Combustión",
+            "Electric": "Eléctrico",
+            "Hybrid": "Híbrido",
+            "FuelCell": "Celda de combustible",
+            "None": "N/A"
+        };
+        return labels[et] || safeVal(et);
     }
 
     // ─── Render grid ─────────────────────────────────────
@@ -97,10 +142,98 @@ geotab.addin.ioxOutput = function () {
 
             var initials = getInitials(device.name);
 
+            // ── Movement status ──
+            var statusInfo = statusInfoMap[device.id];
+            var isMoving = statusInfo && statusInfo.isDeviceCommunicating &&
+                           statusInfo.speed !== undefined && statusInfo.speed > 0;
+            var movingClass = isMoving ? "moving" : "stopped";
+            var movingLabel = isMoving ? "En movimiento" : "Detenida";
+            var movingIcon  = isMoving
+                ? '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+
+            // ── Build detail rows ──
+            var rows = "";
+
+            // VIN / ID de activo
+            var vin = safeVal(device.vehicleIdentificationNumber);
+            rows += buildRow(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 3v4M8 3v4"/></svg>',
+                "ID / VIN",
+                vin ? escapeHtml(vin) : '<span class="card-null">—</span>'
+            );
+
+            // Fabricante, modelo, año
+            var make  = safeVal(device.make);
+            var model = safeVal(device.model);
+            var year  = safeVal(device.year);
+            var makeModelYear = [make, model, year].filter(Boolean).join(" · ");
+            rows += buildRow(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><circle cx="12" cy="20" r="1"/><circle cx="20" cy="20" r="1"/></svg>',
+                "Fabricante / Modelo / Año",
+                makeModelYear ? escapeHtml(makeModelYear) : '<span class="card-null">—</span>'
+            );
+
+            // Tipo de vehículo
+            var vt = vehicleTypeLabel(device.vehicleType) || vehicleTypeLabel(device.activeFrom);
+            var deviceTypeName = safeVal(device.deviceType) || safeVal(device.typeName) || safeVal(device.type);
+            rows += buildRow(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+                "Tipo de vehículo",
+                vt ? escapeHtml(vt) : '<span class="card-null">—</span>'
+            );
+
+            // Tipo de activo
+            var assetType = safeVal(device.assetType) || safeVal(device.deviceType) || safeVal(device.typeName);
+            rows += buildRow(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
+                "Tipo de activo",
+                assetType ? escapeHtml(assetType) : '<span class="card-null">—</span>'
+            );
+
+            // Motopropulsor / Combustible
+            var engine = engineTypeLabel(device.engineType);
+            var fuel   = fuelLabel(device.fuelType);
+            var propulsion = [engine, fuel].filter(Boolean).join(" · ");
+            rows += buildRow(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2v7H6V2"/><path d="M6 9H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/><path d="M16 2l4 4-4 4"/><path d="M20 6H13"/></svg>',
+                "Motopropulsor / Combustible",
+                propulsion ? escapeHtml(propulsion) : '<span class="card-null">—</span>'
+            );
+
+            // Placa
+            var plate = safeVal(device.licensePlate);
+            rows += buildRow(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="7" y1="10" x2="7" y2="14"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="17" y1="10" x2="17" y2="14"/></svg>',
+                "Placa",
+                plate ? '<span class="card-plate">' + escapeHtml(plate) + '</span>' : '<span class="card-null">—</span>'
+            );
+
+            // Grupo
+            var groupName = "—";
+            if (device.groups && device.groups.length > 0) {
+                var groupNames = device.groups.map(function(g) {
+                    return safeVal(g.name) || safeVal(g.id) || "—";
+                }).filter(Boolean);
+                groupName = groupNames.join(", ") || "—";
+            }
+            rows += buildRow(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+                "Grupo",
+                groupName !== "—" ? escapeHtml(groupName) : '<span class="card-null">—</span>'
+            );
+
             card.innerHTML =
-                '<div class="unit-card-avatar">' + initials + '</div>' +
-                '<div class="unit-card-name">' + escapeHtml(device.name) + '</div>' +
-                '<div class="unit-card-id">' + device.id + '</div>' +
+                '<div class="unit-card-header">' +
+                '  <div class="unit-card-avatar">' + initials + '</div>' +
+                '  <div class="unit-card-title-wrap">' +
+                '    <div class="unit-card-name">' + escapeHtml(device.name) + '</div>' +
+                '    <div class="unit-card-id">' + escapeHtml(device.id) + '</div>' +
+                '  </div>' +
+                '  <span class="unit-card-status ' + movingClass + '">' + movingIcon + movingLabel + '</span>' +
+                '</div>' +
+                '<div class="unit-card-divider"></div>' +
+                '<div class="unit-card-details">' + rows + '</div>' +
                 '<svg class="unit-card-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" ' +
                 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" ' +
                 'stroke-linecap="round" stroke-linejoin="round">' +
@@ -112,6 +245,14 @@ geotab.addin.ioxOutput = function () {
 
             grid.appendChild(card);
         });
+    }
+
+    function buildRow(iconSvg, label, valueHtml) {
+        return '<div class="card-row">' +
+               '  <span class="card-row-icon">' + iconSvg + '</span>' +
+               '  <span class="card-row-label">' + escapeHtml(label) + '</span>' +
+               '  <span class="card-row-value">' + valueHtml + '</span>' +
+               '</div>';
     }
 
     // ─── Filter ───────────────────────────────────────────
@@ -458,6 +599,7 @@ geotab.addin.ioxOutput = function () {
          */
         focus: function (geotabApi, state) {
             api = geotabApi;
+            statusInfoMap = {};
 
             // Show skeleton while loading
             grid.innerHTML =
@@ -484,8 +626,32 @@ geotab.addin.ioxOutput = function () {
                     return;
                 }
 
+                // Render immediately with data available, then enrich with status info
                 renderGrid(allDevices);
                 ioxOutputDiv.style.display = "";
+
+                // Fetch movement status for all devices
+                api.call("Get", {
+                    typeName: "DeviceStatusInfo",
+                    search: { groups: state.getGroupFilter() }
+                }, function (statusList) {
+                    statusInfoMap = {};
+                    (statusList || []).forEach(function (s) {
+                        if (s && s.device && s.device.id) {
+                            statusInfoMap[s.device.id] = s;
+                        }
+                    });
+                    // Re-render with movement status
+                    var currentQuery = searchInput ? searchInput.value : "";
+                    if (currentQuery.trim()) {
+                        applyFilter(currentQuery);
+                    } else {
+                        renderGrid(allDevices);
+                    }
+                }, function () {
+                    // Ignore status errors, just keep rendering without movement info
+                });
+
             }, showError);
         },
 
