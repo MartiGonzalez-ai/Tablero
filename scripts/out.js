@@ -347,9 +347,36 @@ geotab.addin.ioxOutput = function () {
     function openGroupsModal(device) {
         selectedDevice = device;
 
-        document.getElementById("groups-unit-name").textContent = device.name;
+        var nameEl = document.getElementById("groups-unit-name");
+        if (nameEl) nameEl.textContent = device.name;
+        
         var listUl = document.getElementById("groups-list");
-        listUl.innerHTML = "";
+        if (listUl) {
+            listUl.innerHTML = "";
+
+            if (device.groups && device.groups.length > 0) {
+                device.groups.forEach(function (g) {
+                    var name = safeVal(g.name) || safeVal(g.id) || "—";
+                    var id = safeVal(g.id) || "";
+                    var li = document.createElement("li");
+                    li.className = "group-item-li";
+                    li.innerHTML = 
+                        '<span class="group-item-icon">' +
+                        '  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' +
+                        '</span>' +
+                        '<span class="group-item-name">' + escapeHtml(name) + '</span>' +
+                        (id ? '<span class="group-item-id">' + escapeHtml(id) + '</span>' : '');
+                    listUl.appendChild(li);
+                });
+            } else {
+                var emptyLi = document.createElement("li");
+                emptyLi.style.textAlign = "center";
+                emptyLi.style.padding = "20px";
+                emptyLi.style.color = "var(--text-soft)";
+                emptyLi.textContent = "La unidad no pertenece a ningún grupo.";
+                listUl.appendChild(emptyLi);
+            }
+        }
 
         // Highlight card
         document.querySelectorAll(".unit-card--selected").forEach(function (el) {
@@ -358,37 +385,19 @@ geotab.addin.ioxOutput = function () {
         var activeCard = grid.querySelector('[data-device-id="' + device.id + '"]');
         if (activeCard) activeCard.classList.add("unit-card--selected");
 
-        if (device.groups && device.groups.length > 0) {
-            device.groups.forEach(function (g) {
-                var name = safeVal(g.name) || safeVal(g.id) || "—";
-                var id = safeVal(g.id) || "";
-                var li = document.createElement("li");
-                li.className = "group-item-li";
-                li.innerHTML = 
-                    '<span class="group-item-icon">' +
-                    '  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' +
-                    '</span>' +
-                    '<span class="group-item-name">' + escapeHtml(name) + '</span>' +
-                    (id ? '<span class="group-item-id">' + escapeHtml(id) + '</span>' : '');
-                listUl.appendChild(li);
-            });
-        } else {
-            var emptyLi = document.createElement("li");
-            emptyLi.style.textAlign = "center";
-            emptyLi.style.padding = "20px";
-            emptyLi.style.color = "var(--text-soft)";
-            emptyLi.textContent = "La unidad no pertenece a ningún grupo.";
-            listUl.appendChild(emptyLi);
-        }
-
         // Open modal
-        document.getElementById("groups-modal").classList.add("open");
-        document.getElementById("groups-overlay").classList.add("active");
+        var gModal = document.getElementById("groups-modal");
+        var gOverlay = document.getElementById("groups-overlay");
+        if (gModal) gModal.classList.add("open");
+        if (gOverlay) gOverlay.classList.add("active");
     }
 
     function closeGroupsModal() {
-        document.getElementById("groups-modal").classList.remove("open");
-        document.getElementById("groups-overlay").classList.remove("active");
+        var gModal = document.getElementById("groups-modal");
+        var gOverlay = document.getElementById("groups-overlay");
+        if (gModal) gModal.classList.remove("open");
+        if (gOverlay) gOverlay.classList.remove("active");
+
         document.querySelectorAll(".unit-card--selected").forEach(function (el) {
             el.classList.remove("unit-card--selected");
         });
@@ -577,11 +586,13 @@ geotab.addin.ioxOutput = function () {
             var groupsModal = document.getElementById("groups-modal");
             var groupsClose = document.getElementById("groups-close");
 
-            groupsClose.addEventListener("click", closeGroupsModal);
-            groupsOverlay.addEventListener("click", closeGroupsModal);
-            groupsModal.addEventListener("click", function (e) {
-                e.stopPropagation();
-            });
+            if (groupsClose) groupsClose.addEventListener("click", closeGroupsModal);
+            if (groupsOverlay) groupsOverlay.addEventListener("click", closeGroupsModal);
+            if (groupsModal) {
+                groupsModal.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                });
+            }
 
             // State selection
             relayBtnOn.addEventListener("click", function () { selectState("On"); });
