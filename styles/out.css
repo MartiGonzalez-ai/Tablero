@@ -1125,6 +1125,7 @@ body {
 
 .status-table-scroll {
     overflow-y: auto;
+    overflow-x: auto;
     max-height: 420px;
     flex: 1;
 }
