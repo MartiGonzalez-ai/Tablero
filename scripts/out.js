@@ -279,12 +279,11 @@ geotab.addin.ioxOutput = function () {
         statusModal.classList.add("open");
         statusOverlay.classList.add("active");
 
-        // Get entire diagnostic history for this device
+        // Get entire text message history for this device
         api.call("Get", {
-            typeName: "StatusData",
+            typeName: "TextMessage",
             search: {
-                deviceSearch: { id: device.id },
-                diagnosticSearch: { id: "aztaiZ_rDlEy5Nsg6UTXc2A" }
+                deviceSearch: { id: device.id }
             }
         }, function (results) {
             statusLoading.style.display = "none";
@@ -299,32 +298,51 @@ geotab.addin.ioxOutput = function () {
 
             // Sort newest first
             results.sort(function (a, b) {
-                return new Date(b.dateTime) - new Date(a.dateTime);
+                return new Date(b.sent || 0) - new Date(a.sent || 0);
             });
 
             results.forEach(function (row) {
                 var tr = document.createElement("tr");
 
-                // data value
-                var dataVal = row.data !== undefined && row.data !== null ? row.data : "—";
+                var idVal = row.id || "—";
+                var directionVal = row.isDirectionToVehicle ? "Hacia Vehículo" : "Desde Vehículo";
 
-                // datetime
-                var dtVal = "—";
-                if (row.dateTime) {
-                    var d = new Date(row.dateTime);
-                    dtVal = d.toLocaleDateString("es-MX") + " " +
+                var sentVal = "—";
+                if (row.sent) {
+                    var d = new Date(row.sent);
+                    sentVal = d.toLocaleDateString("es-MX") + " " +
                         d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
                 }
 
-                // diagnostic name
-                var diagVal = (row.diagnostic && row.diagnostic.name)
-                    ? row.diagnostic.name
-                    : ((row.diagnostic && row.diagnostic.id) ? row.diagnostic.id : "—");
+                var deliveredVal = "—";
+                if (row.delivered) {
+                    var d = new Date(row.delivered);
+                    deliveredVal = d.toLocaleDateString("es-MX") + " " +
+                        d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                }
+
+                var contentVal = "—";
+                if (row.messageContent) {
+                    if (row.messageContent.isRelayOn !== undefined) {
+                        contentVal = row.messageContent.isRelayOn ? "⚡ ON (Activar)" : "⏹ OFF (Desactivar)";
+                    } else if (row.messageContent.contentType) {
+                        contentVal = row.messageContent.contentType + (row.messageContent.text ? ": " + row.messageContent.text : "");
+                    } else if (typeof row.messageContent === "string") {
+                        contentVal = row.messageContent;
+                    } else {
+                        contentVal = JSON.stringify(row.messageContent);
+                    }
+                }
+
+                var userVal = (row.user && row.user.id) ? row.user.id : "—";
 
                 tr.innerHTML =
-                    '<td class="td-data">' + escapeHtml(String(dataVal)) + '</td>' +
-                    '<td class="td-dt">' + escapeHtml(dtVal) + '</td>' +
-                    '<td class="td-diag">' + escapeHtml(String(diagVal)) + '</td>';
+                    '<td class="td-data" style="font-family:\'Courier New\', monospace; font-size:0.75rem;">' + escapeHtml(String(idVal)) + '</td>' +
+                    '<td style="white-space:nowrap;">' + escapeHtml(directionVal) + '</td>' +
+                    '<td>' + escapeHtml(sentVal) + '</td>' +
+                    '<td>' + escapeHtml(deliveredVal) + '</td>' +
+                    '<td style="font-weight:500;">' + escapeHtml(contentVal) + '</td>' +
+                    '<td>' + escapeHtml(userVal) + '</td>';
 
                 statusTbody.appendChild(tr);
             });
