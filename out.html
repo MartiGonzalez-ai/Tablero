@@ -89,8 +89,10 @@
             <aside class="iox-drawer glass-panel status-modal" id="status-modal">
                 <div class="drawer-header">
                     <div class="drawer-unit-info">
+                        <div class="drawer-unit-avatar" id="status-avatar">?</div>
                         <div>
                             <div class="drawer-unit-name" id="status-unit-name">Unidad</div>
+                            <div class="drawer-unit-id" id="status-unit-id">ID: —</div>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;">
@@ -172,8 +174,10 @@
             <aside class="iox-drawer glass-panel" id="iox-drawer">
                 <div class="drawer-header">
                     <div class="drawer-unit-info">
+                        <div class="drawer-unit-avatar" id="drawer-avatar">?</div>
                         <div>
                             <div class="drawer-unit-name" id="drawer-unit-name">Unidad</div>
+                            <div class="drawer-unit-id" id="drawer-unit-id">ID: —</div>
                         </div>
                     </div>
                     <button class="drawer-close" id="drawer-close" title="Cerrar">
@@ -241,6 +245,38 @@
 
                 <!-- Error area -->
                 <div class="drawer-error" id="ioxoutput-error"></div>
+            </aside>
+        </div>
+
+        <!-- ═══════════ GROUPS MODAL ═══════════ -->
+        <div class="iox-drawer-overlay" id="groups-overlay">
+            <aside class="iox-drawer glass-panel status-modal" id="groups-modal">
+                <div class="drawer-header">
+                    <div class="drawer-unit-info">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            style="color: var(--primary);">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <div>
+                            <div class="drawer-unit-name" id="groups-unit-name">Unidad</div>
+                            <div style="font-size: 0.75rem; color: var(--text-soft); margin-top: 2px;">Grupos asignados</div>
+                        </div>
+                    </div>
+                    <button class="drawer-close" id="groups-close" title="Cerrar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="status-modal-body" style="padding: 20px;">
+                    <ul class="groups-list-ul" id="groups-list"></ul>
+                </div>
             </aside>
         </div>
 
