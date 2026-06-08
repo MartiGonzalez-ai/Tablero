@@ -1241,7 +1241,7 @@ body {
 }
 
 /* Groups row button & Groups Modal */
-.card-groups-btn {
+.card-groups-btn, .card-show-groups-btn, .card-history-btn {
     background: rgba(59, 130, 246, 0.1);
     border: 1px solid rgba(59, 130, 246, 0.3);
     color: var(--primary);
@@ -1253,7 +1253,7 @@ body {
     transition: background 0.15s, border-color 0.15s;
     font-family: var(--font);
 }
-.card-groups-btn:hover {
+.card-groups-btn:hover, .card-show-groups-btn:hover, .card-history-btn:hover {
     background: rgba(59, 130, 246, 0.2);
     border-color: var(--primary);
 }
