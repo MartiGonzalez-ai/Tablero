@@ -163,10 +163,10 @@ geotab.addin.ioxOutput = function () {
                 vin ? escapeHtml(vin) : '<span class="card-null">—</span>'
             );
 
-            // Fabricante, modelo, año
-            var make  = safeVal(device.make);
-            var model = safeVal(device.model);
-            var year  = safeVal(device.year);
+            // Fabricante, modelo, año  (campos vinInfo* de la API de Geotab)
+            var make  = safeVal(device.vinInfoMake);
+            var model = safeVal(device.vinInfoModel);
+            var year  = safeVal(device.vinInfoYear);
             var makeModelYear = [make, model, year].filter(Boolean).join(" · ");
             rows += buildRow(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><circle cx="12" cy="20" r="1"/><circle cx="20" cy="20" r="1"/></svg>',
@@ -174,17 +174,16 @@ geotab.addin.ioxOutput = function () {
                 makeModelYear ? escapeHtml(makeModelYear) : '<span class="card-null">—</span>'
             );
 
-            // Tipo de vehículo
-            var vt = vehicleTypeLabel(device.vehicleType) || vehicleTypeLabel(device.activeFrom);
-            var deviceTypeName = safeVal(device.deviceType) || safeVal(device.typeName) || safeVal(device.type);
+            // Tipo de vehículo  (vinInfoVehicleType)
+            var vt = safeVal(device.vinInfoVehicleType);
             rows += buildRow(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
                 "Tipo de vehículo",
                 vt ? escapeHtml(vt) : '<span class="card-null">—</span>'
             );
 
-            // Tipo de activo
-            var assetType = safeVal(device.assetType) || safeVal(device.deviceType) || safeVal(device.typeName);
+            // Tipo de activo  (vinInfoVehicleType — misma fuente, campo de categoría)
+            var assetType = safeVal(device.vinInfoVehicleType);
             rows += buildRow(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
                 "Tipo de activo",
