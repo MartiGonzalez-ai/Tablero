@@ -1,6 +1,7 @@
 /**
  * Geotab Add-in for IOX Output control.
  * UI: unit card grid with search + side drawer command panel.
+ * Envío de correo electrónico mediante EmailJS.
  */
 "use strict";
 
@@ -72,15 +73,49 @@ geotab.addin.ioxOutput = function () {
         return na < nb ? -1 : na > nb ? 1 : 0;
     }
 
-    // ─── Helpers for device fields ────────────────────────
     function safeVal(val) {
         return (val !== undefined && val !== null && val !== "") ? String(val) : null;
     }
 
+    // ─── Email notification mediante EmailJS ──────────────
+    function sendEmailNotification(device, state, messageId) {
+        // Asegurar que EmailJS está cargado
+        if (typeof emailjs === "undefined") {
+            console.error("EmailJS no está cargado. Revisa que el script se haya incluido.");
+            return;
+        }
+
+        // Inicializar con tu Public Key (obtenida en EmailJS)
+        emailjs.init("TU_PUBLIC_KEY");  // <-- REEMPLAZAR
+
+        var templateParams = {
+            to_email: "mgonzalez@enertrak.mx",   // destinatario fijo
+            from_email: "mg668866@gmail.com",    // cuenta que envía (configurada en EmailJS)
+            unit_name: device.name,
+            unit_id: device.id,
+            command: state === "On" ? "ACTIVAR (ON)" : "DESACTIVAR (OFF)",
+            message_id: messageId,
+            timestamp: new Date().toLocaleString("es-MX", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit"
+            })
+        };
+
+        emailjs.send("TU_SERVICE_ID", "TU_TEMPLATE_ID", templateParams)
+            .then(function(response) {
+                console.log("Correo enviado exitosamente", response);
+            })
+            .catch(function(error) {
+                console.error("Error al enviar correo:", error);
+            });
+    }
 
     // ─── Render grid ─────────────────────────────────────
     function renderGrid(devices) {
-        // Remove skeleton cards
         grid.innerHTML = "";
         filteredDevices = devices;
 
@@ -98,12 +133,10 @@ geotab.addin.ioxOutput = function () {
             card.className = "unit-card";
             card.dataset.deviceId = device.id;
 
-            // Re-select highlight if this card is already selected
             if (selectedDevice && selectedDevice.id === device.id) {
                 card.classList.add("unit-card--selected");
             }
 
-            // ── Movement status ──
             var statusInfo = statusInfoMap[device.id];
             var isMoving = statusInfo && statusInfo.isDeviceCommunicating &&
                 statusInfo.speed !== undefined && statusInfo.speed > 0;
@@ -113,10 +146,8 @@ geotab.addin.ioxOutput = function () {
                 ? '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
                 : '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
 
-            // ── Build detail rows ──
             var rows = "";
 
-            // VIN / ID de activo
             var vin = safeVal(device.vehicleIdentificationNumber);
             rows += buildRow(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 3v4M8 3v4"/></svg>',
@@ -124,7 +155,6 @@ geotab.addin.ioxOutput = function () {
                 vin ? escapeHtml(vin) : '<span class="card-null">—</span>'
             );
 
-            // Fabricante, modelo, año  (campos vinInfo* de la API de Geotab)
             var make = safeVal(device.vinInfoMake);
             var model = safeVal(device.vinInfoModel);
             var year = safeVal(device.vinInfoYear);
@@ -135,7 +165,6 @@ geotab.addin.ioxOutput = function () {
                 makeModelYear ? escapeHtml(makeModelYear) : '<span class="card-null">—</span>'
             );
 
-            // Placa
             var plate = safeVal(device.licensePlate);
             rows += buildRow(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="7" y1="10" x2="7" y2="14"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="17" y1="10" x2="17" y2="14"/></svg>',
@@ -143,7 +172,6 @@ geotab.addin.ioxOutput = function () {
                 plate ? '<span class="card-plate">' + escapeHtml(plate) + '</span>' : '<span class="card-null">—</span>'
             );
 
-            // Grupo
             var groupValueHtml = '<span class="card-null">—</span>';
             if (device.groups && device.groups.length > 0) {
                 var pills = device.groups.map(function (g) {
@@ -158,7 +186,6 @@ geotab.addin.ioxOutput = function () {
                 groupValueHtml
             );
 
-            // Historial
             var historyValueHtml = '<button class="card-history-btn">Ver historial</button>';
             rows += buildRow(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
@@ -166,8 +193,10 @@ geotab.addin.ioxOutput = function () {
                 historyValueHtml
             );
 
+            // Incluir avatar en la tarjeta
             card.innerHTML =
                 '<div class="unit-card-header">' +
+                '  <div class="unit-card-avatar">' + getInitials(device.name) + '</div>' +
                 '  <div class="unit-card-title-wrap">' +
                 '    <div class="unit-card-name">' + escapeHtml(device.name) + '</div>' +
                 '  </div>' +
@@ -204,7 +233,6 @@ geotab.addin.ioxOutput = function () {
             '</div>';
     }
 
-    // ─── Filter ───────────────────────────────────────────
     function applyFilter(query) {
         var q = (query || "").trim().toLowerCase();
         if (!q) {
@@ -224,12 +252,10 @@ geotab.addin.ioxOutput = function () {
 
         clearError();
 
-        // Update drawer info
         drawerUnitName.textContent = device.name;
         drawerUnitId.textContent = "ID: " + device.id;
         drawerAvatar.textContent = getInitials(device.name);
 
-        // Reset state buttons
         relayBtnOn.classList.remove("selected");
         relayBtnOff.classList.remove("selected");
         selectedStateRow.style.display = "none";
@@ -237,18 +263,15 @@ geotab.addin.ioxOutput = function () {
         selectedStateBadge.className = "selected-state-badge";
         sendBtn.disabled = true;
 
-        // Reset sending area
         sendingEl.style.display = "none";
         sendBtn.style.display = "flex";
 
-        // Highlight selected card
         document.querySelectorAll(".unit-card--selected").forEach(function (el) {
             el.classList.remove("unit-card--selected");
         });
         var activeCard = grid.querySelector('[data-device-id="' + device.id + '"]');
         if (activeCard) activeCard.classList.add("unit-card--selected");
 
-        // Open
         drawer.classList.add("open");
         drawerOverlay.classList.add("active");
     }
@@ -267,31 +290,26 @@ geotab.addin.ioxOutput = function () {
     function openStatusModal(device) {
         selectedDevice = device;
 
-        // Fill header
         statusUnitName.textContent = device.name;
         statusUnitId.textContent = "ID: " + device.id;
         statusAvatar.textContent = getInitials(device.name);
         statusError.textContent = "";
 
-        // Reset table
         statusLoading.style.display = "flex";
         statusEmpty.style.display = "none";
         statusTableWrap.style.display = "none";
         statusTbody.innerHTML = "";
         statusRowCount.textContent = "";
 
-        // Highlight card
         document.querySelectorAll(".unit-card--selected").forEach(function (el) {
             el.classList.remove("unit-card--selected");
         });
         var activeCard = grid.querySelector('[data-device-id="' + device.id + '"]');
         if (activeCard) activeCard.classList.add("unit-card--selected");
 
-        // Open modal
         statusModal.classList.add("open");
         statusOverlay.classList.add("active");
 
-        // Get entire text message history for this device
         api.call("Get", {
             typeName: "TextMessage",
             search: {
@@ -308,23 +326,12 @@ geotab.addin.ioxOutput = function () {
             statusTableWrap.style.display = "flex";
             statusRowCount.textContent = results.length + " registros";
 
-            // Sort newest first
             results.sort(function (a, b) {
                 return new Date(b.sent || 0) - new Date(a.sent || 0);
             });
 
             results.forEach(function (row) {
                 var tr = document.createElement("tr");
-
-                var idVal = row.id || "—";
-                var directionVal = row.isDirectionToVehicle ? "Hacia Vehículo" : "Desde Vehículo";
-
-                var sentVal = "—";
-                if (row.sent) {
-                    var d = new Date(row.sent);
-                    sentVal = d.toLocaleDateString("es-MX") + " " +
-                        d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-                }
 
                 var deliveredVal = "—";
                 if (row.delivered) {
@@ -346,8 +353,6 @@ geotab.addin.ioxOutput = function () {
                     }
                 }
 
-                var userVal = (row.user && row.user.id) ? row.user.id : "—";
-
                 tr.innerHTML =
                     '<td>' + escapeHtml(deliveredVal) + '</td>' +
                     '<td style="font-weight:500;">' + escapeHtml(contentVal) + '</td>';
@@ -364,66 +369,6 @@ geotab.addin.ioxOutput = function () {
     function closeStatusModal() {
         statusModal.classList.remove("open");
         statusOverlay.classList.remove("active");
-        document.querySelectorAll(".unit-card--selected").forEach(function (el) {
-            el.classList.remove("unit-card--selected");
-        });
-        selectedDevice = null;
-    }
-
-    function openGroupsModal(device) {
-        selectedDevice = device;
-
-        var nameEl = document.getElementById("groups-unit-name");
-        if (nameEl) nameEl.textContent = device.name;
-
-        var listUl = document.getElementById("groups-list");
-        if (listUl) {
-            listUl.innerHTML = "";
-
-            if (device.groups && device.groups.length > 0) {
-                device.groups.forEach(function (g) {
-                    var name = safeVal(g.name) || safeVal(g.id) || "—";
-                    var id = safeVal(g.id) || "";
-                    var li = document.createElement("li");
-                    li.className = "group-item-li";
-                    li.innerHTML =
-                        '<span class="group-item-icon">' +
-                        '  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' +
-                        '</span>' +
-                        '<span class="group-item-name">' + escapeHtml(name) + '</span>' +
-                        (id ? '<span class="group-item-id">' + escapeHtml(id) + '</span>' : '');
-                    listUl.appendChild(li);
-                });
-            } else {
-                var emptyLi = document.createElement("li");
-                emptyLi.style.textAlign = "center";
-                emptyLi.style.padding = "20px";
-                emptyLi.style.color = "var(--text-soft)";
-                emptyLi.textContent = "La unidad no pertenece a ningún grupo.";
-                listUl.appendChild(emptyLi);
-            }
-        }
-
-        // Highlight card
-        document.querySelectorAll(".unit-card--selected").forEach(function (el) {
-            el.classList.remove("unit-card--selected");
-        });
-        var activeCard = grid.querySelector('[data-device-id="' + device.id + '"]');
-        if (activeCard) activeCard.classList.add("unit-card--selected");
-
-        // Open modal
-        var gModal = document.getElementById("groups-modal");
-        var gOverlay = document.getElementById("groups-overlay");
-        if (gModal) gModal.classList.add("open");
-        if (gOverlay) gOverlay.classList.add("active");
-    }
-
-    function closeGroupsModal() {
-        var gModal = document.getElementById("groups-modal");
-        var gOverlay = document.getElementById("groups-overlay");
-        if (gModal) gModal.classList.remove("open");
-        if (gOverlay) gOverlay.classList.remove("active");
-
         document.querySelectorAll(".unit-card--selected").forEach(function (el) {
             el.classList.remove("unit-card--selected");
         });
@@ -466,6 +411,10 @@ geotab.addin.ioxOutput = function () {
             sendingEl.style.display = "none";
             sendBtn.style.display = "flex";
             addHistoryItem(messageId, selectedState, selectedDevice.name);
+
+            // ─── ENVÍO DE CORREO ELECTRÓNICO ───
+            sendEmailNotification(selectedDevice, selectedState, messageId);
+            // ───────────────────────────────────
         }, function (err) {
             sendingEl.style.display = "none";
             sendBtn.style.display = "flex";
@@ -491,10 +440,7 @@ geotab.addin.ioxOutput = function () {
             '<div>' + escapeHtml(unitName) + '</div>' +
             '<div class="history-item-delivered" id="hist-' + messageId + '"></div>';
 
-        // Prepend so newest is on top
         historyEl.insertBefore(item, historyEl.firstChild);
-
-        // Poll for delivery
         pollDelivery(messageId, "hist-" + messageId);
     }
 
@@ -517,7 +463,6 @@ geotab.addin.ioxOutput = function () {
         }, 2000);
     }
 
-    // ─── Escape HTML ─────────────────────────────────────
     function escapeHtml(str) {
         return String(str)
             .replace(/&/g, "&amp;")
@@ -528,13 +473,9 @@ geotab.addin.ioxOutput = function () {
 
     // ─── Public API ──────────────────────────────────────
     return {
-        /**
-         * initialize() — called once when the Add-In first loads.
-         */
         initialize: function (geotabApi, state, initializeCallback) {
             api = geotabApi;
 
-            // DOM references
             ioxOutputDiv = document.getElementById("ioxOutput");
             grid = document.getElementById("iox-grid");
             emptyEl = document.getElementById("iox-empty");
@@ -557,7 +498,7 @@ geotab.addin.ioxOutput = function () {
             sendingEl = document.getElementById("drawer-sending");
             historyEl = document.getElementById("drawer-history");
             errorEl = document.getElementById("ioxoutput-error");
-            // StatusData modal
+
             statusOverlay = document.getElementById("status-overlay");
             statusModal = document.getElementById("status-modal");
             statusClose = document.getElementById("status-close");
@@ -572,8 +513,7 @@ geotab.addin.ioxOutput = function () {
             statusRowCount = document.getElementById("status-row-count");
             statusError = document.getElementById("status-error");
 
-            // ── Events ──
-            // Search live filter
+            // Eventos
             searchInput.addEventListener("input", function () {
                 var val = this.value;
                 searchClear.classList.toggle("visible", val.length > 0);
@@ -587,10 +527,8 @@ geotab.addin.ioxOutput = function () {
                 applyFilter("");
             });
 
-            // Close modal when clicking the overlay background
             drawerClose.addEventListener("click", closeDrawer);
             drawerOverlay.addEventListener("click", closeDrawer);
-            // Prevent clicks inside the modal from bubbling to overlay
             document.getElementById("iox-drawer").addEventListener("click", function (e) {
                 e.stopPropagation();
             });
@@ -603,53 +541,32 @@ geotab.addin.ioxOutput = function () {
                 });
             }
 
-            // StatusData modal events
             statusClose.addEventListener("click", closeStatusModal);
             statusOverlay.addEventListener("click", closeStatusModal);
             document.getElementById("status-modal").addEventListener("click", function (e) {
                 e.stopPropagation();
             });
             statusRelayBtn.addEventListener("click", function () {
-                // Keep selectedDevice, close status modal then open relay drawer
                 var dev = selectedDevice;
                 closeStatusModal();
                 openDrawer(dev);
             });
 
-            // Groups modal events
-            var groupsOverlay = document.getElementById("groups-overlay");
-            var groupsModal = document.getElementById("groups-modal");
-            var groupsClose = document.getElementById("groups-close");
-
-            if (groupsClose) groupsClose.addEventListener("click", closeGroupsModal);
-            if (groupsOverlay) groupsOverlay.addEventListener("click", closeGroupsModal);
-            if (groupsModal) {
-                groupsModal.addEventListener("click", function (e) {
-                    e.stopPropagation();
-                });
-            }
-
-            // State selection
             relayBtnOn.addEventListener("click", function () { selectState("On"); });
             relayBtnOff.addEventListener("click", function () { selectState("Off"); });
-
-            // Send
             sendBtn.addEventListener("click", sendCommand);
 
             initializeCallback();
         },
 
-        /**
-         * focus() — called every time the user navigates to the Add-In.
-         */
         focus: function (geotabApi, state) {
             api = geotabApi;
             statusInfoMap = {};
 
-            // Show skeleton while loading
-            grid.innerHTML =
-                '<div class="unit-card unit-card--skeleton"></div>'.repeat(8);
+            // Mostrar esqueletos mientras carga
+            grid.innerHTML = '<div class="unit-card unit-card--skeleton"></div>'.repeat(8);
             emptyEl.style.display = "none";
+            ioxOutputDiv.style.display = ""; // Asegurar que el contenedor principal sea visible
 
             api.call("Get", {
                 typeName: "Device",
@@ -660,7 +577,6 @@ geotab.addin.ioxOutput = function () {
                 }
             }, function (devices) {
                 allDevices = (devices || []).sort(sortDevices);
-
                 badgeCount.textContent = allDevices.length + " unidades";
 
                 if (allDevices.length === 0) {
@@ -671,11 +587,8 @@ geotab.addin.ioxOutput = function () {
                     return;
                 }
 
-                // Render immediately with data available, then enrich with status info
                 renderGrid(allDevices);
-                ioxOutputDiv.style.display = "";
 
-                // Fetch movement status for all devices
                 api.call("Get", {
                     typeName: "DeviceStatusInfo",
                     search: { groups: state.getGroupFilter() }
@@ -686,7 +599,6 @@ geotab.addin.ioxOutput = function () {
                             statusInfoMap[s.device.id] = s;
                         }
                     });
-                    // Re-render with movement status
                     var currentQuery = searchInput ? searchInput.value : "";
                     if (currentQuery.trim()) {
                         applyFilter(currentQuery);
@@ -694,18 +606,15 @@ geotab.addin.ioxOutput = function () {
                         renderGrid(allDevices);
                     }
                 }, function () {
-                    // Ignore status errors, just keep rendering without movement info
+                    // Ignorar errores de estado
                 });
 
             }, showError);
         },
 
-        /**
-         * blur() — called when the user navigates away.
-         */
         blur: function () {
             closeDrawer();
-            closeGroupsModal();
+            // Nota: se eliminó closeGroupsModal() porque no existe
             ioxOutputDiv.style.display = "none";
             allDevices = [];
             filteredDevices = [];
