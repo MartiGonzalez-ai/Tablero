@@ -16,6 +16,9 @@ geotab.addin.recorrido = function () {
     let lastOdoData = {};
     let lastDistanceData = {};
     let selectedPeriod = "month"; // Default period
+    let selectedDeviceIds = []; // Array of selected device IDs
+    let customDateFrom = ""; // Custom range starting date
+    let customDateTo = ""; // Custom range ending date
 
     // Pagination State
     let currentPage = 1;
@@ -23,8 +26,6 @@ geotab.addin.recorrido = function () {
     let currentTableData = [];
 
     // DOM Elements
-    const unitSelect = document.getElementById("unit-select-recorrido");
-    const dateUntilInput = document.getElementById("date-until");
     const btnConsultar = document.getElementById("btn-consultar");
     const resultContainer = document.getElementById("result-container");
     const loadingOverlay = document.getElementById("loading-overlay");
@@ -68,6 +69,7 @@ geotab.addin.recorrido = function () {
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td class="date-td">${row.date}</td>
+                <td class="device-td" style="font-weight: 500;">${row.device}</td>
                 <td class="dist-td" style="text-align: right; color: var(--color-primary); font-weight: 600;">${row.dist.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
                 <td class="odo-td" style="text-align: right; font-weight: 700;">${row.odo.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
             `;
@@ -120,127 +122,153 @@ geotab.addin.recorrido = function () {
         requestAnimationFrame(step);
     };
 
-    const renderChart = (dailyData) => {
+    const getWeekNumber = (d) => {
+        const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        const dayNum = date.getUTCDay() || 7;
+        date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+        return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+    };
+
+    const renderChart = (dailyDataByDevice) => {
         if (!window.ApexCharts) return;
 
-        const sortedDates = Object.keys(dailyData).sort();
-        let seriesData = [];
+        const series = [];
 
-        const getWeekNumber = function (d) {
-            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            const dayNum = date.getUTCDay() || 7;
-            date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-            const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-            return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-        };
+        // Get sorted unique dates across all devices
+        const allDates = new Set();
+        Object.values(dailyDataByDevice).forEach(deviceData => {
+            Object.keys(deviceData).forEach(d => allDates.add(d));
+        });
+        const sortedDates = Array.from(allDates).sort();
 
-        if (dailyGrouping === "day") {
-            seriesData = sortedDates.map(d => ({
-                x: d,
-                y: parseFloat(dailyData[d].toFixed(1))
-            }));
-        } else if (dailyGrouping === "week") {
+        // For each selected device, construct its series
+        selectedDeviceIds.forEach(deviceId => {
+            const dev = units.find(u => u.id === deviceId);
+            const name = dev ? dev.name : "Unidad";
+            const dailyData = dailyDataByDevice[deviceId] || {};
             const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const d = new Date(dateStr + "T12:00:00");
-                const day = d.getDay();
-                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-                const monday = new Date(d.setDate(diff));
-                const weekKey = monday.getFullYear() + "-" + String(monday.getMonth() + 1).padStart(2, '0') + "-" + String(monday.getDate()).padStart(2, '0');
-                if (!grouped[weekKey]) grouped[weekKey] = 0;
-                grouped[weekKey] += dailyData[dateStr];
+
+            if (dailyGrouping === "day") {
+                sortedDates.forEach(d => {
+                    grouped[d] = dailyData[d] || 0;
+                });
+            } else if (dailyGrouping === "week") {
+                sortedDates.forEach(dateStr => {
+                    const d = new Date(dateStr + "T12:00:00");
+                    const day = d.getDay();
+                    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                    const monday = new Date(d.setDate(diff));
+                    const weekKey = monday.getFullYear() + "-" + String(monday.getMonth() + 1).padStart(2, '0') + "-" + String(monday.getDate()).padStart(2, '0');
+                    if (!grouped[weekKey]) grouped[weekKey] = 0;
+                    grouped[weekKey] += dailyData[dateStr] || 0;
+                });
+            } else if (dailyGrouping === "month") {
+                sortedDates.forEach(dateStr => {
+                    const monthKey = dateStr.substring(0, 7) + "-01";
+                    if (!grouped[monthKey]) grouped[monthKey] = 0;
+                    grouped[monthKey] += dailyData[dateStr] || 0;
+                });
+            } else if (dailyGrouping === "bimester") {
+                sortedDates.forEach(dateStr => {
+                    const month = parseInt(dateStr.substring(5, 7));
+                    const year = dateStr.substring(0, 4);
+                    const bimesterStartMonth = Math.floor((month - 1) / 2) * 2 + 1;
+                    const bKey = year + "-" + String(bimesterStartMonth).padStart(2, '0') + "-01";
+                    if (!grouped[bKey]) grouped[bKey] = 0;
+                    grouped[bKey] += dailyData[dateStr] || 0;
+                });
+            } else if (dailyGrouping === "trimester") {
+                sortedDates.forEach(dateStr => {
+                    const month = parseInt(dateStr.substring(5, 7));
+                    const year = dateStr.substring(0, 4);
+                    const trimesterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
+                    const tKey = year + "-" + String(trimesterStartMonth).padStart(2, '0') + "-01";
+                    if (!grouped[tKey]) grouped[tKey] = 0;
+                    grouped[tKey] += dailyData[dateStr] || 0;
+                });
+            } else if (dailyGrouping === "6months") {
+                sortedDates.forEach(dateStr => {
+                    const month = parseInt(dateStr.substring(5, 7));
+                    const year = dateStr.substring(0, 4);
+                    const semesterStartMonth = Math.floor((month - 1) / 6) * 6 + 1;
+                    const sKey = year + "-" + String(semesterStartMonth).padStart(2, '0') + "-01";
+                    if (!grouped[sKey]) grouped[sKey] = 0;
+                    grouped[sKey] += dailyData[dateStr] || 0;
+                });
+            } else if (dailyGrouping === "year") {
+                sortedDates.forEach(dateStr => {
+                    const yearKey = dateStr.substring(0, 4) + "-01-01";
+                    if (!grouped[yearKey]) grouped[yearKey] = 0;
+                    grouped[yearKey] += dailyData[dateStr] || 0;
+                });
+            }
+
+            const dataPoints = [];
+
+            if (dailyGrouping === "day") {
+                Object.keys(grouped).sort().forEach(d => {
+                    dataPoints.push({ x: d, y: parseFloat(grouped[d].toFixed(1)) });
+                });
+            } else if (dailyGrouping === "week") {
+                Object.keys(grouped).sort().forEach(weekKey => {
+                    const d = new Date(weekKey + "T12:00:00");
+                    const weekNum = getWeekNumber(d);
+                    dataPoints.push({ x: "Semana " + weekNum, y: parseFloat(grouped[weekKey].toFixed(1)) });
+                });
+            } else if (dailyGrouping === "month") {
+                Object.keys(grouped).sort().forEach(monthKey => {
+                    const d = new Date(monthKey + "T12:00:00");
+                    const label = d.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
+                    const capitalized = label.charAt(0).toUpperCase() + label.slice(1);
+                    dataPoints.push({ x: capitalized, y: parseFloat(grouped[monthKey].toFixed(1)) });
+                });
+            } else if (dailyGrouping === "bimester") {
+                Object.keys(grouped).sort().forEach(key => {
+                    const d1 = new Date(key + "T12:00:00");
+                    const d2 = new Date(d1); d2.setMonth(d2.getMonth() + 1);
+                    const l1 = d1.toLocaleDateString("es-MX", { month: "short" });
+                    const l2 = d2.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
+                    const label = l1.charAt(0).toUpperCase() + l1.slice(1) + " - " + l2.charAt(0).toUpperCase() + l2.slice(1);
+                    dataPoints.push({ x: label, y: parseFloat(grouped[key].toFixed(1)) });
+                });
+            } else if (dailyGrouping === "trimester") {
+                Object.keys(grouped).sort().forEach(key => {
+                    const d = new Date(key + "T12:00:00");
+                    const q = Math.floor(d.getMonth() / 3) + 1;
+                    dataPoints.push({ x: "T" + q + " " + d.getFullYear(), y: parseFloat(grouped[key].toFixed(1)) });
+                });
+            } else if (dailyGrouping === "6months") {
+                Object.keys(grouped).sort().forEach(key => {
+                    const d = new Date(key + "T12:00:00");
+                    const sem = d.getMonth() < 6 ? "1er Sem" : "2do Sem";
+                    dataPoints.push({ x: sem + " " + d.getFullYear(), y: parseFloat(grouped[key].toFixed(1)) });
+                });
+            } else if (dailyGrouping === "year") {
+                Object.keys(grouped).sort().forEach(key => {
+                    dataPoints.push({ x: key.substring(0, 4), y: parseFloat(grouped[key].toFixed(1)) });
+                });
+            }
+
+            series.push({
+                name: name,
+                data: dataPoints
             });
-            Object.keys(grouped).sort().forEach(weekKey => {
-                const d = new Date(weekKey + "T12:00:00");
-                const weekNum = getWeekNumber(d);
-                seriesData.push({ x: "Semana " + weekNum, y: parseFloat(grouped[weekKey].toFixed(1)) });
-            });
-        } else if (dailyGrouping === "month") {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const monthKey = dateStr.substring(0, 7) + "-01";
-                if (!grouped[monthKey]) grouped[monthKey] = 0;
-                grouped[monthKey] += dailyData[dateStr];
-            });
-            Object.keys(grouped).sort().forEach(monthKey => {
-                const d = new Date(monthKey + "T12:00:00");
-                const label = d.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
-                const capitalized = label.charAt(0).toUpperCase() + label.slice(1);
-                seriesData.push({ x: capitalized, y: parseFloat(grouped[monthKey].toFixed(1)) });
-            });
-        } else if (dailyGrouping === "bimester") {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const month = parseInt(dateStr.substring(5, 7));
-                const year = dateStr.substring(0, 4);
-                const bimesterStartMonth = Math.floor((month - 1) / 2) * 2 + 1;
-                const bKey = year + "-" + String(bimesterStartMonth).padStart(2, '0') + "-01";
-                if (!grouped[bKey]) grouped[bKey] = 0;
-                grouped[bKey] += dailyData[dateStr];
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                const d1 = new Date(key + "T12:00:00");
-                const d2 = new Date(d1); d2.setMonth(d2.getMonth() + 1);
-                const l1 = d1.toLocaleDateString("es-MX", { month: "short" });
-                const l2 = d2.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
-                const label = l1.charAt(0).toUpperCase() + l1.slice(1) + " - " + l2.charAt(0).toUpperCase() + l2.slice(1);
-                seriesData.push({ x: label, y: parseFloat(grouped[key].toFixed(1)) });
-            });
-        } else if (dailyGrouping === "trimester") {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const month = parseInt(dateStr.substring(5, 7));
-                const year = dateStr.substring(0, 4);
-                const trimesterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
-                const tKey = year + "-" + String(trimesterStartMonth).padStart(2, '0') + "-01";
-                if (!grouped[tKey]) grouped[tKey] = 0;
-                grouped[tKey] += dailyData[dateStr];
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                const d = new Date(key + "T12:00:00");
-                const q = Math.floor(d.getMonth() / 3) + 1;
-                seriesData.push({ x: "T" + q + " " + d.getFullYear(), y: parseFloat(grouped[key].toFixed(1)) });
-            });
-        } else if (dailyGrouping === "6months") {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const month = parseInt(dateStr.substring(5, 7));
-                const year = dateStr.substring(0, 4);
-                const semesterStartMonth = Math.floor((month - 1) / 6) * 6 + 1;
-                const sKey = year + "-" + String(semesterStartMonth).padStart(2, '0') + "-01";
-                if (!grouped[sKey]) grouped[sKey] = 0;
-                grouped[sKey] += dailyData[dateStr];
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                const d = new Date(key + "T12:00:00");
-                const sem = d.getMonth() < 6 ? "1er Sem" : "2do Sem";
-                seriesData.push({ x: sem + " " + d.getFullYear(), y: parseFloat(grouped[key].toFixed(1)) });
-            });
-        } else if (dailyGrouping === "year") {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const yearKey = dateStr.substring(0, 4) + "-01-01";
-                if (!grouped[yearKey]) grouped[yearKey] = 0;
-                grouped[yearKey] += dailyData[dateStr];
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                seriesData.push({ x: key.substring(0, 4), y: parseFloat(grouped[key].toFixed(1)) });
-            });
-        }
+        });
+
+        const categories = series.length > 0 ? series[0].data.map(p => p.x) : [];
 
         const options = {
-            series: [{
-                name: 'Distancia (km)',
-                data: seriesData
-            }],
+            series: series,
             chart: {
                 type: 'bar',
                 height: 260,
                 width: '100%',
+                stacked: selectedDeviceIds.length > 1,
                 toolbar: { show: false },
                 fontFamily: "'Inter', sans-serif"
             },
-            colors: ['#003666'], // Geotab Blue
+            colors: ['#003666', '#00b1e1', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#3b82f6'],
             plotOptions: {
                 bar: {
                     borderRadius: 3,
@@ -248,13 +276,13 @@ geotab.addin.recorrido = function () {
                 }
             },
             dataLabels: {
-                enabled: dailyGrouping !== "day",
+                enabled: dailyGrouping !== "day" && selectedDeviceIds.length <= 3,
                 formatter: (val) => val.toLocaleString("es-MX", { maximumFractionDigits: 1 }),
                 style: { fontSize: '10px', colors: ['#fff'] }
             },
             xaxis: {
                 type: 'category',
-                categories: seriesData.map(p => p.x),
+                categories: categories,
                 labels: {
                     style: { colors: '#64748b', fontSize: '10px' },
                     rotate: -45,
@@ -295,128 +323,147 @@ geotab.addin.recorrido = function () {
     };
 
     let chartOdoTrend;
-    const renderOdoTrendChart = (odoData, dailyDistanceData) => {
+    const renderOdoTrendChart = (odoDataByDevice, dailyDistanceDataByDevice) => {
         if (!window.ApexCharts) return;
 
-        const sortedDates = Object.keys(odoData).sort();
-        let trendSeries = [];
+        const series = [];
 
-        const getWeekNumber = function (d) {
-            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            const dayNum = date.getUTCDay() || 7;
-            date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-            const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-            return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-        };
+        // Get sorted unique dates across all devices
+        const allDates = new Set();
+        Object.values(odoDataByDevice).forEach(deviceData => {
+            Object.keys(deviceData).forEach(d => allDates.add(d));
+        });
+        const sortedDates = Array.from(allDates).sort();
 
-        if (trendGrouping === "day") {
-            trendSeries = sortedDates.map(date => ({
-                x: date,
-                y: parseFloat(odoData[date].toFixed(1))
-            }));
-        } else if (trendGrouping === "week") {
+        selectedDeviceIds.forEach(deviceId => {
+            const dev = units.find(u => u.id === deviceId);
+            const name = dev ? dev.name : "Unidad";
+            const odoData = odoDataByDevice[deviceId] || {};
             const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const d = new Date(dateStr + "T12:00:00");
-                const day = d.getDay();
-                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-                const monday = new Date(d.setDate(diff));
-                const weekKey = monday.getFullYear() + "-" + String(monday.getMonth() + 1).padStart(2, '0') + "-" + String(monday.getDate()).padStart(2, '0');
 
-                if (!grouped[weekKey] || new Date(dateStr) > new Date(grouped[weekKey].lastDate)) {
-                    grouped[weekKey] = { odo: odoData[dateStr], lastDate: dateStr };
-                }
+            if (trendGrouping === "day") {
+                sortedDates.forEach(d => {
+                    grouped[d] = odoData[d] || 0;
+                });
+            } else if (trendGrouping === "week") {
+                sortedDates.forEach(dateStr => {
+                    const d = new Date(dateStr + "T12:00:00");
+                    const day = d.getDay();
+                    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                    const monday = new Date(d.setDate(diff));
+                    const weekKey = monday.getFullYear() + "-" + String(monday.getMonth() + 1).padStart(2, '0') + "-" + String(monday.getDate()).padStart(2, '0');
+
+                    if (odoData[dateStr] !== undefined) {
+                        if (!grouped[weekKey] || new Date(dateStr) > new Date(grouped[weekKey].lastDate)) {
+                            grouped[weekKey] = { odo: odoData[dateStr], lastDate: dateStr };
+                        }
+                    }
+                });
+            } else if (trendGrouping === "month") {
+                sortedDates.forEach(dateStr => {
+                    const monthKey = dateStr.substring(0, 7) + "-01";
+                    if (odoData[dateStr] !== undefined) {
+                        if (!grouped[monthKey] || new Date(dateStr) > new Date(grouped[monthKey].lastDate)) {
+                            grouped[monthKey] = { odo: odoData[dateStr], lastDate: dateStr };
+                        }
+                    }
+                });
+            } else if (trendGrouping === "bimester") {
+                sortedDates.forEach(dateStr => {
+                    const month = parseInt(dateStr.substring(5, 7));
+                    const year = dateStr.substring(0, 4);
+                    const bimesterStartMonth = Math.floor((month - 1) / 2) * 2 + 1;
+                    const bKey = year + "-" + String(bimesterStartMonth).padStart(2, '0') + "-01";
+                    if (odoData[dateStr] !== undefined) {
+                        if (!grouped[bKey] || new Date(dateStr) > new Date(grouped[bKey].lastDate)) {
+                            grouped[bKey] = { odo: odoData[dateStr], lastDate: dateStr };
+                        }
+                    }
+                });
+            } else if (trendGrouping === "trimester") {
+                sortedDates.forEach(dateStr => {
+                    const month = parseInt(dateStr.substring(5, 7));
+                    const year = dateStr.substring(0, 4);
+                    const trimesterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
+                    const tKey = year + "-" + String(trimesterStartMonth).padStart(2, '0') + "-01";
+                    if (odoData[dateStr] !== undefined) {
+                        if (!grouped[tKey] || new Date(dateStr) > new Date(grouped[tKey].lastDate)) {
+                            grouped[tKey] = { odo: odoData[dateStr], lastDate: dateStr };
+                        }
+                    }
+                });
+            } else if (trendGrouping === "6months") {
+                sortedDates.forEach(dateStr => {
+                    const month = parseInt(dateStr.substring(5, 7));
+                    const year = dateStr.substring(0, 4);
+                    const semesterStartMonth = Math.floor((month - 1) / 6) * 6 + 1;
+                    const sKey = year + "-" + String(semesterStartMonth).padStart(2, '0') + "-01";
+                    if (odoData[dateStr] !== undefined) {
+                        if (!grouped[sKey] || new Date(dateStr) > new Date(grouped[sKey].lastDate)) {
+                            grouped[sKey] = { odo: odoData[dateStr], lastDate: dateStr };
+                        }
+                    }
+                });
+            } else if (trendGrouping === "year") {
+                sortedDates.forEach(dateStr => {
+                    const yearKey = dateStr.substring(0, 4) + "-01-01";
+                    if (odoData[dateStr] !== undefined) {
+                        if (!grouped[yearKey] || new Date(dateStr) > new Date(grouped[yearKey].lastDate)) {
+                            grouped[yearKey] = { odo: odoData[dateStr], lastDate: dateStr };
+                        }
+                    }
+                });
+            }
+
+            const trendSeries = [];
+
+            if (trendGrouping === "day") {
+                Object.keys(grouped).sort().forEach(d => {
+                    trendSeries.push({ x: d, y: parseFloat(grouped[d].toFixed(1)) });
+                });
+            } else {
+                Object.keys(grouped).sort().forEach(key => {
+                    let label = key;
+                    if (trendGrouping === "week") {
+                        const d = new Date(key + "T12:00:00");
+                        label = "Semana " + getWeekNumber(d);
+                    } else if (trendGrouping === "month") {
+                        const d = new Date(key + "T12:00:00");
+                        const rawLabel = d.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
+                        label = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1);
+                    } else if (trendGrouping === "bimester") {
+                        const d1 = new Date(key + "T12:00:00");
+                        const d2 = new Date(d1); d2.setMonth(d2.getMonth() + 1);
+                        const l1 = d1.toLocaleDateString("es-MX", { month: "short" });
+                        const l2 = d2.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
+                        label = l1.charAt(0).toUpperCase() + l1.slice(1) + " - " + l2.charAt(0).toUpperCase() + l2.slice(1);
+                    } else if (trendGrouping === "trimester") {
+                        const d = new Date(key + "T12:00:00");
+                        const q = Math.floor(d.getMonth() / 3) + 1;
+                        label = "T" + q + " " + d.getFullYear();
+                    } else if (trendGrouping === "6months") {
+                        const d = new Date(key + "T12:00:00");
+                        const sem = d.getMonth() < 6 ? "1er Sem" : "2do Sem";
+                        label = sem + " " + d.getFullYear();
+                    } else if (trendGrouping === "year") {
+                        label = key.substring(0, 4);
+                    }
+                    trendSeries.push({ x: label, y: parseFloat(grouped[key].odo.toFixed(1)) });
+                });
+            }
+
+            series.push({
+                name: name,
+                data: trendSeries
             });
-            Object.keys(grouped).sort().forEach(weekKey => {
-                const d = new Date(weekKey + "T12:00:00");
-                const weekNum = getWeekNumber(d);
-                trendSeries.push({ x: "Semana " + weekNum, y: parseFloat(grouped[weekKey].odo.toFixed(1)) });
-            });
-        } else if (trendGrouping === "month") {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const monthKey = dateStr.substring(0, 7) + "-01";
-                if (!grouped[monthKey] || new Date(dateStr) > new Date(grouped[monthKey].lastDate)) {
-                    grouped[monthKey] = { odo: odoData[dateStr], lastDate: dateStr };
-                }
-            });
-            Object.keys(grouped).sort().forEach(monthKey => {
-                const d = new Date(monthKey + "T12:00:00");
-                const label = d.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
-                const capitalized = label.charAt(0).toUpperCase() + label.slice(1);
-                trendSeries.push({ x: capitalized, y: parseFloat(grouped[monthKey].odo.toFixed(1)) });
-            });
-        } else if (trendGrouping === "bimester") {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const month = parseInt(dateStr.substring(5, 7));
-                const year = dateStr.substring(0, 4);
-                const bimesterStartMonth = Math.floor((month - 1) / 2) * 2 + 1;
-                const bKey = year + "-" + String(bimesterStartMonth).padStart(2, '0') + "-01";
-                if (!grouped[bKey] || new Date(dateStr) > new Date(grouped[bKey].lastDate)) {
-                    grouped[bKey] = { odo: odoData[dateStr], lastDate: dateStr };
-                }
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                const d1 = new Date(key + "T12:00:00");
-                const d2 = new Date(d1); d2.setMonth(d2.getMonth() + 1);
-                const l1 = d1.toLocaleDateString("es-MX", { month: "short" });
-                const l2 = d2.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
-                const label = l1.charAt(0).toUpperCase() + l1.slice(1) + " - " + l2.charAt(0).toUpperCase() + l2.slice(1);
-                trendSeries.push({ x: label, y: parseFloat(grouped[key].odo.toFixed(1)) });
-            });
-        } else if (trendGrouping === "trimester") {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const month = parseInt(dateStr.substring(5, 7));
-                const year = dateStr.substring(0, 4);
-                const trimesterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
-                const tKey = year + "-" + String(trimesterStartMonth).padStart(2, '0') + "-01";
-                if (!grouped[tKey] || new Date(dateStr) > new Date(grouped[tKey].lastDate)) {
-                    grouped[tKey] = { odo: odoData[dateStr], lastDate: dateStr };
-                }
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                const d = new Date(key + "T12:00:00");
-                const q = Math.floor(d.getMonth() / 3) + 1;
-                trendSeries.push({ x: "T" + q + " " + d.getFullYear(), y: parseFloat(grouped[key].odo.toFixed(1)) });
-            });
-        } else if (trendGrouping === "6months") {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const month = parseInt(dateStr.substring(5, 7));
-                const year = dateStr.substring(0, 4);
-                const semesterStartMonth = Math.floor((month - 1) / 6) * 6 + 1;
-                const sKey = year + "-" + String(semesterStartMonth).padStart(2, '0') + "-01";
-                if (!grouped[sKey] || new Date(dateStr) > new Date(grouped[sKey].lastDate)) {
-                    grouped[sKey] = { odo: odoData[dateStr], lastDate: dateStr };
-                }
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                const d = new Date(key + "T12:00:00");
-                const sem = d.getMonth() < 6 ? "1er Sem" : "2do Sem";
-                trendSeries.push({ x: sem + " " + d.getFullYear(), y: parseFloat(grouped[key].odo.toFixed(1)) });
-            });
-        } else if (trendGrouping === "year") {
-            const grouped = {};
-            sortedDates.forEach(dateStr => {
-                const yearKey = dateStr.substring(0, 4) + "-01-01";
-                if (!grouped[yearKey] || new Date(dateStr) > new Date(grouped[yearKey].lastDate)) {
-                    grouped[yearKey] = { odo: odoData[dateStr], lastDate: dateStr };
-                }
-            });
-            Object.keys(grouped).sort().forEach(key => {
-                trendSeries.push({ x: key.substring(0, 4), y: parseFloat(grouped[key].odo.toFixed(1)) });
-            });
-        }
+        });
+
+        const categories = series.length > 0 ? series[0].data.map(p => p.x) : [];
 
         const options = {
-            series: [{
-                name: 'Odómetro (km)',
-                data: trendSeries
-            }],
+            series: series,
             chart: {
-                type: 'area',
+                type: 'line',
                 height: 260,
                 width: '100%',
                 toolbar: { show: false },
@@ -427,37 +474,22 @@ geotab.addin.recorrido = function () {
                 curve: 'smooth',
                 width: 2.5
             },
-            fill: {
-                type: 'gradient',
-                gradient: {
-                    shadeIntensity: 1,
-                    opacityFrom: 0.35,
-                    opacityTo: 0.05,
-                    stops: [0, 100],
-                    colorStops: [
-                        { offset: 0, color: "#00b1e1", opacity: 0.35 },
-                        { offset: 100, color: "#00b1e1", opacity: 0 }
-                    ]
-                }
-            },
-            colors: ["#00b1e1"],
+            colors: ["#00b1e1", "#003666", "#10b981", "#8b5cf6", "#f59e0b", "#ec4899", "#3b82f6"],
             dataLabels: {
-                enabled: trendGrouping !== "day",
+                enabled: trendGrouping !== "day" && selectedDeviceIds.length <= 2,
                 formatter: (val) => Math.round(val).toLocaleString("es-MX"),
                 offsetY: -6,
-                style: { fontSize: '11px', fontWeight: '700', colors: ["#003666"] },
-                background: { enabled: true, foreColor: '#fff', borderRadius: 4, borderWidth: 0, opacity: 0.9 }
+                style: { fontSize: '10px', fontWeight: '700', colors: ["#003666"] }
             },
             markers: {
                 size: trendGrouping === "day" ? 0 : 4,
                 colors: ['#fff'],
-                strokeColors: "#00b1e1",
                 strokeWidth: 2,
                 hover: { size: 7 }
             },
             xaxis: {
                 type: "category",
-                categories: trendSeries.map(p => p.x),
+                categories: categories,
                 labels: {
                     style: { colors: '#64748b', fontSize: '10px' },
                     rotate: -45,
@@ -499,26 +531,93 @@ geotab.addin.recorrido = function () {
     };
 
     // --- Data Loaders ---
+    // --- Data Loaders ---
     const loadUnits = () => {
         api.call("Get", {
             typeName: "Device"
         }, (result) => {
             units = result || [];
-            unitSelect.innerHTML = '<option value="" disabled selected>Selecciona una unidad...</option>';
-
             // Sort by name
             units.sort((a, b) => a.name.localeCompare(b.name));
 
-            units.forEach(device => {
-                const option = document.createElement("option");
-                option.value = device.id;
-                option.textContent = device.name;
-                unitSelect.appendChild(option);
-            });
+            // Select the first device by default if none selected
+            if (units.length > 0 && selectedDeviceIds.length === 0) {
+                selectedDeviceIds.push(units[0].id);
+            }
+
+            renderUnitOptionsList();
+            updateUnitSelectTriggerText();
         }, (err) => {
             console.error("Error loading devices:", err);
             showError("No se pudieron cargar las unidades.");
         });
+    };
+
+    const renderUnitOptionsList = (filterText = "") => {
+        const listContainer = document.getElementById("unit-options-list");
+        if (!listContainer) return;
+        listContainer.innerHTML = "";
+
+        const query = filterText.toLowerCase().trim();
+        const filteredUnits = units.filter(d => d.name.toLowerCase().includes(query));
+
+        if (filteredUnits.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "multiselect-empty";
+            empty.textContent = "No se encontraron unidades";
+            listContainer.appendChild(empty);
+            return;
+        }
+
+        filteredUnits.forEach(device => {
+            const optionDiv = document.createElement("div");
+            optionDiv.className = "multiselect-option";
+            
+            const isChecked = selectedDeviceIds.includes(device.id);
+            
+            optionDiv.innerHTML = `
+                <input type="checkbox" value="${device.id}" ${isChecked ? "checked" : ""}>
+                <span>${device.name}</span>
+            `;
+            
+            // Checkbox change or label click
+            optionDiv.addEventListener("click", (e) => {
+                const checkbox = optionDiv.querySelector('input[type="checkbox"]');
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                }
+                toggleDeviceSelection(device.id, checkbox.checked);
+            });
+            
+            listContainer.appendChild(optionDiv);
+        });
+    };
+
+    const toggleDeviceSelection = (deviceId, isSelected) => {
+        if (isSelected) {
+            if (!selectedDeviceIds.includes(deviceId)) {
+                selectedDeviceIds.push(deviceId);
+            }
+        } else {
+            selectedDeviceIds = selectedDeviceIds.filter(id => id !== deviceId);
+        }
+        updateUnitSelectTriggerText();
+    };
+
+    const updateUnitSelectTriggerText = () => {
+        const triggerLabel = document.getElementById("unit-select-label");
+        if (!triggerLabel) return;
+        
+        if (selectedDeviceIds.length === 0) {
+            triggerLabel.textContent = "Selecciona unidades...";
+        } else if (selectedDeviceIds.length === 1) {
+            const dev = units.find(u => u.id === selectedDeviceIds[0]);
+            triggerLabel.textContent = dev ? dev.name : "1 unidad seleccionada";
+        } else if (selectedDeviceIds.length === units.length) {
+            triggerLabel.textContent = "Todas las unidades";
+        } else {
+            triggerLabel.textContent = `${selectedDeviceIds.length} unidades seleccionadas`;
+        }
     };
 
     const getSelectedRange = () => {
@@ -526,11 +625,9 @@ geotab.addin.recorrido = function () {
         const fromDate = new Date();
 
         if (selectedPeriod === "custom") {
-            const customVal = document.getElementById("date-until").value;
-            if (!customVal) return null;
-            const toD = new Date(customVal + "T23:59:59");
-            const fromD = new Date(toD);
-            fromD.setDate(fromD.getDate() - 30); // Default to 30 days history
+            if (!customDateFrom || !customDateTo) return null;
+            const fromD = new Date(customDateFrom + "T00:00:00");
+            const toD = new Date(customDateTo + "T23:59:59");
             return { from: fromD, to: toD };
         }
 
@@ -557,15 +654,14 @@ geotab.addin.recorrido = function () {
     };
 
     const calculateDistance = () => {
-        const deviceId = unitSelect.value;
         const range = getSelectedRange();
 
-        if (!deviceId) {
-            showError("Por favor, selecciona una unidad.");
+        if (selectedDeviceIds.length === 0) {
+            showError("Por favor, selecciona al menos una unidad.");
             return;
         }
         if (!range) {
-            showError("Por favor, selecciona una fecha válida.");
+            showError("Por favor, selecciona un rango de fechas válido.");
             return;
         }
 
@@ -583,46 +679,56 @@ geotab.addin.recorrido = function () {
 
         const now = new Date();
         const searchToDateToken = now.toISOString();
-        const searchFromDateToken = fromDateHistoric.toISOString();
 
-        const calls = odometerDiagnostics.map(diagId => [
-            "Get",
-            {
-                typeName: "StatusData",
-                search: {
-                    deviceSearch: { id: deviceId },
-                    diagnosticSearch: { id: diagId },
-                    toDate: searchToDateToken,
-                    resultsLimit: 1,
-                    applyLatest: true
-                }
-            }
-        ]);
+        // Build list of API calls
+        const calls = [];
+        
+        // 1. Odometer diagnostics query for each selected device
+        selectedDeviceIds.forEach(deviceId => {
+            odometerDiagnostics.forEach(diagId => {
+                calls.push([
+                    "Get",
+                    {
+                        typeName: "StatusData",
+                        search: {
+                            deviceSearch: { id: deviceId },
+                            diagnosticSearch: { id: diagId },
+                            toDate: searchToDateToken,
+                            resultsLimit: 1,
+                            applyLatest: true
+                        }
+                    }
+                ]);
+            });
+        });
 
-        // Paginación y Optimización de la API (Chunking Trips)
-        // Obtener viajes en lotes de 30 días para evitar carga pesada
+        // Query trips from fromDateHistoric to current time to have accurate backward-odo reconstruction
+        const queryEndDate = new Date();
         const chunks = [];
         let chunkStart = new Date(fromDateHistoric);
-        while (chunkStart < toDateObj) {
+        while (chunkStart < queryEndDate) {
             let chunkEnd = new Date(chunkStart);
             chunkEnd.setDate(chunkEnd.getDate() + 30);
-            if (chunkEnd > toDateObj) chunkEnd = new Date(toDateObj);
+            if (chunkEnd > queryEndDate) chunkEnd = new Date(queryEndDate);
             chunks.push({ start: chunkStart.toISOString(), end: chunkEnd.toISOString() });
             chunkStart = new Date(chunkEnd);
         }
 
-        chunks.forEach(chunk => {
-            calls.push([
-                "Get",
-                {
-                    typeName: "Trip",
-                    search: {
-                        deviceSearch: { id: deviceId },
-                        fromDate: chunk.start,
-                        toDate: chunk.end
+        // 2. Trips query for each selected device in chunks
+        selectedDeviceIds.forEach(deviceId => {
+            chunks.forEach(chunk => {
+                calls.push([
+                    "Get",
+                    {
+                        typeName: "Trip",
+                        search: {
+                            deviceSearch: { id: deviceId },
+                            fromDate: chunk.start,
+                            toDate: chunk.end
+                        }
                     }
-                }
-            ]);
+                ]);
+            });
         });
 
         api.multiCall(calls, (results) => {
@@ -630,113 +736,160 @@ geotab.addin.recorrido = function () {
             btnConsultar.disabled = false;
 
             try {
-                // A. Extraer lectura base de odómetro (la absoluta actual)
-                const odoResults = results.slice(0, odometerDiagnostics.length)
-                    .flat()
-                    .filter(r => r && r.data !== undefined);
-
-                if (odoResults.length === 0) {
-                    showError("No se encontraron lecturas de odómetro recientes para este vehículo.");
-                    return;
-                }
-
-                odoResults.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-                const latestOdoData = odoResults[0];
-                let currentOdoKms = latestOdoData.data / 1000;
-                const odoDateTime = new Date(latestOdoData.dateTime);
-
-                // B. Extraer viajes (juntando todos los lotes de trips)
-                const tripsRaw = results.slice(odometerDiagnostics.length).flat().filter(t => t);
-
-                // Limpiar duplicados si se empalmaron por los chunks
-                const tripsIdSet = new Set();
-                const trips = [];
-                tripsRaw.forEach(t => {
-                    if (!tripsIdSet.has(t.id)) {
-                        tripsIdSet.add(t.id);
-                        trips.push(t);
+                const totalOdoQueries = selectedDeviceIds.length * odometerDiagnostics.length;
+                
+                // A. Extract latest odometer data by device
+                let odoResultsIdx = 0;
+                const odoDataByDevice = {}; // deviceId -> latestOdoData
+                
+                selectedDeviceIds.forEach(deviceId => {
+                    const deviceOdoResults = [];
+                    odometerDiagnostics.forEach(() => {
+                        const res = results[odoResultsIdx++];
+                        if (res) {
+                            deviceOdoResults.push(...res);
+                        }
+                    });
+                    
+                    const filteredOdo = deviceOdoResults.filter(r => r && r.data !== undefined);
+                    if (filteredOdo.length > 0) {
+                        filteredOdo.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+                        odoDataByDevice[deviceId] = filteredOdo[0];
                     }
                 });
 
-                // Ordenar del más reciente al más antiguo
-                trips.sort((a, b) => new Date(b.stop || b.start) - new Date(a.stop || a.start));
-
-                // C. Reconstrucción lógica
-                // Usamos el odómetro base (en KM) y ajustamos según los viajes ocurridos
-                // entre la lectura de anclaje (odoDateTime) y la fecha de interés (toDateObj).
-
-                const dailyDistanceData = {};
-                // Initialize range days previos a toDate
-                for (let i = 0; i < historyDays; i++) {
-                    const d = new Date(toDateObj);
-                    d.setDate(d.getDate() - i);
-                    dailyDistanceData[getLocalDateString(d)] = 0;
-                }
-
-                let targetOdoKms = currentOdoKms;
-
-                trips.forEach(trip => {
-                    const tripDist = trip.distance || 0; // Se asume KM basándose en historial rendimiento.js
-                    const tripStart = new Date(trip.start);
-                    const tripStop = new Date(trip.stop || trip.start);
-
-                    // 1. Ajustar el Odómetro al final de la 'fechaObjetivo' (toDateObj)
-                    // Si el viaje terminó ANTES del anclaje pero DESPUÉS del objetivo -> restamos para ir al pasado.
-                    if (tripStop <= odoDateTime && tripStop > toDateObj) {
-                        targetOdoKms -= tripDist;
-                    }
-                    // Si el viaje terminó DESPUÉS del anclaje pero ANTES del objetivo -> sumamos para ir al futuro.
-                    else if (tripStop > odoDateTime && tripStop <= toDateObj) {
-                        targetOdoKms += tripDist;
-                    }
-
-                    // 2. Poblar desglose diario (usando fecha local para evitar desfases de zona horaria)
-                    const dStr = getLocalDateString(tripStart);
-                    if (dailyDistanceData[dStr] !== undefined) {
-                        dailyDistanceData[dStr] += tripDist;
-                    }
+                // B. Extract trips by device
+                let tripResultsIdx = totalOdoQueries;
+                const tripsByDevice = {}; // deviceId -> trips list
+                
+                selectedDeviceIds.forEach(deviceId => {
+                    tripsByDevice[deviceId] = [];
+                    chunks.forEach(() => {
+                        const res = results[tripResultsIdx++];
+                        if (res) {
+                            tripsByDevice[deviceId].push(...res);
+                        }
+                    });
                 });
 
-                // D. Reconstrucción de Odómetro Acumulado por día (Historial para la tabla)
-                const dailyOdoData = {};
-                const sortedDatesAsc = Object.keys(dailyDistanceData).sort((a, b) => a.localeCompare(b));
-                const reversedDates = [...sortedDatesAsc].reverse(); // Recientes primero (el seleccionado es el primero)
+                // C. Logical reconstruction per device
+                const dailyDistanceByDevice = {};
+                const dailyOdoByDevice = {};
+                const targetOdoKmsByDevice = {};
 
-                let currentRunningOdo = targetOdoKms;
+                selectedDeviceIds.forEach(deviceId => {
+                    const latestOdo = odoDataByDevice[deviceId];
+                    let currentOdoKms = latestOdo ? (latestOdo.data / 1000) : 0;
+                    const odoDateTime = latestOdo ? new Date(latestOdo.dateTime) : new Date();
 
-                reversedDates.forEach((date) => {
-                    dailyOdoData[date] = currentRunningOdo;
-                    // El odómetro del día anterior es el actual menos lo que se recorrió hoy
-                    currentRunningOdo -= dailyDistanceData[date];
+                    // Deduplicate and sort trips
+                    const rawTrips = tripsByDevice[deviceId] || [];
+                    const tripsIdSet = new Set();
+                    const trips = [];
+                    rawTrips.forEach(t => {
+                        if (!tripsIdSet.has(t.id)) {
+                            tripsIdSet.add(t.id);
+                            trips.push(t);
+                        }
+                    });
+                    trips.sort((a, b) => new Date(b.stop || b.start) - new Date(a.stop || a.start));
+
+                    // Initialize daily distance dictionary for this device
+                    const dailyDistance = {};
+                    for (let i = 0; i < historyDays; i++) {
+                        const d = new Date(toDateObj);
+                        d.setDate(d.getDate() - i);
+                        dailyDistance[getLocalDateString(d)] = 0;
+                    }
+
+                    let targetOdoKms = currentOdoKms;
+
+                    trips.forEach(trip => {
+                        const tripDist = trip.distance || 0;
+                        const tripStart = new Date(trip.start);
+                        const tripStop = new Date(trip.stop || trip.start);
+
+                        // Adjust odometer back to target toDateObj
+                        if (tripStop <= odoDateTime && tripStop > toDateObj) {
+                            targetOdoKms -= tripDist;
+                        } else if (tripStop > odoDateTime && tripStop <= toDateObj) {
+                            targetOdoKms += tripDist;
+                        }
+
+                        // Populate daily distance
+                        const dStr = getLocalDateString(tripStart);
+                        if (dailyDistance[dStr] !== undefined) {
+                            dailyDistance[dStr] += tripDist;
+                        }
+                    });
+
+                    // Build odometer accumulation per day
+                    const dailyOdo = {};
+                    const sortedDatesAsc = Object.keys(dailyDistance).sort((a, b) => a.localeCompare(b));
+                    const reversedDates = [...sortedDatesAsc].reverse();
+                    let currentRunningOdo = targetOdoKms;
+
+                    reversedDates.forEach(date => {
+                        dailyOdo[date] = currentRunningOdo;
+                        currentRunningOdo -= dailyDistance[date];
+                    });
+
+                    dailyDistanceByDevice[deviceId] = dailyDistance;
+                    dailyOdoByDevice[deviceId] = dailyOdo;
+                    targetOdoKmsByDevice[deviceId] = targetOdoKms;
                 });
 
-                // --- UI Update ---
-                resultContainer.style.display = "block";
+                // D. Aggregate KPI calculations
+                // 1) Estimated Odometer: Sum of latest target odometer values
+                let totalTargetOdoKms = 0;
+                Object.values(targetOdoKmsByDevice).forEach(val => {
+                    totalTargetOdoKms += val;
+                });
 
-                // KPI: Odómetro al final del día seleccionado (en KM)
-                animateCount(distanciaValue, targetOdoKms);
+                // 2) Distance in Period: Sum of daily distances of all selected devices
+                let totalDistancePeriod = 0;
+                Object.values(dailyDistanceByDevice).forEach(dailyDist => {
+                    Object.values(dailyDist).forEach(dVal => {
+                        totalDistancePeriod += dVal;
+                    });
+                });
 
-                // KPI: Distancia total recorrida en el periodo
-                const totalDistancePeriod = Object.values(dailyDistanceData).reduce((a, b) => a + b, 0);
+                // Update UI KPI Cards
+                animateCount(distanciaValue, totalTargetOdoKms);
                 const distanciaPeriodoValue = document.getElementById("distancia-periodo-value");
                 if (distanciaPeriodoValue) {
                     animateCount(distanciaPeriodoValue, totalDistancePeriod);
                 }
 
-                const rangeDisplay = selectedPeriod === "custom"
-                    ? formatDateReadable(document.getElementById("date-until").value)
+                // Update date string on card footer
+                const rangeDisplay = selectedPeriod === "custom" 
+                    ? (formatDateReadable(customDateFrom) + " al " + formatDateReadable(customDateTo))
                     : formatDateReadable(getLocalDateString(toDateObj));
                 fechaFooter.textContent = rangeDisplay;
 
-                // Tabla (ahora paginada)
-                const sortedDatesForTable = Object.keys(dailyOdoData).sort((a, b) => b.localeCompare(a));
+                // E. Populate Table Data
+                currentTableData = [];
+                selectedDeviceIds.forEach(deviceId => {
+                    const dev = units.find(u => u.id === deviceId);
+                    const devName = dev ? dev.name : "Unidad";
+                    const dailyOdo = dailyOdoByDevice[deviceId] || {};
+                    const dailyDistance = dailyDistanceByDevice[deviceId] || {};
+                    
+                    Object.keys(dailyOdo).forEach(date => {
+                        currentTableData.push({
+                            date: date,
+                            device: devName,
+                            dist: dailyDistance[date] || 0,
+                            odo: dailyOdo[date] || 0
+                        });
+                    });
+                });
 
-                currentTableData = sortedDatesForTable.map(date => {
-                    return {
-                        date: date,
-                        dist: dailyDistanceData[date],
-                        odo: dailyOdoData[date]
-                    };
+                // Sort table: Date Descending, then Device Name Ascending
+                currentTableData.sort((a, b) => {
+                    const dateComp = b.date.localeCompare(a.date);
+                    if (dateComp !== 0) return dateComp;
+                    return a.device.localeCompare(b.device);
                 });
 
                 currentPage = 1;
@@ -745,13 +898,13 @@ geotab.addin.recorrido = function () {
                 const labelPeriodo = document.getElementById("label-periodo");
                 if (labelPeriodo) labelPeriodo.textContent = `Detalle de odómetro y distancia por día`;
 
-                // Store results for re-grouping
-                lastOdoData = dailyOdoData;
-                lastDistanceData = dailyDistanceData;
+                // Store references for re-grouping options
+                lastOdoData = dailyOdoByDevice;
+                lastDistanceData = dailyDistanceByDevice;
 
-                // Gráficas
-                renderChart(dailyDistanceData);
-                renderOdoTrendChart(dailyOdoData, dailyDistanceData);
+                // F. Render Charts
+                renderChart(dailyDistanceByDevice);
+                renderOdoTrendChart(dailyOdoByDevice, dailyDistanceByDevice);
 
                 if (window.lucide) lucide.createIcons();
                 setTimeout(() => {
@@ -775,15 +928,200 @@ geotab.addin.recorrido = function () {
         initialize: function (_api, state, callback) {
             api = _api;
 
-            // Set default date to today
-            if (dateUntilInput) {
-                dateUntilInput.value = new Date().toISOString().split('T')[0];
+            // 1. UNIT MULTISELECT DROPDOWN EVENTS
+            const unitSelectTrigger = document.getElementById("unit-select-trigger");
+            const unitSelectDropdown = document.getElementById("unit-select-dropdown");
+            const unitSearchInput = document.getElementById("unit-search-input");
+            const btnSelectAllUnits = document.getElementById("btn-select-all-units");
+            const btnClearUnits = document.getElementById("btn-clear-units");
+
+            if (unitSelectTrigger && unitSelectDropdown) {
+                unitSelectTrigger.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const isVisible = unitSelectDropdown.style.display === "block";
+                    unitSelectDropdown.style.display = isVisible ? "none" : "block";
+                    
+                    // Close other popovers
+                    if (datePopoverPanel) {
+                        datePopoverPanel.style.display = "none";
+                    }
+                    if (btnDateTrigger) {
+                        btnDateTrigger.classList.remove("active-trigger");
+                    }
+                });
             }
 
-            // Event Listeners
-            if (btnConsultar) {
-                btnConsultar.addEventListener("click", calculateDistance);
+            if (unitSearchInput) {
+                unitSearchInput.addEventListener("input", (e) => {
+                    renderUnitOptionsList(e.target.value);
+                });
+                // Prevent trigger close when clicking search input
+                unitSearchInput.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                });
             }
+
+            if (btnSelectAllUnits) {
+                btnSelectAllUnits.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    // Select all currently filtered units
+                    const query = unitSearchInput ? unitSearchInput.value.toLowerCase().trim() : "";
+                    const filtered = units.filter(d => d.name.toLowerCase().includes(query));
+                    
+                    filtered.forEach(device => {
+                        if (!selectedDeviceIds.includes(device.id)) {
+                            selectedDeviceIds.push(device.id);
+                        }
+                    });
+                    
+                    renderUnitOptionsList(query);
+                    updateUnitSelectTriggerText();
+                });
+            }
+
+            if (btnClearUnits) {
+                btnClearUnits.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    // Clear only selected device IDs that are currently visible in the filter
+                    const query = unitSearchInput ? unitSearchInput.value.toLowerCase().trim() : "";
+                    const filtered = units.filter(d => d.name.toLowerCase().includes(query));
+                    const filteredIds = filtered.map(d => d.id);
+                    
+                    selectedDeviceIds = selectedDeviceIds.filter(id => !filteredIds.includes(id));
+                    
+                    renderUnitOptionsList(query);
+                    updateUnitSelectTriggerText();
+                });
+            }
+
+            // 2. DATE POPOVER EVENTS
+            const btnDateTrigger = document.getElementById("btn-date-trigger");
+            const datePopoverPanel = document.getElementById("date-popover-panel");
+            const btnCustomTrigger = document.getElementById("btn-custom-trigger");
+            const customRangeSelector = document.getElementById("custom-range-selector");
+            const datePopoverPresets = document.getElementById("period-presets");
+            const btnBackPresets = document.getElementById("btn-back-presets");
+            const btnApplyCustomDate = document.getElementById("btn-apply-custom-date");
+            const customDateFromInput = document.getElementById("custom-date-from");
+            const customDateToInput = document.getElementById("custom-date-to");
+            const selectedDateLabel = document.getElementById("selected-date-label");
+
+            // Set default date values
+            if (customDateFromInput && customDateToInput) {
+                const todayStr = new Date().toISOString().split('T')[0];
+                customDateFromInput.value = todayStr;
+                customDateToInput.value = todayStr;
+            }
+
+            if (btnDateTrigger && datePopoverPanel) {
+                btnDateTrigger.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const isVisible = datePopoverPanel.style.display === "block";
+                    datePopoverPanel.style.display = isVisible ? "none" : "block";
+                    btnDateTrigger.classList.toggle("active-trigger", !isVisible);
+                    
+                    // Close other dropdowns
+                    if (unitSelectDropdown) {
+                        unitSelectDropdown.style.display = "none";
+                    }
+                });
+            }
+
+            if (btnCustomTrigger && customRangeSelector && datePopoverPresets) {
+                btnCustomTrigger.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    datePopoverPresets.style.display = "none";
+                    customRangeSelector.style.display = "flex";
+                });
+            }
+
+            if (btnBackPresets && customRangeSelector && datePopoverPresets) {
+                btnBackPresets.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    customRangeSelector.style.display = "none";
+                    datePopoverPresets.style.display = "flex";
+                });
+            }
+
+            // Prevent closing the popover when clicking inside the custom date inputs
+            if (customRangeSelector) {
+                customRangeSelector.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                });
+            }
+
+            if (btnApplyCustomDate && customDateFromInput && customDateToInput) {
+                btnApplyCustomDate.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    customDateFrom = customDateFromInput.value;
+                    customDateTo = customDateToInput.value;
+                    
+                    if (!customDateFrom || !customDateTo) {
+                        showError("Por favor selecciona ambas fechas.");
+                        return;
+                    }
+
+                    selectedPeriod = "custom";
+                    if (selectedDateLabel) selectedDateLabel.textContent = "Personalizado";
+                    
+                    // Close panel
+                    datePopoverPanel.style.display = "none";
+                    btnDateTrigger.classList.remove("active-trigger");
+                    
+                    // Keep presets menu active for next open
+                    customRangeSelector.style.display = "none";
+                    datePopoverPresets.style.display = "flex";
+
+                    calculateDistance();
+                });
+            }
+
+            // Period presets selector inside the popover
+            const presetPopoverButtons = document.querySelectorAll(".btn-popover-preset[data-period]");
+            presetPopoverButtons.forEach(btn => {
+                btn.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    presetPopoverButtons.forEach(b => b.classList.remove("active"));
+                    this.classList.add("active");
+
+                    const period = this.getAttribute("data-period");
+                    if (period) {
+                        selectedPeriod = period;
+                        if (selectedDateLabel) selectedDateLabel.textContent = this.textContent.trim();
+
+                        // Close popover
+                        datePopoverPanel.style.display = "none";
+                        btnDateTrigger.classList.remove("active-trigger");
+
+                        // Set automatic grouping based on the selected period preset
+                        const isMultiMonth = (period === "semester" || period === "trimester" || period === "bimester");
+                        const newGrouping = isMultiMonth ? "month" : "day";
+
+                        trendGrouping = newGrouping;
+                        dailyGrouping = newGrouping;
+
+                        const selectOdo = document.getElementById("trend-timeframe-select-odo");
+                        const selectDaily = document.getElementById("trend-timeframe-select-daily");
+                        if (selectOdo) selectOdo.value = newGrouping;
+                        if (selectDaily) selectDaily.value = newGrouping;
+
+                        calculateDistance();
+                    }
+                });
+            });
+
+            // 3. GLOBAL CLICK OUTSIDE TO CLOSE DROP-DOWNS
+            document.addEventListener("click", () => {
+                if (unitSelectDropdown) {
+                    unitSelectDropdown.style.display = "none";
+                }
+                if (datePopoverPanel) {
+                    datePopoverPanel.style.display = "none";
+                }
+                if (btnDateTrigger) {
+                    btnDateTrigger.classList.remove("active-trigger");
+                }
+            });
 
             // Pagination Listeners
             const btnPrev = document.getElementById("btn-prev-page");
@@ -806,39 +1144,10 @@ geotab.addin.recorrido = function () {
                 });
             }
 
-            // Period Presets
-            const presetButtons = document.querySelectorAll("#period-presets .btn-range");
-            const customWrapper = document.getElementById("custom-date-wrapper");
-
-            presetButtons.forEach(btn => {
-                btn.addEventListener("click", function () {
-                    presetButtons.forEach(b => b.classList.remove("active"));
-                    this.classList.add("active");
-
-                    const period = this.getAttribute("data-period");
-                    if (period) {
-                        selectedPeriod = period;
-                        customWrapper.style.display = "none";
-
-                        // Set automatic grouping based on the selected period preset
-                        const isMultiMonth = (period === "semester" || period === "trimester" || period === "bimester");
-                        const newGrouping = isMultiMonth ? "month" : "day";
-
-                        trendGrouping = newGrouping;
-                        dailyGrouping = newGrouping;
-
-                        const selectOdo = document.getElementById("trend-timeframe-select-odo");
-                        const selectDaily = document.getElementById("trend-timeframe-select-daily");
-                        if (selectOdo) selectOdo.value = newGrouping;
-                        if (selectDaily) selectDaily.value = newGrouping;
-
-                        calculateDistance();
-                    } else if (this.id === "btn-custom-range") {
-                        selectedPeriod = "custom";
-                        customWrapper.style.display = "block";
-                    }
-                });
-            });
+            // Consultar button click
+            if (btnConsultar) {
+                btnConsultar.addEventListener("click", calculateDistance);
+            }
 
             const timeframeSelectOdo = document.getElementById("trend-timeframe-select-odo");
             if (timeframeSelectOdo) {
