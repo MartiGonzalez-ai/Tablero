@@ -1111,15 +1111,24 @@ geotab.addin.recorrido = function () {
             });
 
             // 3. GLOBAL CLICK OUTSIDE TO CLOSE DROP-DOWNS
-            document.addEventListener("click", () => {
-                if (unitSelectDropdown) {
-                    unitSelectDropdown.style.display = "none";
+            document.addEventListener("click", (e) => {
+                // Click outside Unit Multiselect
+                const multiselectContainer = document.getElementById("unit-multiselect-container");
+                if (multiselectContainer && !multiselectContainer.contains(e.target)) {
+                    if (unitSelectDropdown) {
+                        unitSelectDropdown.style.display = "none";
+                    }
                 }
-                if (datePopoverPanel) {
-                    datePopoverPanel.style.display = "none";
-                }
-                if (btnDateTrigger) {
-                    btnDateTrigger.classList.remove("active-trigger");
+
+                // Click outside Date Popover
+                const datePopoverContainer = btnDateTrigger ? btnDateTrigger.parentElement : null;
+                if (datePopoverContainer && !datePopoverContainer.contains(e.target)) {
+                    if (datePopoverPanel) {
+                        datePopoverPanel.style.display = "none";
+                    }
+                    if (btnDateTrigger) {
+                        btnDateTrigger.classList.remove("active-trigger");
+                    }
                 }
             });
 
