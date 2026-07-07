@@ -907,8 +907,11 @@ geotab.addin.recorrido = function () {
                 renderOdoTrendChart(dailyOdoByDevice, dailyDistanceByDevice);
 
                 if (window.lucide) lucide.createIcons();
+
+                // Show results panel and scroll to it
+                if (resultContainer) resultContainer.style.display = "block";
                 setTimeout(() => {
-                    resultContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    if (resultContainer) resultContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
                 }, 100);
 
             } catch (err) {
