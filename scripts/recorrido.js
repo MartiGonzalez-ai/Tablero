@@ -935,7 +935,8 @@ geotab.addin.recorrido = function () {
             const btnSelectAllUnits = document.getElementById("btn-select-all-units");
             const btnClearUnits = document.getElementById("btn-clear-units");
 
-            if (unitSelectTrigger && unitSelectDropdown) {
+            if (unitSelectTrigger && unitSelectDropdown && !unitSelectTrigger.dataset.hasListener) {
+                unitSelectTrigger.dataset.hasListener = "true";
                 unitSelectTrigger.addEventListener("click", (e) => {
                     e.stopPropagation();
                     const isVisible = unitSelectDropdown.style.display === "block";
@@ -951,7 +952,8 @@ geotab.addin.recorrido = function () {
                 });
             }
 
-            if (unitSearchInput) {
+            if (unitSearchInput && !unitSearchInput.dataset.hasListener) {
+                unitSearchInput.dataset.hasListener = "true";
                 unitSearchInput.addEventListener("input", (e) => {
                     renderUnitOptionsList(e.target.value);
                 });
@@ -961,7 +963,8 @@ geotab.addin.recorrido = function () {
                 });
             }
 
-            if (btnSelectAllUnits) {
+            if (btnSelectAllUnits && !btnSelectAllUnits.dataset.hasListener) {
+                btnSelectAllUnits.dataset.hasListener = "true";
                 btnSelectAllUnits.addEventListener("click", (e) => {
                     e.stopPropagation();
                     // Select all currently filtered units
@@ -979,7 +982,8 @@ geotab.addin.recorrido = function () {
                 });
             }
 
-            if (btnClearUnits) {
+            if (btnClearUnits && !btnClearUnits.dataset.hasListener) {
+                btnClearUnits.dataset.hasListener = "true";
                 btnClearUnits.addEventListener("click", (e) => {
                     e.stopPropagation();
                     // Clear only selected device IDs that are currently visible in the filter
@@ -1007,13 +1011,15 @@ geotab.addin.recorrido = function () {
             const selectedDateLabel = document.getElementById("selected-date-label");
 
             // Set default date values
-            if (customDateFromInput && customDateToInput) {
+            if (customDateFromInput && customDateToInput && !customDateFromInput.dataset.hasDefault) {
+                customDateFromInput.dataset.hasDefault = "true";
                 const todayStr = new Date().toISOString().split('T')[0];
                 customDateFromInput.value = todayStr;
                 customDateToInput.value = todayStr;
             }
 
-            if (btnDateTrigger && datePopoverPanel) {
+            if (btnDateTrigger && datePopoverPanel && !btnDateTrigger.dataset.hasListener) {
+                btnDateTrigger.dataset.hasListener = "true";
                 btnDateTrigger.addEventListener("click", (e) => {
                     e.stopPropagation();
                     const isVisible = datePopoverPanel.style.display === "block";
@@ -1027,7 +1033,8 @@ geotab.addin.recorrido = function () {
                 });
             }
 
-            if (btnCustomTrigger && customRangeSelector && datePopoverPresets) {
+            if (btnCustomTrigger && customRangeSelector && datePopoverPresets && !btnCustomTrigger.dataset.hasListener) {
+                btnCustomTrigger.dataset.hasListener = "true";
                 btnCustomTrigger.addEventListener("click", (e) => {
                     e.stopPropagation();
                     datePopoverPresets.style.display = "none";
@@ -1035,7 +1042,8 @@ geotab.addin.recorrido = function () {
                 });
             }
 
-            if (btnBackPresets && customRangeSelector && datePopoverPresets) {
+            if (btnBackPresets && customRangeSelector && datePopoverPresets && !btnBackPresets.dataset.hasListener) {
+                btnBackPresets.dataset.hasListener = "true";
                 btnBackPresets.addEventListener("click", (e) => {
                     e.stopPropagation();
                     customRangeSelector.style.display = "none";
@@ -1044,13 +1052,15 @@ geotab.addin.recorrido = function () {
             }
 
             // Prevent closing the popover when clicking inside the custom date inputs
-            if (customRangeSelector) {
+            if (customRangeSelector && !customRangeSelector.dataset.hasListener) {
+                customRangeSelector.dataset.hasListener = "true";
                 customRangeSelector.addEventListener("click", (e) => {
                     e.stopPropagation();
                 });
             }
 
-            if (btnApplyCustomDate && customDateFromInput && customDateToInput) {
+            if (btnApplyCustomDate && customDateFromInput && customDateToInput && !btnApplyCustomDate.dataset.hasListener) {
+                btnApplyCustomDate.dataset.hasListener = "true";
                 btnApplyCustomDate.addEventListener("click", (e) => {
                     e.stopPropagation();
                     customDateFrom = customDateFromInput.value;
@@ -1079,6 +1089,8 @@ geotab.addin.recorrido = function () {
             // Period presets selector inside the popover
             const presetPopoverButtons = document.querySelectorAll(".btn-popover-preset[data-period]");
             presetPopoverButtons.forEach(btn => {
+                if (btn.dataset.hasListener) return;
+                btn.dataset.hasListener = "true";
                 btn.addEventListener("click", function (e) {
                     e.stopPropagation();
                     presetPopoverButtons.forEach(b => b.classList.remove("active"));
@@ -1111,31 +1123,35 @@ geotab.addin.recorrido = function () {
             });
 
             // 3. GLOBAL CLICK OUTSIDE TO CLOSE DROP-DOWNS
-            document.addEventListener("click", (e) => {
-                // Click outside Unit Multiselect
-                const multiselectContainer = document.getElementById("unit-multiselect-container");
-                if (multiselectContainer && !multiselectContainer.contains(e.target)) {
-                    if (unitSelectDropdown) {
-                        unitSelectDropdown.style.display = "none";
+            if (!document.hasRecorridoClickListener) {
+                document.hasRecorridoClickListener = true;
+                document.addEventListener("click", (e) => {
+                    // Click outside Unit Multiselect
+                    const multiselectContainer = document.getElementById("unit-multiselect-container");
+                    if (multiselectContainer && !multiselectContainer.contains(e.target)) {
+                        if (unitSelectDropdown) {
+                            unitSelectDropdown.style.display = "none";
+                        }
                     }
-                }
 
-                // Click outside Date Popover
-                const datePopoverContainer = btnDateTrigger ? btnDateTrigger.parentElement : null;
-                if (datePopoverContainer && !datePopoverContainer.contains(e.target)) {
-                    if (datePopoverPanel) {
-                        datePopoverPanel.style.display = "none";
+                    // Click outside Date Popover
+                    const datePopoverContainer = btnDateTrigger ? btnDateTrigger.parentElement : null;
+                    if (datePopoverContainer && !datePopoverContainer.contains(e.target)) {
+                        if (datePopoverPanel) {
+                            datePopoverPanel.style.display = "none";
+                        }
+                        if (btnDateTrigger) {
+                            btnDateTrigger.classList.remove("active-trigger");
+                        }
                     }
-                    if (btnDateTrigger) {
-                        btnDateTrigger.classList.remove("active-trigger");
-                    }
-                }
-            });
+                });
+            }
 
             // Pagination Listeners
             const btnPrev = document.getElementById("btn-prev-page");
             const btnNext = document.getElementById("btn-next-page");
-            if (btnPrev) {
+            if (btnPrev && !btnPrev.dataset.hasListener) {
+                btnPrev.dataset.hasListener = "true";
                 btnPrev.addEventListener("click", () => {
                     if (currentPage > 1) {
                         currentPage--;
@@ -1143,7 +1159,8 @@ geotab.addin.recorrido = function () {
                     }
                 });
             }
-            if (btnNext) {
+            if (btnNext && !btnNext.dataset.hasListener) {
+                btnNext.dataset.hasListener = "true";
                 btnNext.addEventListener("click", () => {
                     const totalPages = Math.ceil(currentTableData.length / itemsPerPage);
                     if (currentPage < totalPages) {
@@ -1154,12 +1171,14 @@ geotab.addin.recorrido = function () {
             }
 
             // Consultar button click
-            if (btnConsultar) {
+            if (btnConsultar && !btnConsultar.dataset.hasListener) {
+                btnConsultar.dataset.hasListener = "true";
                 btnConsultar.addEventListener("click", calculateDistance);
             }
 
             const timeframeSelectOdo = document.getElementById("trend-timeframe-select-odo");
-            if (timeframeSelectOdo) {
+            if (timeframeSelectOdo && !timeframeSelectOdo.dataset.hasListener) {
+                timeframeSelectOdo.dataset.hasListener = "true";
                 timeframeSelectOdo.addEventListener("change", function (e) {
                     trendGrouping = e.target.value;
                     if (Object.keys(lastOdoData).length > 0) {
@@ -1169,7 +1188,8 @@ geotab.addin.recorrido = function () {
             }
 
             const timeframeSelectDaily = document.getElementById("trend-timeframe-select-daily");
-            if (timeframeSelectDaily) {
+            if (timeframeSelectDaily && !timeframeSelectDaily.dataset.hasListener) {
+                timeframeSelectDaily.dataset.hasListener = "true";
                 timeframeSelectDaily.addEventListener("change", function (e) {
                     dailyGrouping = e.target.value;
                     if (Object.keys(lastDistanceData).length > 0) {
