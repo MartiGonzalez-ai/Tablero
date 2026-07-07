@@ -57,7 +57,7 @@ geotab.addin.recorrido = function () {
 
         const totalItems = currentTableData.length;
         const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-        
+
         if (currentPage > totalPages) currentPage = totalPages;
 
         const startIdx = (currentPage - 1) * itemsPerPage;
@@ -107,14 +107,14 @@ geotab.addin.recorrido = function () {
         const duration = 1200;
         const start = performance.now();
         const startVal = parseFloat(el.textContent.replace(/,/g, "")) || 0;
-        
+
         const step = (now) => {
             const progress = Math.min((now - start) / duration, 1);
             const eased = 1 - Math.pow(1 - progress, 4); // Quartic ease out
             const current = startVal + (target - startVal) * eased;
-            
+
             el.textContent = Math.round(current).toLocaleString("es-MX");
-            
+
             if (progress < 1) requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
@@ -247,7 +247,7 @@ geotab.addin.recorrido = function () {
                     columnWidth: '55%',
                 }
             },
-            dataLabels: { 
+            dataLabels: {
                 enabled: dailyGrouping !== "day",
                 formatter: (val) => val.toLocaleString("es-MX", { maximumFractionDigits: 1 }),
                 style: { fontSize: '10px', colors: ['#fff'] }
@@ -258,7 +258,7 @@ geotab.addin.recorrido = function () {
                 labels: {
                     style: { colors: '#64748b', fontSize: '10px' },
                     rotate: -45,
-                    formatter: function(value) {
+                    formatter: function (value) {
                         if (dailyGrouping !== 'day') return value;
                         if (!value) return "";
                         const d = new Date(value + "T12:00:00");
@@ -505,7 +505,7 @@ geotab.addin.recorrido = function () {
         }, (result) => {
             units = result || [];
             unitSelect.innerHTML = '<option value="" disabled selected>Selecciona una unidad...</option>';
-            
+
             // Sort by name
             units.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -541,13 +541,13 @@ geotab.addin.recorrido = function () {
         } else if (selectedPeriod === "month") {
             fromDate.setDate(1);
         } else if (selectedPeriod === "bimester") {
-            fromDate.setMonth(Math.floor(toDate.getMonth() / 2) * 2);
+            fromDate.setMonth(toDate.getMonth() - 1);
             fromDate.setDate(1);
         } else if (selectedPeriod === "trimester") {
-            fromDate.setMonth(Math.floor(toDate.getMonth() / 3) * 3);
+            fromDate.setMonth(toDate.getMonth() - 2);
             fromDate.setDate(1);
         } else if (selectedPeriod === "semester") {
-            fromDate.setMonth(Math.floor(toDate.getMonth() / 6) * 6);
+            fromDate.setMonth(toDate.getMonth() - 5);
             fromDate.setDate(1);
         }
 
@@ -573,7 +573,7 @@ geotab.addin.recorrido = function () {
         loadingOverlay.style.display = "flex";
         btnConsultar.disabled = true;
 
-        const toDateObj = range.to; 
+        const toDateObj = range.to;
         const fromDateHistoric = range.from;
 
         // Number of days in the selected range (for the daily breakdown)
@@ -632,9 +632,9 @@ geotab.addin.recorrido = function () {
             try {
                 // A. Extraer lectura base de odómetro (la absoluta actual)
                 const odoResults = results.slice(0, odometerDiagnostics.length)
-                                          .flat()
-                                          .filter(r => r && r.data !== undefined);
-                
+                    .flat()
+                    .filter(r => r && r.data !== undefined);
+
                 if (odoResults.length === 0) {
                     showError("No se encontraron lecturas de odómetro recientes para este vehículo.");
                     return;
@@ -647,7 +647,7 @@ geotab.addin.recorrido = function () {
 
                 // B. Extraer viajes (juntando todos los lotes de trips)
                 const tripsRaw = results.slice(odometerDiagnostics.length).flat().filter(t => t);
-                
+
                 // Limpiar duplicados si se empalmaron por los chunks
                 const tripsIdSet = new Set();
                 const trips = [];
@@ -684,7 +684,7 @@ geotab.addin.recorrido = function () {
                     // Si el viaje terminó ANTES del anclaje pero DESPUÉS del objetivo -> restamos para ir al pasado.
                     if (tripStop <= odoDateTime && tripStop > toDateObj) {
                         targetOdoKms -= tripDist;
-                    } 
+                    }
                     // Si el viaje terminó DESPUÉS del anclaje pero ANTES del objetivo -> sumamos para ir al futuro.
                     else if (tripStop > odoDateTime && tripStop <= toDateObj) {
                         targetOdoKms += tripDist;
@@ -712,10 +712,10 @@ geotab.addin.recorrido = function () {
 
                 // --- UI Update ---
                 resultContainer.style.display = "block";
-                
+
                 // KPI: Odómetro al final del día seleccionado (en KM)
                 animateCount(distanciaValue, targetOdoKms);
-                
+
                 // KPI: Distancia total recorrida en el periodo
                 const totalDistancePeriod = Object.values(dailyDistanceData).reduce((a, b) => a + b, 0);
                 const distanciaPeriodoValue = document.getElementById("distancia-periodo-value");
@@ -723,14 +723,14 @@ geotab.addin.recorrido = function () {
                     animateCount(distanciaPeriodoValue, totalDistancePeriod);
                 }
 
-                const rangeDisplay = selectedPeriod === "custom" 
+                const rangeDisplay = selectedPeriod === "custom"
                     ? formatDateReadable(document.getElementById("date-until").value)
                     : formatDateReadable(getLocalDateString(toDateObj));
                 fechaFooter.textContent = rangeDisplay;
 
                 // Tabla (ahora paginada)
                 const sortedDatesForTable = Object.keys(dailyOdoData).sort((a, b) => b.localeCompare(a));
-                
+
                 currentTableData = sortedDatesForTable.map(date => {
                     return {
                         date: date,
@@ -738,7 +738,7 @@ geotab.addin.recorrido = function () {
                         odo: dailyOdoData[date]
                     };
                 });
-                
+
                 currentPage = 1;
                 renderTablePage();
 
@@ -811,7 +811,7 @@ geotab.addin.recorrido = function () {
             const customWrapper = document.getElementById("custom-date-wrapper");
 
             presetButtons.forEach(btn => {
-                btn.addEventListener("click", function() {
+                btn.addEventListener("click", function () {
                     presetButtons.forEach(b => b.classList.remove("active"));
                     this.classList.add("active");
 
@@ -819,6 +819,19 @@ geotab.addin.recorrido = function () {
                     if (period) {
                         selectedPeriod = period;
                         customWrapper.style.display = "none";
+
+                        // Set automatic grouping based on the selected period preset
+                        const isMultiMonth = (period === "semester" || period === "trimester" || period === "bimester");
+                        const newGrouping = isMultiMonth ? "month" : "day";
+
+                        trendGrouping = newGrouping;
+                        dailyGrouping = newGrouping;
+
+                        const selectOdo = document.getElementById("trend-timeframe-select-odo");
+                        const selectDaily = document.getElementById("trend-timeframe-select-daily");
+                        if (selectOdo) selectOdo.value = newGrouping;
+                        if (selectDaily) selectDaily.value = newGrouping;
+
                         calculateDistance();
                     } else if (this.id === "btn-custom-range") {
                         selectedPeriod = "custom";
@@ -829,7 +842,7 @@ geotab.addin.recorrido = function () {
 
             const timeframeSelectOdo = document.getElementById("trend-timeframe-select-odo");
             if (timeframeSelectOdo) {
-                timeframeSelectOdo.addEventListener("change", function(e) {
+                timeframeSelectOdo.addEventListener("change", function (e) {
                     trendGrouping = e.target.value;
                     if (Object.keys(lastOdoData).length > 0) {
                         renderOdoTrendChart(lastOdoData, lastDistanceData);
@@ -839,7 +852,7 @@ geotab.addin.recorrido = function () {
 
             const timeframeSelectDaily = document.getElementById("trend-timeframe-select-daily");
             if (timeframeSelectDaily) {
-                timeframeSelectDaily.addEventListener("change", function(e) {
+                timeframeSelectDaily.addEventListener("change", function (e) {
                     dailyGrouping = e.target.value;
                     if (Object.keys(lastDistanceData).length > 0) {
                         renderChart(lastDistanceData);
