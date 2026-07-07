@@ -941,14 +941,6 @@ geotab.addin.recorrido = function () {
                     e.stopPropagation();
                     const isVisible = unitSelectDropdown.style.display === "block";
                     unitSelectDropdown.style.display = isVisible ? "none" : "block";
-                    
-                    // Close other popovers
-                    if (datePopoverPanel) {
-                        datePopoverPanel.style.display = "none";
-                    }
-                    if (btnDateTrigger) {
-                        btnDateTrigger.classList.remove("active-trigger");
-                    }
                 });
             }
 
@@ -998,17 +990,11 @@ geotab.addin.recorrido = function () {
                 });
             }
 
-            // 2. DATE POPOVER EVENTS
-            const btnDateTrigger = document.getElementById("btn-date-trigger");
-            const datePopoverPanel = document.getElementById("date-popover-panel");
-            const btnCustomTrigger = document.getElementById("btn-custom-trigger");
-            const customRangeSelector = document.getElementById("custom-range-selector");
-            const datePopoverPresets = document.getElementById("period-presets");
-            const btnBackPresets = document.getElementById("btn-back-presets");
-            const btnApplyCustomDate = document.getElementById("btn-apply-custom-date");
+            // 2. DATE PRESET BUTTONS EVENTS
+            const presetButtons = document.querySelectorAll("#period-presets .btn-range");
+            const customDateWrapper = document.getElementById("custom-date-wrapper");
             const customDateFromInput = document.getElementById("custom-date-from");
             const customDateToInput = document.getElementById("custom-date-to");
-            const selectedDateLabel = document.getElementById("selected-date-label");
 
             // Set default date values
             if (customDateFromInput && customDateToInput && !customDateFromInput.dataset.hasDefault) {
@@ -1018,92 +1004,17 @@ geotab.addin.recorrido = function () {
                 customDateToInput.value = todayStr;
             }
 
-            if (btnDateTrigger && datePopoverPanel && !btnDateTrigger.dataset.hasListener) {
-                btnDateTrigger.dataset.hasListener = "true";
-                btnDateTrigger.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    const isVisible = datePopoverPanel.style.display === "block";
-                    datePopoverPanel.style.display = isVisible ? "none" : "block";
-                    btnDateTrigger.classList.toggle("active-trigger", !isVisible);
-                    
-                    // Close other dropdowns
-                    if (unitSelectDropdown) {
-                        unitSelectDropdown.style.display = "none";
-                    }
-                });
-            }
-
-            if (btnCustomTrigger && customRangeSelector && datePopoverPresets && !btnCustomTrigger.dataset.hasListener) {
-                btnCustomTrigger.dataset.hasListener = "true";
-                btnCustomTrigger.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    datePopoverPresets.style.display = "none";
-                    customRangeSelector.style.display = "flex";
-                });
-            }
-
-            if (btnBackPresets && customRangeSelector && datePopoverPresets && !btnBackPresets.dataset.hasListener) {
-                btnBackPresets.dataset.hasListener = "true";
-                btnBackPresets.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    customRangeSelector.style.display = "none";
-                    datePopoverPresets.style.display = "flex";
-                });
-            }
-
-            // Prevent closing the popover when clicking inside the custom date inputs
-            if (customRangeSelector && !customRangeSelector.dataset.hasListener) {
-                customRangeSelector.dataset.hasListener = "true";
-                customRangeSelector.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                });
-            }
-
-            if (btnApplyCustomDate && customDateFromInput && customDateToInput && !btnApplyCustomDate.dataset.hasListener) {
-                btnApplyCustomDate.dataset.hasListener = "true";
-                btnApplyCustomDate.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    customDateFrom = customDateFromInput.value;
-                    customDateTo = customDateToInput.value;
-                    
-                    if (!customDateFrom || !customDateTo) {
-                        showError("Por favor selecciona ambas fechas.");
-                        return;
-                    }
-
-                    selectedPeriod = "custom";
-                    if (selectedDateLabel) selectedDateLabel.textContent = "Personalizado";
-                    
-                    // Close panel
-                    datePopoverPanel.style.display = "none";
-                    btnDateTrigger.classList.remove("active-trigger");
-                    
-                    // Keep presets menu active for next open
-                    customRangeSelector.style.display = "none";
-                    datePopoverPresets.style.display = "flex";
-
-                    calculateDistance();
-                });
-            }
-
-            // Period presets selector inside the popover
-            const presetPopoverButtons = document.querySelectorAll(".btn-popover-preset[data-period]");
-            presetPopoverButtons.forEach(btn => {
+            presetButtons.forEach(btn => {
                 if (btn.dataset.hasListener) return;
                 btn.dataset.hasListener = "true";
-                btn.addEventListener("click", function (e) {
-                    e.stopPropagation();
-                    presetPopoverButtons.forEach(b => b.classList.remove("active"));
+                btn.addEventListener("click", function () {
+                    presetButtons.forEach(b => b.classList.remove("active"));
                     this.classList.add("active");
 
                     const period = this.getAttribute("data-period");
                     if (period) {
                         selectedPeriod = period;
-                        if (selectedDateLabel) selectedDateLabel.textContent = this.textContent.trim();
-
-                        // Close popover
-                        datePopoverPanel.style.display = "none";
-                        btnDateTrigger.classList.remove("active-trigger");
+                        if (customDateWrapper) customDateWrapper.style.display = "none";
 
                         // Set automatic grouping based on the selected period preset
                         const isMultiMonth = (period === "semester" || period === "trimester" || period === "bimester");
@@ -1118,6 +1029,9 @@ geotab.addin.recorrido = function () {
                         if (selectDaily) selectDaily.value = newGrouping;
 
                         calculateDistance();
+                    } else if (this.id === "btn-custom-range") {
+                        selectedPeriod = "custom";
+                        if (customDateWrapper) customDateWrapper.style.display = "flex";
                     }
                 });
             });
@@ -1131,17 +1045,6 @@ geotab.addin.recorrido = function () {
                     if (multiselectContainer && !multiselectContainer.contains(e.target)) {
                         if (unitSelectDropdown) {
                             unitSelectDropdown.style.display = "none";
-                        }
-                    }
-
-                    // Click outside Date Popover
-                    const datePopoverContainer = btnDateTrigger ? btnDateTrigger.parentElement : null;
-                    if (datePopoverContainer && !datePopoverContainer.contains(e.target)) {
-                        if (datePopoverPanel) {
-                            datePopoverPanel.style.display = "none";
-                        }
-                        if (btnDateTrigger) {
-                            btnDateTrigger.classList.remove("active-trigger");
                         }
                     }
                 });
