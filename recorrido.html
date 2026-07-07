@@ -25,76 +25,30 @@
             </div>
 
             <div class="filter-controls">
-                <!-- Multi-select Unidad con Buscador -->
-                <div class="filter-group" style="position: relative;">
-                    <label>Unidad</label>
-                    <div class="multiselect-container" id="unit-multiselect-container">
-                        <button type="button" class="recorrido-input-top multiselect-trigger" id="unit-select-trigger">
-                            <span class="multiselect-trigger-text" id="unit-select-label">Selecciona unidades...</span>
-                            <i data-lucide="chevron-down" width="14" height="14" stroke-width="2.5"></i>
-                        </button>
-                        <div class="multiselect-dropdown glass-panel" id="unit-select-dropdown" style="display: none;">
-                            <div class="multiselect-search-container">
-                                <i data-lucide="search" width="14" height="14" class="search-icon"></i>
-                                <input type="text" class="multiselect-search-input" id="unit-search-input" placeholder="Buscar unidad...">
-                            </div>
-                            <div class="multiselect-actions">
-                                <button type="button" id="btn-select-all-units" class="btn-subtle">Todos</button>
-                                <button type="button" id="btn-clear-units" class="btn-subtle">Limpiar</button>
-                            </div>
-                            <div class="multiselect-options-list" id="unit-options-list">
-                                <div class="multiselect-loading">Cargando...</div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="filter-group">
+                    <label for="unit-select-recorrido">Unidad</label>
+                    <select id="unit-select-recorrido" class="recorrido-input-top">
+                        <option value="">Cargando...</option>
+                    </select>
                 </div>
 
-                <!-- Date Range Popover -->
-                <div class="filter-group" style="position: relative;">
-                    <label>Periodo</label>
-                    <button type="button" id="btn-date-trigger" class="recorrido-input-top btn-date-trigger">
-                        <i data-lucide="calendar" width="14" height="14" stroke-width="2.5"></i>
-                        <span id="selected-date-label">Este mes</span>
-                        <i data-lucide="chevron-down" width="12" height="12" stroke-width="2.5" class="chevron-date"></i>
+                <!-- Date Range Presets -->
+                <div class="date-range-group" id="period-presets">
+                    <button class="btn-range active" data-period="day">Hoy</button>
+                    <button class="btn-range" data-period="week">Esta semana</button>
+                    <button class="btn-range" data-period="month">Este mes</button>
+                    <button class="btn-range" data-period="bimester">Bimestre</button>
+                    <button class="btn-range" data-period="trimester">Trimestre</button>
+                    <button class="btn-range" data-period="semester">6 meses</button>
+                    <button class="btn-range btn-range--custom" id="btn-custom-range">
+                        <i data-lucide="calendar" width="13" height="13" stroke-width="2.5"></i>
+                        Personalizado
                     </button>
-                    
-                    <div id="date-popover-panel" class="date-popover glass-panel" style="display: none;">
-                        <div class="date-popover-presets" id="period-presets">
-                            <button type="button" class="btn-popover-preset" data-period="day">Hoy</button>
-                            <button type="button" class="btn-popover-preset" data-period="week">Esta semana</button>
-                            <button type="button" class="btn-popover-preset active" data-period="month">Este mes</button>
-                            <button type="button" class="btn-popover-preset" data-period="bimester">Bimestre</button>
-                            <button type="button" class="btn-popover-preset" data-period="trimester">Trimestre</button>
-                            <button type="button" class="btn-popover-preset" data-period="semester">6 meses</button>
-                            <button type="button" class="btn-popover-preset" id="btn-custom-trigger">
-                                <span>Personalizado</span>
-                                <i data-lucide="chevron-right" width="12" height="12"></i>
-                            </button>
-                        </div>
-                        
-                        <div id="custom-range-selector" class="custom-range-selector" style="display: none;">
-                            <div class="custom-range-header">
-                                <button type="button" id="btn-back-presets" class="btn-back">
-                                    <i data-lucide="chevron-left" width="14" height="14"></i>
-                                    Atrás
-                                </button>
-                                <span>Rango Personalizado</span>
-                            </div>
-                            <div class="custom-range-inputs">
-                                <div class="input-field">
-                                    <label for="custom-date-from">Desde</label>
-                                    <input type="date" id="custom-date-from" class="recorrido-input-top">
-                                </div>
-                                <div class="input-field">
-                                    <label for="custom-date-to">Hasta</label>
-                                    <input type="date" id="custom-date-to" class="recorrido-input-top">
-                                </div>
-                            </div>
-                            <button type="button" id="btn-apply-custom-date" class="btn-primary-top" style="width: 100%; justify-content: center; margin-top: 0.75rem;">
-                                Aplicar Rango
-                            </button>
-                        </div>
-                    </div>
+                </div>
+
+                <!-- Hidden Custom Date Picker -->
+                <div id="custom-date-wrapper" style="display: none;">
+                    <input type="date" id="date-until" class="recorrido-input-top">
                 </div>
 
                 <button id="btn-consultar" class="btn-primary-top">
@@ -202,7 +156,6 @@
                             <thead>
                                 <tr>
                                     <th>Fecha</th>
-                                    <th>Unidad</th>
                                     <th style="text-align: right;">Distancia (km)</th>
                                     <th style="text-align: right;">Odómetro (km)</th>
                                 </tr>
