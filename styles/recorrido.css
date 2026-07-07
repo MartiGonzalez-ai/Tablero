@@ -391,6 +391,283 @@ body {
     to { transform: translateX(0); opacity: 1; }
 }
 
+/* ═══════════ NEW FILTERS DESIGN (POP-UP & MULTISELECT) ═══════════ */
+.multiselect-container {
+    position: relative;
+    display: inline-block;
+}
+
+.multiselect-trigger {
+    min-width: 220px;
+    max-width: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    gap: 0.75rem;
+    text-align: left;
+}
+
+.multiselect-trigger-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.multiselect-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 280px;
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    padding: 0.75rem;
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    animation: dropdownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFade {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.multiselect-search-container {
+    position: relative;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.multiselect-search-container .search-icon {
+    position: absolute;
+    left: 10px;
+    color: var(--color-text-muted);
+    pointer-events: none;
+}
+
+.multiselect-search-input {
+    width: 100% !important;
+    padding-left: 2rem !important;
+}
+
+.multiselect-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.btn-subtle {
+    background: none;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+
+.btn-subtle:hover {
+    background: rgba(0, 177, 225, 0.08);
+}
+
+.multiselect-options-list {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-right: 2px;
+}
+
+/* Custom Scrollbar for list */
+.multiselect-options-list::-webkit-scrollbar {
+    width: 6px;
+}
+.multiselect-options-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.multiselect-options-list::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.2);
+    border-radius: 10px;
+}
+.multiselect-options-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.4);
+}
+
+.multiselect-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.multiselect-option:hover {
+    background: rgba(0, 54, 102, 0.04);
+}
+
+.multiselect-option input[type="checkbox"] {
+    accent-color: var(--color-accent);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+
+.multiselect-option span {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.multiselect-loading, .multiselect-empty {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    text-align: center;
+    padding: 1rem 0;
+    font-weight: 500;
+}
+
+/* Date Popover Styles */
+.btn-date-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 140px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.chevron-date {
+    margin-left: auto;
+    transition: transform 0.2s;
+}
+
+.btn-date-trigger.active-trigger .chevron-date {
+    transform: rotate(180deg);
+}
+
+.date-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 220px;
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    padding: 0.5rem;
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    animation: dropdownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.date-popover-presets {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.btn-popover-preset {
+    width: 100%;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.15s;
+}
+
+.btn-popover-preset:hover {
+    background: rgba(0, 177, 225, 0.08);
+    color: var(--color-primary);
+}
+
+.btn-popover-preset.active {
+    background: rgba(0, 54, 102, 0.08);
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+.custom-range-selector {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.custom-range-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.btn-back {
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.btn-back:hover {
+    background: rgba(0, 177, 225, 0.08);
+}
+
+.custom-range-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.input-field label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+
+.input-field input {
+    width: 100% !important;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
     .filter-controls {
