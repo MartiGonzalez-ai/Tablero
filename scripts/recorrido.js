@@ -13,9 +13,12 @@ geotab.addin.recorrido = function () {
     let units = [];
     let trendGrouping = "day";
     let dailyGrouping = "day";
+    let tableGrouping = "day";
     let lastOdoData = {};
     let lastDistanceData = {};
     let selectedPeriod = "month"; // Default period
+    let customFromDate = null;  // For custom modal range
+    let customToDate = null;    // For custom modal range
 
     // Pagination State
     let currentPage = 1;
@@ -50,19 +53,95 @@ geotab.addin.recorrido = function () {
         }
     };
 
+    // ─── Table grouping helpers ─────────────────────────────────────────────────
+    const groupTableData = (rawRows, grouping) => {
+        // rawRows: [{ date (YYYY-MM-DD), dist, odo }]
+        if (grouping === "day") return rawRows;
+
+        const getWeekNumber = (d) => {
+            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            const dayNum = date.getUTCDay() || 7;
+            date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+            return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+        };
+
+        const grouped = {}; // key -> { label, dist, odo (last), sortKey }
+
+        rawRows.forEach(row => {
+            const d = new Date(row.date + "T12:00:00");
+            let key, label;
+
+            if (grouping === "week") {
+                const day = d.getDay();
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                const monday = new Date(d); monday.setDate(diff);
+                key = monday.getFullYear() + "-" + String(monday.getMonth() + 1).padStart(2, '0') + "-" + String(monday.getDate()).padStart(2, '0');
+                label = "Semana " + getWeekNumber(monday) + " (" + monday.getFullYear() + ")";
+            } else if (grouping === "month") {
+                key = row.date.substring(0, 7);
+                const lbl = d.toLocaleDateString("es-MX", { month: "long", year: "numeric" });
+                label = lbl.charAt(0).toUpperCase() + lbl.slice(1);
+            } else if (grouping === "bimester") {
+                const month = parseInt(row.date.substring(5, 7));
+                const year = row.date.substring(0, 4);
+                const bStart = Math.floor((month - 1) / 2) * 2 + 1;
+                key = year + "-" + String(bStart).padStart(2, '0');
+                const d1 = new Date(parseInt(year), bStart - 1, 1);
+                const d2 = new Date(parseInt(year), bStart, 1);
+                const l1 = d1.toLocaleDateString("es-MX", { month: "short" });
+                const l2 = d2.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
+                label = l1.charAt(0).toUpperCase() + l1.slice(1) + " - " + l2.charAt(0).toUpperCase() + l2.slice(1);
+            } else if (grouping === "trimester") {
+                const month = parseInt(row.date.substring(5, 7));
+                const year = row.date.substring(0, 4);
+                const q = Math.floor((month - 1) / 3) + 1;
+                key = year + "-Q" + q;
+                label = "T" + q + " " + year;
+            } else if (grouping === "6months") {
+                const month = parseInt(row.date.substring(5, 7));
+                const year = row.date.substring(0, 4);
+                const sem = month <= 6 ? 1 : 2;
+                key = year + "-S" + sem;
+                label = (sem === 1 ? "1er Sem" : "2do Sem") + " " + year;
+            } else if (grouping === "year") {
+                key = row.date.substring(0, 4);
+                label = key;
+            } else {
+                key = row.date; label = row.date;
+            }
+
+            if (!grouped[key]) {
+                grouped[key] = { label, dist: 0, odo: 0, sortKey: key };
+            }
+            grouped[key].dist += row.dist;
+            // Keep the odo of the most recent day in the group (rows are descending)
+            if (grouped[key].odo === 0) grouped[key].odo = row.odo;
+        });
+
+        return Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(k => ({
+            date: grouped[k].label,
+            dist: grouped[k].dist,
+            odo: grouped[k].odo
+        }));
+    };
+
     const renderTablePage = () => {
         const tbody = document.getElementById("daily-recorrido-tbody");
         if (!tbody) return;
         tbody.innerHTML = "";
 
-        const totalItems = currentTableData.length;
+        // Apply grouping
+        const displayData = groupTableData(currentTableData, tableGrouping);
+
+        const totalItems = displayData.length;
         const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
 
         if (currentPage > totalPages) currentPage = totalPages;
 
         const startIdx = (currentPage - 1) * itemsPerPage;
         const endIdx = Math.min(startIdx + itemsPerPage, totalItems);
-        const pageData = currentTableData.slice(startIdx, endIdx);
+        const pageData = displayData.slice(startIdx, endIdx);
 
         pageData.forEach(row => {
             const tr = document.createElement("tr");
@@ -526,11 +605,9 @@ geotab.addin.recorrido = function () {
         const fromDate = new Date();
 
         if (selectedPeriod === "custom") {
-            const customVal = document.getElementById("date-until").value;
-            if (!customVal) return null;
-            const toD = new Date(customVal + "T23:59:59");
-            const fromD = new Date(toD);
-            fromD.setDate(fromD.getDate() - 30); // Default to 30 days history
+            if (!customFromDate || !customToDate) return null;
+            const fromD = new Date(customFromDate + "T00:00:00");
+            const toD = new Date(customToDate + "T23:59:59");
             return { from: fromD, to: toD };
         }
 
@@ -724,7 +801,7 @@ geotab.addin.recorrido = function () {
                 }
 
                 const rangeDisplay = selectedPeriod === "custom"
-                    ? formatDateReadable(document.getElementById("date-until").value)
+                    ? (formatDateReadable(customFromDate) + " → " + formatDateReadable(customToDate))
                     : formatDateReadable(getLocalDateString(toDateObj));
                 fechaFooter.textContent = rangeDisplay;
 
@@ -808,37 +885,97 @@ geotab.addin.recorrido = function () {
 
             // Period Presets
             const presetButtons = document.querySelectorAll("#period-presets .btn-range");
-            const customWrapper = document.getElementById("custom-date-wrapper");
 
             presetButtons.forEach(btn => {
                 btn.addEventListener("click", function () {
+                    const period = this.getAttribute("data-period");
+
+                    if (this.id === "btn-custom-range" || !period) {
+                        // Open modal instead of showing inline
+                        const modal = document.getElementById("custom-date-modal");
+                        if (modal) {
+                            // Pre-fill with today
+                            const today = new Date().toISOString().split('T')[0];
+                            const fromEl = document.getElementById("custom-date-from");
+                            const toEl = document.getElementById("custom-date-to");
+                            if (fromEl && !fromEl.value) fromEl.value = today;
+                            if (toEl && !toEl.value) toEl.value = today;
+                            modal.style.display = "flex";
+                            if (window.lucide) lucide.createIcons();
+                        }
+                        return;
+                    }
+
                     presetButtons.forEach(b => b.classList.remove("active"));
                     this.classList.add("active");
+                    selectedPeriod = period;
 
-                    const period = this.getAttribute("data-period");
-                    if (period) {
-                        selectedPeriod = period;
-                        customWrapper.style.display = "none";
+                    // Set automatic grouping based on the selected period preset
+                    const isMultiMonth = (period === "semester" || period === "trimester" || period === "bimester");
+                    const newGrouping = isMultiMonth ? "month" : "day";
 
-                        // Set automatic grouping based on the selected period preset
-                        const isMultiMonth = (period === "semester" || period === "trimester" || period === "bimester");
-                        const newGrouping = isMultiMonth ? "month" : "day";
+                    trendGrouping = newGrouping;
+                    dailyGrouping = newGrouping;
+                    tableGrouping = newGrouping;
 
-                        trendGrouping = newGrouping;
-                        dailyGrouping = newGrouping;
+                    const selectOdo = document.getElementById("trend-timeframe-select-odo");
+                    const selectDaily = document.getElementById("trend-timeframe-select-daily");
+                    const selectTable = document.getElementById("table-timeframe-select");
+                    if (selectOdo) selectOdo.value = newGrouping;
+                    if (selectDaily) selectDaily.value = newGrouping;
+                    if (selectTable) selectTable.value = newGrouping;
 
-                        const selectOdo = document.getElementById("trend-timeframe-select-odo");
-                        const selectDaily = document.getElementById("trend-timeframe-select-daily");
-                        if (selectOdo) selectOdo.value = newGrouping;
-                        if (selectDaily) selectDaily.value = newGrouping;
-
-                        calculateDistance();
-                    } else if (this.id === "btn-custom-range") {
-                        selectedPeriod = "custom";
-                        customWrapper.style.display = "block";
-                    }
+                    calculateDistance();
                 });
             });
+
+            // Custom Date Modal Listeners
+            const customModal = document.getElementById("custom-date-modal");
+            const modalClose = document.getElementById("date-modal-close");
+            const modalCancel = document.getElementById("date-modal-cancel");
+            const modalApply = document.getElementById("date-modal-apply");
+
+            const closeModal = () => {
+                if (customModal) customModal.style.display = "none";
+            };
+
+            if (modalClose) modalClose.addEventListener("click", closeModal);
+            if (modalCancel) modalCancel.addEventListener("click", closeModal);
+
+            // Close on backdrop click
+            if (customModal) {
+                customModal.addEventListener("click", function (e) {
+                    if (e.target === customModal) closeModal();
+                });
+            }
+
+            if (modalApply) {
+                modalApply.addEventListener("click", () => {
+                    const fromVal = document.getElementById("custom-date-from").value;
+                    const toVal = document.getElementById("custom-date-to").value;
+
+                    if (!fromVal || !toVal) {
+                        showError("Por favor, selecciona ambas fechas.");
+                        return;
+                    }
+                    if (fromVal > toVal) {
+                        showError("La fecha de inicio no puede ser mayor que la fecha de fin.");
+                        return;
+                    }
+
+                    customFromDate = fromVal;
+                    customToDate = toVal;
+                    selectedPeriod = "custom";
+
+                    // Update active button
+                    presetButtons.forEach(b => b.classList.remove("active"));
+                    const btnCustom = document.getElementById("btn-custom-range");
+                    if (btnCustom) btnCustom.classList.add("active");
+
+                    closeModal();
+                    calculateDistance();
+                });
+            }
 
             const timeframeSelectOdo = document.getElementById("trend-timeframe-select-odo");
             if (timeframeSelectOdo) {
@@ -857,6 +994,15 @@ geotab.addin.recorrido = function () {
                     if (Object.keys(lastDistanceData).length > 0) {
                         renderChart(lastDistanceData);
                     }
+                });
+            }
+
+            const tableTimeframeSelect = document.getElementById("table-timeframe-select");
+            if (tableTimeframeSelect) {
+                tableTimeframeSelect.addEventListener("change", function (e) {
+                    tableGrouping = e.target.value;
+                    currentPage = 1;
+                    renderTablePage();
                 });
             }
 
