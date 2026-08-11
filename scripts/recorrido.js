@@ -336,59 +336,91 @@ geotab.addin.recorrido = function () {
                 applyBorder(cell);
             });
 
-            // \u2500\u2500 Capture Chart PNGs via SVG \u2192 Canvas \u2500\u2500
-            const captureChartPng = async (chartElId) => {
-                const chartEl = document.getElementById(chartElId);
-                if (!chartEl) return null;
-                const svgEl = chartEl.querySelector("svg");
-                if (!svgEl) return null;
-
-                // Clone SVG and set explicit background
-                const clone = svgEl.cloneNode(true);
-                clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-                const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                bgRect.setAttribute("width", "100%");
-                bgRect.setAttribute("height", "100%");
-                bgRect.setAttribute("fill", "white");
-                clone.insertBefore(bgRect, clone.firstChild);
-
-                const svgStr = new XMLSerializer().serializeToString(clone);
-                const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
-                const url = URL.createObjectURL(svgBlob);
-
+            // ── Capture Chart PNGs (timeout-guarded, best-effort) ──
+            const captureChartPng = (chartElId) => {
                 return new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const W = 620, H = 280;
-                        const canvas = document.createElement("canvas");
-                        canvas.width = W; canvas.height = H;
-                        const ctx = canvas.getContext("2d");
-                        ctx.fillStyle = "#ffffff";
-                        ctx.fillRect(0, 0, W, H);
-                        ctx.drawImage(img, 0, 0, W, H);
-                        URL.revokeObjectURL(url);
-                        const b64 = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
-                        resolve(b64);
-                    };
-                    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-                    img.src = url;
+                    // Always resolve after 4 seconds max — never hang the export
+                    const bail = setTimeout(() => { console.warn("Chart capture timeout:", chartElId); resolve(null); }, 4000);
+
+                    try {
+                        const chartEl = document.getElementById(chartElId);
+                        if (!chartEl) { clearTimeout(bail); resolve(null); return; }
+                        const svgEl = chartEl.querySelector("svg");
+                        if (!svgEl) { clearTimeout(bail); resolve(null); return; }
+
+                        // Clone SVG with white background
+                        const clone = svgEl.cloneNode(true);
+                        clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+                        // Ensure explicit dimensions so canvas renders correctly
+                        const bbox = svgEl.getBoundingClientRect();
+                        if (bbox.width > 0) {
+                            clone.setAttribute("width", bbox.width);
+                            clone.setAttribute("height", bbox.height);
+                        }
+                        const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                        bgRect.setAttribute("width", "100%");
+                        bgRect.setAttribute("height", "100%");
+                        bgRect.setAttribute("fill", "white");
+                        clone.insertBefore(bgRect, clone.firstChild);
+
+                        const svgStr = new XMLSerializer().serializeToString(clone);
+                        // Use data URI instead of blob URL — avoids CSP/blob restrictions in Geotab
+                        const dataUri = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgStr);
+
+                        const img = new Image();
+                        img.onload = () => {
+                            clearTimeout(bail);
+                            try {
+                                const W = 620, H = 280;
+                                const canvas = document.createElement("canvas");
+                                canvas.width = W; canvas.height = H;
+                                const ctx = canvas.getContext("2d");
+                                ctx.fillStyle = "#ffffff";
+                                ctx.fillRect(0, 0, W, H);
+                                ctx.drawImage(img, 0, 0, W, H);
+                                const b64 = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+                                resolve(b64);
+                            } catch (e) {
+                                console.warn("Canvas draw failed:", e);
+                                resolve(null);
+                            }
+                        };
+                        img.onerror = (e) => {
+                            clearTimeout(bail);
+                            console.warn("Image load failed:", chartElId, e);
+                            resolve(null);
+                        };
+                        img.src = dataUri;
+                    } catch (e) {
+                        clearTimeout(bail);
+                        console.warn("captureChartPng error:", e);
+                        resolve(null);
+                    }
                 });
             };
 
             const chartDefs = [
-                { id: "chart-odo-trend",       tl: { col: 5, row: 0 }, br: { col: 13, row: 16 } },
+                { id: "chart-odo-trend",       tl: { col: 5, row: 0 },  br: { col: 13, row: 16 } },
                 { id: "chart-daily-recorrido", tl: { col: 5, row: 17 }, br: { col: 13, row: 33 } }
             ];
 
             for (const cd of chartDefs) {
                 const b64 = await captureChartPng(cd.id);
                 if (!b64) continue;
-                const imgId = wb.addImage({ base64: b64, extension: "png" });
-                ws.addImage(imgId, { tl: cd.tl, br: cd.br });
+                try {
+                    const imgId = wb.addImage({ base64: b64, extension: "png" });
+                    ws.addImage(imgId, { tl: cd.tl, br: cd.br });
+                } catch (e) {
+                    console.warn("addImage failed:", e);
+                }
             }
 
-            // \u2500\u2500 Download \u2500\u2500
-            const buffer = await wb.xlsx.writeBuffer();
+            // ── Download (timeout-guarded) ──
+            const bufferTimeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("writeBuffer timeout")), 15000)
+            );
+            const buffer = await Promise.race([wb.xlsx.writeBuffer(), bufferTimeout]);
+
             const blob = new Blob([buffer], {
                 type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             });
@@ -398,8 +430,10 @@ geotab.addin.recorrido = function () {
             const ds = today.getFullYear() + "-" + String(today.getMonth()+1).padStart(2,"0") + "-" + String(today.getDate()).padStart(2,"0");
             a.href = dlUrl;
             a.download = "Recorrido_" + ds + ".xlsx";
+            document.body.appendChild(a);
             a.click();
-            URL.revokeObjectURL(dlUrl);
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(dlUrl), 1000);
 
         } catch (err) {
             console.error("Error exportando:", err);
