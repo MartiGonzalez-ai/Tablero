@@ -54,9 +54,15 @@ geotab.addin.recorrido = function () {
     };
 
     // ─── Table grouping helpers ─────────────────────────────────────────────────
+    // NOTE: dailyOdoData[date] = odómetro al FINAL del día.
+    // Para mostrar el odómetro de INICIO del periodo (odo_inicio + dist = odo_fin_siguiente),
+    // se calcula: odo_inicio = odo_fin - dist_total_del_periodo.
     const groupTableData = (rawRows, grouping) => {
-        // rawRows: [{ date (YYYY-MM-DD), dist, odo }]
-        if (grouping === "day") return rawRows;
+        // rawRows: [{ date (YYYY-MM-DD), dist, odo (end-of-day) }]
+        if (grouping === "day") {
+            // For day view, show start-of-day odometer = odo_end - dist
+            return rawRows.map(r => ({ ...r, odo: r.odo - r.dist }));
+        }
 
         const getWeekNumber = (d) => {
             const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -115,14 +121,15 @@ geotab.addin.recorrido = function () {
                 grouped[key] = { label, dist: 0, odo: 0, sortKey: key };
             }
             grouped[key].dist += row.dist;
-            // Keep the odo of the most recent day in the group (rows are descending)
+            // Keep the odo of the most recent day in the group (rows are descending) = end-of-period odo
             if (grouped[key].odo === 0) grouped[key].odo = row.odo;
         });
 
+        // Convert end-of-period odo → start-of-period odo so that: odo_inicio + dist = odo_inicio_siguiente
         return Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(k => ({
             date: grouped[k].label,
             dist: grouped[k].dist,
-            odo: grouped[k].odo
+            odo: grouped[k].odo - grouped[k].dist   // odo_inicio = odo_fin - dist
         }));
     };
 
