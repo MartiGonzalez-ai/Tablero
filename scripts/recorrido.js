@@ -61,7 +61,7 @@ geotab.addin.recorrido = function () {
         // rawRows: [{ date (YYYY-MM-DD), dist, odo (end-of-day) }]
         if (grouping === "day") {
             // For day view, show start-of-day odometer = odo_end - dist
-            return rawRows.map(r => ({ ...r, odo: r.odo - r.dist }));
+            return rawRows.map(r => ({ ...r, odo: r.odo - r.dist, odoFin: r.odo }));
         }
 
         const getWeekNumber = (d) => {
@@ -129,7 +129,8 @@ geotab.addin.recorrido = function () {
         return Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(k => ({
             date: grouped[k].label,
             dist: grouped[k].dist,
-            odo: grouped[k].odo - grouped[k].dist   // odo_inicio = odo_fin - dist
+            odo: grouped[k].odo - grouped[k].dist,  // odo_inicio = odo_fin - dist
+            odoFin: grouped[k].odo                   // odo_fin = most recent day odo in group
         }));
     };
 
@@ -152,10 +153,12 @@ geotab.addin.recorrido = function () {
 
         pageData.forEach(row => {
             const tr = document.createElement("tr");
+            const fmt = v => v.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " km";
             tr.innerHTML = `
                 <td class="date-td">${row.date}</td>
-                <td class="dist-td" style="text-align: right; color: var(--color-primary); font-weight: 600;">${row.dist.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
-                <td class="odo-td" style="text-align: right; font-weight: 700;">${row.odo.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</td>
+                <td class="dist-td" style="text-align: right; color: var(--color-primary); font-weight: 600;">${fmt(row.dist)}</td>
+                <td class="odo-td" style="text-align: right; font-weight: 700;">${fmt(row.odo)}</td>
+                <td class="odo-td" style="text-align: right; font-weight: 700; color: var(--color-accent);">${fmt(row.odoFin !== undefined ? row.odoFin : row.odo + row.dist)}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -182,6 +185,101 @@ geotab.addin.recorrido = function () {
         if (!isoStr) return "—";
         const d = new Date(isoStr + "T00:00:00"); // Forzar interpretación local
         return d.toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" });
+    };
+
+    // ─── Excel Export ──────────────────────────────────────────────────
+    const exportToExcel = async () => {
+        if (typeof XLSX === "undefined") {
+            showError("La librería de exportación no está disponible.");
+            return;
+        }
+        if (currentTableData.length === 0) {
+            showError("No hay datos para exportar.");
+            return;
+        }
+
+        const wb = XLSX.utils.book_new();
+
+        // ── Sheet 1: Tabla completa con todos los datos agrupados ──
+        const displayData = groupTableData(currentTableData, tableGrouping);
+        const unitName = document.getElementById("unit-select-recorrido");
+        const unitLabel = unitName ? (unitName.options[unitName.selectedIndex]?.text || "Unidad") : "Unidad";
+
+        const wsData = [
+            ["Recorrido por Unidad — " + unitLabel],
+            [],
+            ["Fecha", "Distancia (km)", "Odómetro Inicio (km)", "Odómetro Fin (km)"]
+        ];
+
+        displayData.forEach(row => {
+            const odoFin = row.odoFin !== undefined ? row.odoFin : row.odo + row.dist;
+            wsData.push([
+                row.date,
+                parseFloat(row.dist.toFixed(1)),
+                parseFloat(row.odo.toFixed(1)),
+                parseFloat(odoFin.toFixed(1))
+            ]);
+        });
+
+        // Totals row
+        const totalDist = displayData.reduce((a, r) => a + r.dist, 0);
+        wsData.push([]);
+        wsData.push(["TOTAL", parseFloat(totalDist.toFixed(1)), "", ""]);
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+        // Column widths
+        ws["!cols"] = [
+            { wch: 30 }, // Fecha
+            { wch: 18 }, // Distancia
+            { wch: 22 }, // Odo Inicio
+            { wch: 22 }  // Odo Fin
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, "Desglose");
+
+        // ── Sheet 2: Gráficas como imágenes ──
+        try {
+            const wsCharts = XLSX.utils.aoa_to_sheet([["Las gráficas se exportaron como imágenes PNG adjuntas al archivo."]]);
+            XLSX.utils.book_append_sheet(wb, wsCharts, "Graficas");
+
+            // Export chart images separately as PNG files
+            const charts = [
+                { id: "chart-odo-trend", name: "Tendencia_Odometro" },
+                { id: "chart-daily-recorrido", name: "Distancia_Diaria" }
+            ];
+
+            for (const chartInfo of charts) {
+                const chartEl = document.getElementById(chartInfo.id);
+                if (!chartEl) continue;
+                // ApexCharts stores the instance on the element
+                const apexInstance = chartEl._apexcharts;
+                if (apexInstance) {
+                    try {
+                        const dataURI = await apexInstance.dataURI();
+                        if (dataURI && dataURI.imgURI) {
+                            // Add image data as a worksheet with a note
+                            const wsImg = XLSX.utils.aoa_to_sheet([[chartInfo.name + " (ver imagen adjunta)"]]);
+                            // We can't embed images directly in XLSX easily without paid libs,
+                            // so we download the PNG separately
+                            const link = document.createElement("a");
+                            link.href = dataURI.imgURI;
+                            link.download = chartInfo.name + ".png";
+                            link.click();
+                        }
+                    } catch (e) {
+                        console.warn("No se pudo exportar gráfica:", chartInfo.id, e);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Error exportando gráficas:", e);
+        }
+
+        // ── Download XLSX ──
+        const today = new Date();
+        const dateStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, '0') + "-" + String(today.getDate()).padStart(2, '0');
+        XLSX.writeFile(wb, "Recorrido_" + dateStr + ".xlsx");
     };
 
     const getLocalDateString = (date) => {
@@ -1011,6 +1109,12 @@ geotab.addin.recorrido = function () {
                     currentPage = 1;
                     renderTablePage();
                 });
+            }
+
+            // Export Excel button
+            const btnExport = document.getElementById("btn-export-excel");
+            if (btnExport) {
+                btnExport.addEventListener("click", () => exportToExcel());
             }
 
             // Initialize Lucide
