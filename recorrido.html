@@ -49,7 +49,7 @@
                 <!-- Hidden Custom Date Picker (keep hidden, value used by JS) -->
                 <input type="date" id="date-until" style="display:none;">
 
-                <button id="btn-consultar" class="btn-primary-top">
+                <button id="btn-consultar" class="btn-primary-top" style="border-radius: 8px;">
                     <i data-lucide="search" width="16" height="16"></i>
                     <span>Consultar</span>
                 </button>
@@ -161,6 +161,10 @@
                                 </select>
                             </div>
                             <span id="label-periodo" class="label-periodo"></span>
+                            <button id="btn-export-excel" class="btn-export" title="Exportar a Excel">
+                                <i data-lucide="file-spreadsheet" width="14" height="14" stroke-width="2.5"></i>
+                                Exportar Excel
+                            </button>
                         </div>
                     </div>
                     <div class="table-scroll">
@@ -170,6 +174,7 @@
                                     <th>Fecha</th>
                                     <th style="text-align: right;">Distancia (km)</th>
                                     <th style="text-align: right;">Odómetro Inicio (km)</th>
+                                    <th style="text-align: right;">Odómetro Fin (km)</th>
                                 </tr>
                             </thead>
                             <tbody id="daily-recorrido-tbody">
@@ -226,8 +231,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="scripts/recorrido.js"></script>
 </body>
 
 </html>
-
