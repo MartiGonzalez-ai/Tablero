@@ -391,6 +391,165 @@ body {
     to { transform: translateX(0); opacity: 1; }
 }
 
+/* ═══════════ TABLE HEADER WITH GROUPING ═══════════ */
+.table-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* ═══════════ CUSTOM DATE MODAL ═══════════ */
+.date-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+    animation: fadeInOverlay 0.2s ease;
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.date-modal-box {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.3);
+    width: 360px;
+    max-width: 92vw;
+    animation: scaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+}
+
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.92) translateY(10px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.date-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, var(--color-primary) 0%, #005299 100%);
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.date-modal-header span {
+    flex: 1;
+}
+
+.date-modal-close {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s;
+    padding: 0;
+}
+
+.date-modal-close:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+.date-modal-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.date-modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.date-modal-field label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.date-modal-input {
+    height: 40px;
+    background: #f8fafc;
+    border: 1.5px solid var(--color-border);
+    border-radius: 10px;
+    padding: 0 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text);
+    font-family: var(--font-main);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+}
+
+.date-modal-input:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(0, 177, 225, 0.12);
+    background: white;
+}
+
+.date-modal-footer {
+    padding: 1rem 1.5rem 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.date-modal-btn {
+    height: 38px;
+    border: none;
+    border-radius: 10px;
+    padding: 0 1.25rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-family: var(--font-main);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+}
+
+.date-modal-btn--ghost {
+    background: #f1f5f9;
+    color: var(--color-text-muted);
+}
+
+.date-modal-btn--ghost:hover {
+    background: #e2e8f0;
+    color: var(--color-text);
+}
+
+.date-modal-btn--primary {
+    background: var(--color-primary);
+    color: white;
+}
+
+.date-modal-btn--primary:hover {
+    background: #004a8c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,54,102,0.25);
+}
+
 /* Responsive */
 @media (max-width: 900px) {
     .filter-controls {
