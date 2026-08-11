@@ -398,6 +398,35 @@ body {
     gap: 0.75rem;
 }
 
+.btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 30px;
+    padding: 0 0.875rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: var(--font-main);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+
+.btn-export:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.btn-export:active {
+    transform: translateY(0);
+}
+
 /* ═══════════ CUSTOM DATE MODAL ═══════════ */
 .date-modal-overlay {
     position: fixed;
