@@ -336,95 +336,223 @@ geotab.addin.recorrido = function () {
                 applyBorder(cell);
             });
 
-            // ── Capture Chart PNGs (timeout-guarded, best-effort) ──
-            const captureChartPng = (chartElId) => {
-                return new Promise((resolve) => {
-                    // Always resolve after 4 seconds max — never hang the export
-                    const bail = setTimeout(() => { console.warn("Chart capture timeout:", chartElId); resolve(null); }, 4000);
-
-                    try {
-                        const chartEl = document.getElementById(chartElId);
-                        if (!chartEl) { clearTimeout(bail); resolve(null); return; }
-                        const svgEl = chartEl.querySelector("svg");
-                        if (!svgEl) { clearTimeout(bail); resolve(null); return; }
-
-                        // Clone SVG with white background
-                        const clone = svgEl.cloneNode(true);
-                        clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-                        // Ensure explicit dimensions so canvas renders correctly
-                        const bbox = svgEl.getBoundingClientRect();
-                        if (bbox.width > 0) {
-                            clone.setAttribute("width", bbox.width);
-                            clone.setAttribute("height", bbox.height);
-                        }
-                        const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                        bgRect.setAttribute("width", "100%");
-                        bgRect.setAttribute("height", "100%");
-                        bgRect.setAttribute("fill", "white");
-                        clone.insertBefore(bgRect, clone.firstChild);
-
-                        const svgStr = new XMLSerializer().serializeToString(clone);
-                        // Use data URI instead of blob URL — avoids CSP/blob restrictions in Geotab
-                        const dataUri = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgStr);
-
-                        const img = new Image();
-                        img.onload = () => {
-                            clearTimeout(bail);
-                            try {
-                                const W = 620, H = 280;
-                                const canvas = document.createElement("canvas");
-                                canvas.width = W; canvas.height = H;
-                                const ctx = canvas.getContext("2d");
-                                ctx.fillStyle = "#ffffff";
-                                ctx.fillRect(0, 0, W, H);
-                                ctx.drawImage(img, 0, 0, W, H);
-                                const b64 = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
-                                resolve(b64);
-                            } catch (e) {
-                                console.warn("Canvas draw failed:", e);
-                                resolve(null);
-                            }
-                        };
-                        img.onerror = (e) => {
-                            clearTimeout(bail);
-                            console.warn("Image load failed:", chartElId, e);
-                            resolve(null);
-                        };
-                        img.src = dataUri;
-                    } catch (e) {
-                        clearTimeout(bail);
-                        console.warn("captureChartPng error:", e);
-                        resolve(null);
-                    }
-                });
-            };
-
-            const chartDefs = [
-                { id: "chart-odo-trend",       tl: { col: 5, row: 0 },  br: { col: 13, row: 16 } },
-                { id: "chart-daily-recorrido", tl: { col: 5, row: 17 }, br: { col: 13, row: 33 } }
-            ];
-
-            for (const cd of chartDefs) {
-                const b64 = await captureChartPng(cd.id);
-                if (!b64) continue;
-                try {
-                    const imgId = wb.addImage({ base64: b64, extension: "png" });
-                    ws.addImage(imgId, { tl: cd.tl, br: cd.br });
-                } catch (e) {
-                    console.warn("addImage failed:", e);
-                }
-            }
-
-            // ── Download (timeout-guarded) ──
+            // ── Generate native Excel charts via JSZip post-processing ──
             const bufferTimeout = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error("writeBuffer timeout")), 15000)
             );
-            const buffer = await Promise.race([wb.xlsx.writeBuffer(), bufferTimeout]);
+            const rawBuffer = await Promise.race([wb.xlsx.writeBuffer(), bufferTimeout]);
 
-            const blob = new Blob([buffer], {
-                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            });
-            const dlUrl = URL.createObjectURL(blob);
+            // Post-process the generated Excel file to inject native charts
+            const zip = await JSZip.loadAsync(rawBuffer);
+
+            // 1. Add drawings and charts override to [Content_Types].xml
+            let contentTypes = await zip.file("[Content_Types].xml").async("text");
+            if (!contentTypes.includes("PartName=\"/xl/drawings/drawing1.xml\"")) {
+                contentTypes = contentTypes.replace("</Types>", 
+                    `  <Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>\r\n` +
+                    `  <Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>\r\n` +
+                    `  <Override PartName="/xl/charts/chart2.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>\r\n</Types>`
+                );
+                zip.file("[Content_Types].xml", contentTypes);
+            }
+
+            // 2. Reference the drawing in xl/worksheets/sheet1.xml
+            let sheet1Xml = await zip.file("xl/worksheets/sheet1.xml").async("text");
+            if (!sheet1Xml.includes("<drawing")) {
+                sheet1Xml = sheet1Xml.replace("</worksheet>", `<drawing r:id="rId1"/></worksheet>`);
+                zip.file("xl/worksheets/sheet1.xml", sheet1Xml);
+            }
+
+            // 3. Add relationship to xl/worksheets/_rels/sheet1.xml.rels
+            let sheet1Rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+                `<Relationships xmlns="http://schemas.openxmlformats.org/relationships">\r\n` +
+                `  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>\r\n` +
+                `</Relationships>`;
+            zip.file("xl/worksheets/_rels/sheet1.xml.rels", sheet1Rels);
+
+            // 4. Create xl/drawings/drawing1.xml linking to chart1.xml and chart2.xml
+            let drawing1Xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+                `<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">\r\n` +
+                `  <!-- Chart 1: Odómetro Acumulado (Line) from F1 to L15 -->\r\n` +
+                `  <xdr:twoCellAnchor editAs="oneCell">\r\n` +
+                `    <xdr:from><xdr:col>5</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>\r\n` +
+                `    <xdr:to><xdr:col>12</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>15</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>\r\n` +
+                `    <xdr:graphicFrame>\r\n` +
+                `      <xdr:nvGraphicFramePr>\r\n` +
+                `        <xdr:cNvPr id="1" name="Chart 1"/>\r\n` +
+                `        <xdr:cNvGraphicFramePr/>\r\n` +
+                `      </xdr:nvGraphicFramePr>\r\n` +
+                `      <xdr:xfrm>\r\n` +
+                `        <a:off x="0" y="0"/>\r\n` +
+                `        <a:ext cx="0" cy="0"/>\r\n` +
+                `      </xdr:xfrm>\r\n` +
+                `      <a:graphic>\r\n` +
+                `        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">\r\n` +
+                `          <c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rId1"/>\r\n` +
+                `        </a:graphicData>\r\n` +
+                `      </a:graphic>\r\n` +
+                `    </xdr:graphicFrame>\r\n` +
+                `    <xdr:clientData/>\r\n` +
+                `  </xdr:twoCellAnchor>\r\n` +
+                `  <!-- Chart 2: Kilometros recorridos (Bar) from F17 to L32 -->\r\n` +
+                `  <xdr:twoCellAnchor editAs="oneCell">\r\n` +
+                `    <xdr:from><xdr:col>5</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>16</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>\r\n` +
+                `    <xdr:to><xdr:col>12</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>31</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>\r\n` +
+                `    <xdr:graphicFrame>\r\n` +
+                `      <xdr:nvGraphicFramePr>\r\n` +
+                `        <xdr:cNvPr id="2" name="Chart 2"/>\r\n` +
+                `        <xdr:cNvGraphicFramePr/>\r\n` +
+                `      </xdr:nvGraphicFramePr>\r\n` +
+                `      <xdr:xfrm>\r\n` +
+                `        <a:off x="0" y="0"/>\r\n` +
+                `        <a:ext cx="0" cy="0"/>\r\n` +
+                `      </xdr:xfrm>\r\n` +
+                `      <a:graphic>\r\n` +
+                `        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">\r\n` +
+                `          <c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rId2"/>\r\n` +
+                `        </a:graphicData>\r\n` +
+                `      </a:graphic>\r\n` +
+                `    </xdr:graphicFrame>\r\n` +
+                `    <xdr:clientData/>\r\n` +
+                `  </xdr:twoCellAnchor>\r\n` +
+                `</xdr:wsDr>`;
+            zip.file("xl/drawings/drawing1.xml", drawing1Xml);
+
+            // 5. Create drawing relations
+            let drawing1Rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+                `<Relationships xmlns="http://schemas.openxmlformats.org/relationships">\r\n` +
+                `  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>\r\n` +
+                `  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart2.xml"/>\r\n` +
+                `</Relationships>`;
+            zip.file("xl/drawings/_rels/drawing1.xml.rels", drawing1Rels);
+
+            // Calculate active data range inside drawing (rows start at 4, up to displayData.length + 3)
+            const maxRow = displayData.length + 3;
+
+            // 6. Create xl/charts/chart1.xml (Odómetro Acumulado - Line Chart)
+            let chart1Xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+                `<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">\r\n` +
+                `  <c:chart>\r\n` +
+                `    <c:title>\r\n` +
+                `      <c:tx>\r\n` +
+                `        <c:rich>\r\n` +
+                `          <a:bodyPr/>\r\n` +
+                `          <a:lstStyle/>\r\n` +
+                `          <a:p>\r\n` +
+                `            <a:r>\r\n` +
+                `              <a:rPr><a:latin typeface="Calibri"/></a:rPr>\r\n` +
+                `              <a:t>Od\u00f3metro Acumulado (km)</a:t>\r\n` +
+                `            </a:r>\r\n` +
+                `          </a:p>\r\n` +
+                `        </c:rich>\r\n` +
+                `      </c:tx>\r\n` +
+                `    </c:title>\r\n` +
+                `    <c:plotArea>\r\n` +
+                `      <c:lineChart>\r\n` +
+                `        <c:grouping val="standard"/>\r\n` +
+                `        <c:ser>\r\n` +
+                `          <c:idx val="0"/>\r\n` +
+                `          <c:order val="0"/>\r\n` +
+                `          <c:tx><c:v>Od\u00f3metro Fin (km)</c:v></c:tx>\r\n` +
+                `          <c:cat>\r\n` +
+                `            <c:strRef>\r\n` +
+                `              <c:f>Reporte!$A$4:$A$${maxRow}</c:f>\r\n` +
+                `            </c:strRef>\r\n` +
+                `          </c:cat>\r\n` +
+                `          <c:val>\r\n` +
+                `            <c:numRef>\r\n` +
+                `              <c:f>Reporte!$D$4:$D$${maxRow}</c:f>\r\n` +
+                `            </c:numRef>\r\n` +
+                `          </c:val>\r\n` +
+                `        </c:ser>\r\n` +
+                `        <c:axId val="1001"/>\r\n` +
+                `        <c:axId val="1002"/>\r\n` +
+                `      </c:lineChart>\r\n` +
+                `      <c:catAx>\r\n` +
+                `        <c:axId val="1001"/>\r\n` +
+                `        <c:scaling><c:orientation val="minMax"/></c:scaling>\r\n` +
+                `        <c:axPos val="b"/>\r\n` +
+                `        <c:tickLblPos val="nextTo"/>\r\n` +
+                `      </c:catAx>\r\n` +
+                `      <c:valAx>\r\n` +
+                `        <c:axId val="1002"/>\r\n` +
+                `        <c:scaling><c:orientation val="minMax"/></c:scaling>\r\n` +
+                `        <c:axPos val="l"/>\r\n` +
+                `        <c:majorGridlines/>\r\n` +
+                `        <c:tickLblPos val="nextTo"/>\r\n` +
+                `      </c:valAx>\r\n` +
+                `    </c:plotArea>\r\n` +
+                `    <c:legend>\r\n` +
+                `      <c:legendPos val="b"/>\r\n` +
+                `    </c:legend>\r\n` +
+                `  </c:chart>\r\n` +
+                `</c:chartSpace>`;
+            zip.file("xl/charts/chart1.xml", chart1Xml);
+
+            // 7. Create xl/charts/chart2.xml (Kilómetros recorridos - Bar/Column Chart)
+            let chart2Xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+                `<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">\r\n` +
+                `  <c:chart>\r\n` +
+                `    <c:title>\r\n` +
+                `      <c:tx>\r\n` +
+                `        <c:rich>\r\n` +
+                `          <a:bodyPr/>\r\n` +
+                `          <a:lstStyle/>\r\n` +
+                `          <a:p>\r\n` +
+                `            <a:r>\r\n` +
+                `              <a:rPr><a:latin typeface="Calibri"/></a:rPr>\r\n` +
+                `              <a:t>Kil\u00f3metros recorridos</a:t>\r\n` +
+                `            </a:r>\r\n` +
+                `          </a:p>\r\n` +
+                `        </c:rich>\r\n` +
+                `      </c:tx>\r\n` +
+                `    </c:title>\r\n` +
+                `    <c:plotArea>\r\n` +
+                `      <c:barChart>\r\n` +
+                `        <c:barDir val="col"/>\r\n` +
+                `        <c:grouping val="clustered"/>\r\n` +
+                `        <c:ser>\r\n` +
+                `          <c:idx val="0"/>\r\n` +
+                `          <c:order val="0"/>\r\n` +
+                `          <c:tx><c:v>Distancia (km)</c:v></c:tx>\r\n` +
+                `          <c:cat>\r\n` +
+                `            <c:strRef>\r\n` +
+                `              <c:f>Reporte!$A$4:$A$${maxRow}</c:f>\r\n` +
+                `            </c:strRef>\r\n` +
+                `          </c:cat>\r\n` +
+                `          <c:val>\r\n` +
+                `            <c:numRef>\r\n` +
+                `              <c:f>Reporte!$B$4:$B$${maxRow}</c:f>\r\n` +
+                `            </c:numRef>\r\n` +
+                `          </c:val>\r\n` +
+                `        </c:ser>\r\n` +
+                `        <c:axId val="2001"/>\r\n` +
+                `        <c:axId val="2002"/>\r\n` +
+                `      </c:barChart>\r\n` +
+                `      <c:catAx>\r\n` +
+                `        <c:axId val="2001"/>\r\n` +
+                `        <c:scaling><c:orientation val="minMax"/></c:scaling>\r\n` +
+                `        <c:axPos val="b"/>\r\n` +
+                `        <c:tickLblPos val="nextTo"/>\r\n` +
+                `      </c:catAx>\r\n` +
+                `      <c:valAx>\r\n` +
+                `        <c:axId val="2002"/>\r\n` +
+                `        <c:scaling><c:orientation val="minMax"/></c:scaling>\r\n` +
+                `        <c:axPos val="l"/>\r\n` +
+                `        <c:majorGridlines/>\r\n` +
+                `        <c:tickLblPos val="nextTo"/>\r\n` +
+                `      </c:valAx>\r\n` +
+                `    </c:plotArea>\r\n` +
+                `    <c:legend>\r\n` +
+                `      <c:legendPos val="b"/>\r\n` +
+                `    </c:legend>\r\n` +
+                `  </c:chart>\r\n` +
+                `</c:chartSpace>`;
+            zip.file("xl/charts/chart2.xml", chart2Xml);
+
+            // Generate ZIP buffer and download
+            const buffer = await zip.generateAsync({ type: "blob" });
+            const dlUrl = URL.createObjectURL(buffer);
             const a = document.createElement("a");
             const today = new Date();
             const ds = today.getFullYear() + "-" + String(today.getMonth()+1).padStart(2,"0") + "-" + String(today.getDate()).padStart(2,"0");
