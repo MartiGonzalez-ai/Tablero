@@ -189,8 +189,8 @@ geotab.addin.recorrido = function () {
 
     // ─── Excel Export ──────────────────────────────────────────────────
     const exportToExcel = async () => {
-        if (typeof XLSX === "undefined") {
-            showError("La librería de exportación no está disponible.");
+        if (typeof ExcelJS === "undefined") {
+            showError("La librer\u00eda de exportaci\u00f3n no est\u00e1 disponible.");
             return;
         }
         if (currentTableData.length === 0) {
@@ -198,88 +198,219 @@ geotab.addin.recorrido = function () {
             return;
         }
 
-        const wb = XLSX.utils.book_new();
-
-        // ── Sheet 1: Tabla completa con todos los datos agrupados ──
-        const displayData = groupTableData(currentTableData, tableGrouping);
-        const unitName = document.getElementById("unit-select-recorrido");
-        const unitLabel = unitName ? (unitName.options[unitName.selectedIndex]?.text || "Unidad") : "Unidad";
-
-        const wsData = [
-            ["Recorrido por Unidad — " + unitLabel],
-            [],
-            ["Fecha", "Distancia (km)", "Odómetro Inicio (km)", "Odómetro Fin (km)"]
-        ];
-
-        displayData.forEach(row => {
-            const odoFin = row.odoFin !== undefined ? row.odoFin : row.odo + row.dist;
-            wsData.push([
-                row.date,
-                parseFloat(row.dist.toFixed(1)),
-                parseFloat(row.odo.toFixed(1)),
-                parseFloat(odoFin.toFixed(1))
-            ]);
-        });
-
-        // Totals row
-        const totalDist = displayData.reduce((a, r) => a + r.dist, 0);
-        wsData.push([]);
-        wsData.push(["TOTAL", parseFloat(totalDist.toFixed(1)), "", ""]);
-
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-        // Column widths
-        ws["!cols"] = [
-            { wch: 30 }, // Fecha
-            { wch: 18 }, // Distancia
-            { wch: 22 }, // Odo Inicio
-            { wch: 22 }  // Odo Fin
-        ];
-
-        XLSX.utils.book_append_sheet(wb, ws, "Desglose");
-
-        // ── Sheet 2: Gráficas como imágenes ──
-        try {
-            const wsCharts = XLSX.utils.aoa_to_sheet([["Las gráficas se exportaron como imágenes PNG adjuntas al archivo."]]);
-            XLSX.utils.book_append_sheet(wb, wsCharts, "Graficas");
-
-            // Export chart images separately as PNG files
-            const charts = [
-                { id: "chart-odo-trend", name: "Tendencia_Odometro" },
-                { id: "chart-daily-recorrido", name: "Distancia_Diaria" }
-            ];
-
-            for (const chartInfo of charts) {
-                const chartEl = document.getElementById(chartInfo.id);
-                if (!chartEl) continue;
-                // ApexCharts stores the instance on the element
-                const apexInstance = chartEl._apexcharts;
-                if (apexInstance) {
-                    try {
-                        const dataURI = await apexInstance.dataURI();
-                        if (dataURI && dataURI.imgURI) {
-                            // Add image data as a worksheet with a note
-                            const wsImg = XLSX.utils.aoa_to_sheet([[chartInfo.name + " (ver imagen adjunta)"]]);
-                            // We can't embed images directly in XLSX easily without paid libs,
-                            // so we download the PNG separately
-                            const link = document.createElement("a");
-                            link.href = dataURI.imgURI;
-                            link.download = chartInfo.name + ".png";
-                            link.click();
-                        }
-                    } catch (e) {
-                        console.warn("No se pudo exportar gráfica:", chartInfo.id, e);
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn("Error exportando gráficas:", e);
+        const btnExport = document.getElementById("btn-export-excel");
+        const origHtml = btnExport ? btnExport.innerHTML : "";
+        if (btnExport) {
+            btnExport.disabled = true;
+            btnExport.innerHTML = "\u23f3 Generando...";
         }
 
-        // ── Download XLSX ──
-        const today = new Date();
-        const dateStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, '0') + "-" + String(today.getDate()).padStart(2, '0');
-        XLSX.writeFile(wb, "Recorrido_" + dateStr + ".xlsx");
+        try {
+            const wb = new ExcelJS.Workbook();
+            wb.creator = "Geotab Recorrido";
+            wb.created = new Date();
+
+            const ws = wb.addWorksheet("Reporte", { views: [{ showGridLines: true }] });
+
+            // \u2500\u2500 Source Data \u2500\u2500
+            const displayData = groupTableData(currentTableData, tableGrouping);
+            const unitEl = document.getElementById("unit-select-recorrido");
+            const unitLabel = unitEl ? (unitEl.options[unitEl.selectedIndex]?.text || "Unidad") : "Unidad";
+
+            // Build date range label
+            let dateRangeStr = "";
+            if (selectedPeriod === "custom" && customFromDate && customToDate) {
+                const fmt = s => s.split("-").reverse().join("/");
+                dateRangeStr = fmt(customFromDate) + " a " + fmt(customToDate);
+            } else {
+                const range = getSelectedRange();
+                if (range) {
+                    const fmtD = d => String(d.getDate()).padStart(2,"0") + "/" +
+                        String(d.getMonth()+1).padStart(2,"0") + "/" + d.getFullYear();
+                    dateRangeStr = fmtD(range.from) + " a " + fmtD(range.to);
+                }
+            }
+
+            // \u2500\u2500 Column Widths \u2500\u2500
+            ws.columns = [
+                { width: 28 },  // A - Fecha
+                { width: 16 },  // B - Distancia
+                { width: 22 },  // C - Odo Inicio
+                { width: 22 },  // D - Odo Fin
+                { width: 3  },  // E - spacer
+                { width: 15 },  // F - chart col start
+                { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }
+            ];
+
+            // \u2500\u2500 Palette \u2500\u2500
+            const COL_DARK   = { argb: "FF002060" };  // deep navy (title bg)
+            const COL_TEAL   = { argb: "FF1F6B75" };  // teal (header bg)
+            const COL_WHITE  = { argb: "FFFFFFFF" };
+            const COL_ALT    = { argb: "FFEBF3FB" };  // alternate row
+            const COL_TOTAL  = { argb: "FFD6E4F0" };  // total row bg
+            const COL_BORDER = { argb: "FFB0C4D8" };
+
+            const applyFill = (cell, argb) => {
+                cell.fill = { type: "pattern", pattern: "solid", fgColor: argb };
+            };
+            const applyBorder = (cell) => {
+                cell.border = {
+                    top:    { style: "thin", color: COL_BORDER },
+                    left:   { style: "thin", color: COL_BORDER },
+                    bottom: { style: "thin", color: COL_BORDER },
+                    right:  { style: "thin", color: COL_BORDER }
+                };
+            };
+
+            // \u2500\u2500 Row 1: Title \u2500\u2500
+            ws.mergeCells("A1:D1");
+            const r1 = ws.getRow(1);
+            r1.height = 30;
+            const titleCell = ws.getCell("A1");
+            titleCell.value = "REPORTE DE RECORRIDO";
+            titleCell.font = { bold: true, size: 13, color: COL_WHITE, name: "Calibri" };
+            applyFill(titleCell, COL_DARK);
+            titleCell.alignment = { horizontal: "center", vertical: "middle" };
+
+            // \u2500\u2500 Row 2: Date range | Unit \u2500\u2500
+            ws.getRow(2).height = 20;
+            const dateCell = ws.getCell("A2");
+            dateCell.value = dateRangeStr;
+            dateCell.font = { size: 9, color: COL_WHITE, name: "Calibri" };
+            applyFill(dateCell, COL_DARK);
+            dateCell.alignment = { horizontal: "left", vertical: "middle" };
+
+            ws.mergeCells("B2:D2");
+            const unitCell = ws.getCell("B2");
+            unitCell.value = unitLabel;
+            unitCell.font = { bold: true, size: 9, color: COL_WHITE, name: "Calibri" };
+            applyFill(unitCell, COL_DARK);
+            unitCell.alignment = { horizontal: "right", vertical: "middle" };
+
+            // \u2500\u2500 Row 3: Column Headers \u2500\u2500
+            ws.getRow(3).height = 18;
+            const headers = ["Fecha", "Distancia (km)", "Od\u00f3metro Inicio (km)", "Od\u00f3metro Fin (km)"];
+            headers.forEach((h, i) => {
+                const cell = ws.getCell(3, i + 1);
+                cell.value = h;
+                cell.font = { bold: true, size: 9, color: COL_WHITE, name: "Calibri" };
+                applyFill(cell, COL_TEAL);
+                cell.alignment = { horizontal: i === 0 ? "left" : "right", vertical: "middle" };
+                applyBorder(cell);
+            });
+
+            // \u2500\u2500 Data Rows \u2500\u2500
+            let rowIdx = 4;
+            displayData.forEach((row, idx) => {
+                const odoFin = row.odoFin !== undefined ? row.odoFin : row.odo + row.dist;
+                const r = ws.getRow(rowIdx);
+                r.height = 16;
+
+                const vals = [row.date, parseFloat(row.dist.toFixed(1)), parseFloat(row.odo.toFixed(1)), parseFloat(odoFin.toFixed(1))];
+                vals.forEach((v, ci) => {
+                    const cell = r.getCell(ci + 1);
+                    cell.value = v;
+                    cell.font = { size: 9, name: "Calibri" };
+                    applyFill(cell, idx % 2 === 0 ? COL_WHITE : COL_ALT);
+                    cell.alignment = { horizontal: ci === 0 ? "left" : "right", vertical: "middle" };
+                    if (ci > 0) cell.numFmt = "#,##0.0";
+                    applyBorder(cell);
+                });
+                rowIdx++;
+            });
+
+            // \u2500\u2500 Empty separator \u2500\u2500
+            rowIdx++;
+
+            // \u2500\u2500 TOTAL Row \u2500\u2500
+            const totalDist = displayData.reduce((s, r) => s + r.dist, 0);
+            const totalRow = ws.getRow(rowIdx);
+            totalRow.height = 18;
+            ["TOTAL", parseFloat(totalDist.toFixed(1)), "", ""].forEach((v, ci) => {
+                const cell = totalRow.getCell(ci + 1);
+                cell.value = v;
+                cell.font = { bold: true, size: 9, name: "Calibri" };
+                applyFill(cell, COL_TOTAL);
+                cell.alignment = { horizontal: ci === 0 ? "left" : "right", vertical: "middle" };
+                if (ci === 1) cell.numFmt = "#,##0.0";
+                applyBorder(cell);
+            });
+
+            // \u2500\u2500 Capture Chart PNGs via SVG \u2192 Canvas \u2500\u2500
+            const captureChartPng = async (chartElId) => {
+                const chartEl = document.getElementById(chartElId);
+                if (!chartEl) return null;
+                const svgEl = chartEl.querySelector("svg");
+                if (!svgEl) return null;
+
+                // Clone SVG and set explicit background
+                const clone = svgEl.cloneNode(true);
+                clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+                const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                bgRect.setAttribute("width", "100%");
+                bgRect.setAttribute("height", "100%");
+                bgRect.setAttribute("fill", "white");
+                clone.insertBefore(bgRect, clone.firstChild);
+
+                const svgStr = new XMLSerializer().serializeToString(clone);
+                const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+                const url = URL.createObjectURL(svgBlob);
+
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const W = 620, H = 280;
+                        const canvas = document.createElement("canvas");
+                        canvas.width = W; canvas.height = H;
+                        const ctx = canvas.getContext("2d");
+                        ctx.fillStyle = "#ffffff";
+                        ctx.fillRect(0, 0, W, H);
+                        ctx.drawImage(img, 0, 0, W, H);
+                        URL.revokeObjectURL(url);
+                        const b64 = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+                        resolve(b64);
+                    };
+                    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+                    img.src = url;
+                });
+            };
+
+            const chartDefs = [
+                { id: "chart-odo-trend",       tl: { col: 5, row: 0 }, br: { col: 13, row: 16 } },
+                { id: "chart-daily-recorrido", tl: { col: 5, row: 17 }, br: { col: 13, row: 33 } }
+            ];
+
+            for (const cd of chartDefs) {
+                const b64 = await captureChartPng(cd.id);
+                if (!b64) continue;
+                const imgId = wb.addImage({ base64: b64, extension: "png" });
+                ws.addImage(imgId, { tl: cd.tl, br: cd.br });
+            }
+
+            // \u2500\u2500 Download \u2500\u2500
+            const buffer = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buffer], {
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            });
+            const dlUrl = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            const today = new Date();
+            const ds = today.getFullYear() + "-" + String(today.getMonth()+1).padStart(2,"0") + "-" + String(today.getDate()).padStart(2,"0");
+            a.href = dlUrl;
+            a.download = "Recorrido_" + ds + ".xlsx";
+            a.click();
+            URL.revokeObjectURL(dlUrl);
+
+        } catch (err) {
+            console.error("Error exportando:", err);
+            showError("Error al generar el archivo Excel.");
+        } finally {
+            if (btnExport) {
+                btnExport.disabled = false;
+                btnExport.innerHTML = origHtml || "\uD83D\uDCCA Exportar Excel";
+                if (window.lucide) lucide.createIcons();
+            }
+        }
     };
 
     const getLocalDateString = (date) => {
