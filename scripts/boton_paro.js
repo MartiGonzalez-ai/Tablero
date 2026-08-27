@@ -1,7 +1,10 @@
 /* 
  * ═══════════════════════════════════════════════════════════════
  * PARO_MOTOR.JS — Fleet Control | Motor Stop Panel
- * Geotab Add-In | geotab.addin.paro_motor
+ * Geotab Add-In | geotab.addin.boton_paro
+ * Cargado por: boton_paro.html (GitHub Pages) y paro_motor.html (local)
+ * NOTA: El namespace es boton_paro para que Geotab pueda inicializarlo
+ *       desde boton_paro.html. El add-in deriva el nombre del HTML.
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -10,7 +13,7 @@
 window.geotab = window.geotab || {};
 geotab.addin = geotab.addin || {};
 
-geotab.addin.paro_motor = (function () {
+geotab.addin.boton_paro = (function () {
 
     // ── Estado global ────────────────────────────────────────────
     let api = null;
