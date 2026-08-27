@@ -1,7 +1,7 @@
 /* 
  * ═══════════════════════════════════════════════════════════════
- * BOTON_PARO.JS — Fleet Control | Motor Stop Panel
- * Geotab Add-In | geotab.addin.boton_paro
+ * PARO_MOTOR.JS — Fleet Control | Motor Stop Panel
+ * Geotab Add-In | geotab.addin.paro_motor
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -10,7 +10,7 @@
 window.geotab = window.geotab || {};
 geotab.addin = geotab.addin || {};
 
-geotab.addin.boton_paro = (function () {
+geotab.addin.paro_motor = (function () {
 
     // ── Estado global ────────────────────────────────────────────
     let api = null;
@@ -1467,4 +1467,3 @@ geotab.addin.boton_paro = (function () {
     };
 
 })();
-
