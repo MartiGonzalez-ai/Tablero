@@ -30,6 +30,103 @@ geotab.addin.boton_paro = (function () {
     let pinBuffer = "";
     let pendingAction = "";   // "stop" | "restore"
 
+    // ── Lista de correos autorizados ─────────────────────────────
+    // Agrega o elimina correos aquí para controlar el acceso al add-in.
+    const ALLOWED_EMAILS = [
+        "mgonzalez@enerkom.com.mx",
+        "admin@enerkom.com.mx",
+        "supervisor@enerkom.com.mx"
+        // Agrega más correos aquí...
+    ];
+
+    // ── Control de Acceso ────────────────────────────────────────
+    const checkAccess = (email) => {
+        if (!email) return false;
+        return ALLOWED_EMAILS.some(allowed => allowed.toLowerCase() === email.toLowerCase());
+    };
+
+    const showAccessDenied = (email) => {
+        // Ocultar todo el contenido principal
+        const mainContent = document.getElementById("app-root") || document.querySelector(".app-shell") || document.body.firstElementChild;
+        
+        // Ocultar todos los hijos directos del body excepto toast-wrap
+        document.querySelectorAll("body > *:not(#toast-wrap):not(#access-denied-screen)").forEach(el => {
+            el.style.display = "none";
+        });
+
+        // Crear pantalla de acceso denegado si no existe
+        if (!document.getElementById("access-denied-screen")) {
+            const screen = document.createElement("div");
+            screen.id = "access-denied-screen";
+            screen.style.cssText = [
+                "position:fixed","inset:0","display:flex","align-items:center",
+                "justify-content:center","flex-direction:column","gap:1.5rem",
+                "background:var(--bg-1,#0f1117)","z-index:99999",
+                "font-family:'Inter',sans-serif","text-align:center","padding:2rem"
+            ].join(";");
+
+            screen.innerHTML = `
+                <div style="
+                    background:rgba(239,68,68,0.08);
+                    border:1px solid rgba(239,68,68,0.25);
+                    border-radius:20px;
+                    padding:3rem 2.5rem;
+                    max-width:480px;
+                    width:100%;
+                    display:flex;
+                    flex-direction:column;
+                    align-items:center;
+                    gap:1.25rem;
+                    box-shadow:0 0 60px rgba(239,68,68,0.08);
+                ">
+                    <div style="
+                        width:72px;height:72px;border-radius:50%;
+                        background:rgba(239,68,68,0.12);
+                        display:flex;align-items:center;justify-content:center;
+                        border:2px solid rgba(239,68,68,0.3);
+                    ">
+                        <svg xmlns='http://www.w3.org/2000/svg' width='36' height='36'
+                             viewBox='0 0 24 24' fill='none' stroke='#ef4444'
+                             stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
+                            <circle cx='12' cy='12' r='10'/>
+                            <line x1='4.93' y1='4.93' x2='19.07' y2='19.07'/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 style="margin:0 0 0.5rem;font-size:1.4rem;font-weight:700;color:#ef4444;letter-spacing:-0.01em;">
+                            Add-In No Disponible
+                        </h2>
+                        <p style="margin:0;font-size:0.95rem;color:rgba(255,255,255,0.6);line-height:1.6;">
+                            Tu cuenta (<strong style='color:rgba(255,255,255,0.85);'>${email || 'desconocido'}</strong>)
+                            no tiene acceso a este panel de control.
+                        </p>
+                    </div>
+                    <div style="
+                        background:rgba(255,255,255,0.04);
+                        border:1px solid rgba(255,255,255,0.08);
+                        border-radius:10px;
+                        padding:0.85rem 1.25rem;
+                        font-size:0.82rem;
+                        color:rgba(255,255,255,0.45);
+                        display:flex;
+                        align-items:center;
+                        gap:0.6rem;
+                    ">
+                        <svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'
+                             viewBox='0 0 24 24' fill='none' stroke='currentColor'
+                             stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
+                            <circle cx='12' cy='12' r='10'/>
+                            <line x1='12' y1='8' x2='12' y2='12'/>
+                            <line x1='12' y1='16' x2='12.01' y2='16'/>
+                        </svg>
+                        Habla con tu administrador para solicitar acceso.
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(screen);
+        }
+    };
+
     const IO_DIAGNOSTICS = [
         "DiagnosticDeviceRelayStateId",
         "DiagnosticDigitalOutput1StateId",
@@ -1458,13 +1555,26 @@ geotab.addin.boton_paro = (function () {
                 api = geotabApi;
                 isDemoMode = false;
 
-                const modeBadge = document.getElementById("mode-badge");
-                if (modeBadge) { modeBadge.dataset.mode = "live"; document.getElementById("mode-text").textContent = "Geotab Live"; }
+                // ── Verificar acceso antes de cargar el add-in ────
+                api.getSession((session) => {
+                    const userEmail = session && session.userName ? session.userName : null;
 
-                bindEvents();
-                loadCurrentUser();
-                loadDevices();
-                if (callback) callback();
+                    if (!checkAccess(userEmail)) {
+                        // Usuario no autorizado → mostrar pantalla de acceso denegado
+                        showAccessDenied(userEmail);
+                        if (callback) callback();
+                        return;
+                    }
+
+                    // Usuario autorizado → inicializar normalmente
+                    const modeBadge = document.getElementById("mode-badge");
+                    if (modeBadge) { modeBadge.dataset.mode = "live"; document.getElementById("mode-text").textContent = "Geotab Live"; }
+
+                    bindEvents();
+                    loadCurrentUser();
+                    loadDevices();
+                    if (callback) callback();
+                });
             },
             focus(geotabApi, state) {
                 api = geotabApi;
