@@ -477,14 +477,14 @@ geotab.addin.boton_paro = (function () {
 
         } else {
             // Envío real en paralelo a todas las unidades seleccionadas
-            // Estructura idéntica a out.js que sí funciona con la API de Geotab
+            // La API de Geotab usa typeName "TextMessage" con messageContent IoxOutput
             const calls = selVehicles.map(v => ["Add", {
                 typeName: "TextMessage",
                 entity: {
                     device: { id: v.id },
                     messageContent: {
-                        isRelayOn: isStopping,   // true = paro (relay ON), false = restablecer (relay OFF)
-                        contentType: "IoxOutput"
+                        contentType: "IoxOutput",
+                        isRelayOn: isStopping   // true = paro (relay ON), false = restablecer (relay OFF)
                     },
                     isDirectionToVehicle: true
                 }
