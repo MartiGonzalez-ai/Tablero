@@ -836,16 +836,16 @@ geotab.addin.boton_paro = (function () {
                 }
             ]);
 
-            // Agregar consulta histórica del estado del relay
+            // Agregar consulta histórica usando TextMessage (comandos IoxOutput enviados)
             calls.push([
                 "Get",
                 {
-                    typeName: "StatusData",
+                    typeName: "TextMessage",
                     search: {
                         deviceSearch: { id: deviceId },
-                        diagnosticSearch: { id: "DiagnosticDeviceRelayStateId" },
                         fromDate: range.fromDate.toISOString(),
-                        toDate: range.toDate.toISOString()
+                        toDate: range.toDate.toISOString(),
+                        isDirectionToVehicle: true
                     }
                 }
             ]);
@@ -865,7 +865,19 @@ geotab.addin.boton_paro = (function () {
                     }
                 });
 
-                const historyRecords = results[IO_DIAGNOSTICS.length] || [];
+                // Filtrar solo mensajes IoxOutput del historial TextMessage
+                const allTextMessages = results[IO_DIAGNOSTICS.length] || [];
+                const historyRecords = allTextMessages
+                    .filter(msg => msg.messageContent && msg.messageContent.contentType === "IoxOutput")
+                    .map(msg => ({
+                        // Normalizar estructura para que renderHistoryAndDiagnostics la entienda
+                        data: msg.messageContent.isRelayOn ? 1 : 0,
+                        dateTime: msg.sent || msg.activeFrom,
+                        delivered: msg.delivered,
+                        device: msg.device,
+                        id: msg.id
+                    }));
+
                 renderHistoryAndDiagnostics(processedResults, historyRecords);
             }, (err) => {
                 console.error("Error al consultar diagnósticos I/O:", err);
@@ -958,9 +970,17 @@ geotab.addin.boton_paro = (function () {
                 historyListEl.innerHTML = sortedRecords.map(rec => {
                     const isActive = rec.data === 1 || rec.data === true;
                     const cardClass = isActive ? "active-shutoff" : "inactive-shutoff";
-                    const statusText = isActive ? "Bloqueo Activado" : "Motor Restablecido";
+                    const statusText = isActive ? "Paro de Motor" : "Motor Restablecido";
                     const statusIcon = isActive ? "lock" : "unlock";
                     const iconColor = isActive ? "var(--c-stopped)" : "var(--c-active)";
+
+                    // Estado de entrega del TextMessage
+                    let deliveryBadge = "";
+                    if (rec.delivered === true) {
+                        deliveryBadge = `<span style="font-size:0.68rem; padding:0.15rem 0.45rem; border-radius:4px; background:rgba(34,197,94,0.12); color:var(--c-active); border:1px solid rgba(34,197,94,0.2);">✓ Entregado</span>`;
+                    } else if (rec.delivered === false) {
+                        deliveryBadge = `<span style="font-size:0.68rem; padding:0.15rem 0.45rem; border-radius:4px; background:rgba(245,158,11,0.12); color:var(--c-moving); border:1px solid rgba(245,158,11,0.2);">⏳ Pendiente</span>`;
+                    }
                     
                     return `
                         <div class="history-card ${cardClass}">
@@ -971,8 +991,9 @@ geotab.addin.boton_paro = (function () {
                                 </span>
                                 <span class="history-card-time">${formatTime(rec.dateTime)}</span>
                             </div>
-                            <div style="font-size:0.72rem; color:var(--text-2); margin-top:0.25rem;">
-                                Transmitido por el sistema telemático (Relay: ${isActive ? '1' : '0'}).
+                            <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.72rem; color:var(--text-2); margin-top:0.35rem;">
+                                <span>Comando IoxOutput enviado vía Geotab (Relay: ${isActive ? '1' : '0'}).</span>
+                                ${deliveryBadge}
                             </div>
                         </div>
                     `;
