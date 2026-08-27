@@ -61,7 +61,7 @@ geotab.addin.boton_paro = (function () {
         "DiagnosticDigitalOutput2StateId": { name: "Salida Digital 2", type: "output" },
         "DiagnosticDigitalOutput3StateId": { name: "Salida Digital 3", type: "output" },
         "DiagnosticDigitalOutput4StateId": { name: "Salida Digital 4", type: "output" },
-        
+
         "DiagnosticDigitalInput1StateId": { name: "Entrada Digital 1", type: "input" },
         "DiagnosticDigitalInput2StateId": { name: "Entrada Digital 2", type: "input" },
         "DiagnosticDigitalInput3StateId": { name: "Entrada Digital 3", type: "input" },
@@ -70,7 +70,7 @@ geotab.addin.boton_paro = (function () {
         "DiagnosticDigitalInput6StateId": { name: "Entrada Digital 6", type: "input" },
         "DiagnosticDigitalInput7StateId": { name: "Entrada Digital 7", type: "input" },
         "DiagnosticDigitalInput8StateId": { name: "Entrada Digital 8", type: "input" },
-        
+
         "DiagnosticAux1Id": { name: "Entrada Auxiliar 1", type: "input" },
         "DiagnosticAux2Id": { name: "Entrada Auxiliar 2", type: "input" },
         "DiagnosticAux3Id": { name: "Entrada Auxiliar 3", type: "input" },
@@ -79,7 +79,7 @@ geotab.addin.boton_paro = (function () {
         "DiagnosticAux6Id": { name: "Entrada Auxiliar 6", type: "input" },
         "DiagnosticAux7Id": { name: "Entrada Auxiliar 7", type: "input" },
         "DiagnosticAux8Id": { name: "Entrada Auxiliar 8", type: "input" },
-        
+
         "DiagnosticIgnitionId": { name: "Estado de Ignición (Motor)", type: "ignition" }
     };
 
@@ -477,17 +477,9 @@ geotab.addin.boton_paro = (function () {
 
         } else {
             // Envío real en paralelo a todas las unidades seleccionadas
-            // Estructura idéntica a out.js que sí funciona con la API de Geotab
             const calls = selVehicles.map(v => ["Add", {
-                typeName: "TextMessage",
-                entity: {
-                    device: { id: v.id },
-                    messageContent: {
-                        isRelayOn: isStopping,   // true = paro (relay ON), false = restablecer (relay OFF)
-                        contentType: "IoxOutput"
-                    },
-                    isDirectionToVehicle: true
-                }
+                typeName: "TextCommand",
+                entity: { device: { id: v.id }, text: cmdText }
             }]);
 
             api.multiCall(calls, (results) => {
@@ -535,7 +527,7 @@ geotab.addin.boton_paro = (function () {
     const getDateRangeFromSelect = (rangeValue) => {
         const toDate = new Date();
         let fromDate = new Date();
-        
+
         switch (rangeValue) {
             case "24h":
                 fromDate.setHours(fromDate.getHours() - 24);
@@ -570,30 +562,30 @@ geotab.addin.boton_paro = (function () {
         const history = [];
         const v = allVehicles.find(x => x.id === deviceId);
         const isStopped = v ? v.outputState === 1 : false;
-        
+
         const diffMs = toDate.getTime() - fromDate.getTime();
         // Generar entre 2 y 6 eventos para dar una apariencia realista
-        const numEvents = Math.floor(Math.random() * 4) + 2; 
-        
+        const numEvents = Math.floor(Math.random() * 4) + 2;
+
         let currentState = isStopped ? 1 : 0;
         let currentMs = toDate.getTime() - (Math.random() * (diffMs / numEvents) * 0.3); // comenzar poco antes del fin
-        
+
         for (let i = 0; i < numEvents; i++) {
             if (currentMs < fromDate.getTime()) break;
-            
+
             history.push({
                 data: currentState,
                 dateTime: new Date(currentMs).toISOString(),
                 device: { id: deviceId },
                 diagnostic: { id: "DiagnosticDeviceRelayStateId" }
             });
-            
+
             // alternar estados retrocediendo en el tiempo
             currentState = currentState === 1 ? 0 : 1;
             // restar tiempo aleatorio
             currentMs -= (Math.random() * (diffMs / numEvents) * 0.8) + (diffMs / numEvents) * 0.4;
         }
-        
+
         return history;
     };
 
@@ -621,7 +613,7 @@ geotab.addin.boton_paro = (function () {
 
         if (timeRangeSel) timeRangeSel.value = "24h";
         if (customDatesDiv) customDatesDiv.style.display = "none";
-        
+
         // Inicializar selectores de fecha personalizados
         const today = new Date();
         const pastDate = new Date();
@@ -688,10 +680,10 @@ geotab.addin.boton_paro = (function () {
                     const isOut1 = diagId === "DiagnosticDigitalOutput1StateId";
                     const isIn1 = diagId === "DiagnosticDigitalInput1StateId";
                     const isIgnition = diagId === "DiagnosticIgnitionId";
-                    
+
                     let hasData = false;
                     let value = 0;
-                    
+
                     if (deviceId === "b101") {
                         if (isRelay || isOut1 || isIn1) { hasData = true; value = 1; }
                         else if (isIgnition) { hasData = true; value = 0; }
@@ -726,7 +718,7 @@ geotab.addin.boton_paro = (function () {
         } else {
             // Modo Live: Consulta real al API de Geotab
             const range = getDateRangeFromSelect(document.getElementById("drawer-time-range")?.value || "24h");
-            
+
             const calls = IO_DIAGNOSTICS.map(diagId => [
                 "Get",
                 {
@@ -857,14 +849,14 @@ geotab.addin.boton_paro = (function () {
             } else {
                 // Ordenar más recientes primero
                 const sortedRecords = [...historyRecords].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-                
+
                 historyListEl.innerHTML = sortedRecords.map(rec => {
                     const isActive = rec.data === 1 || rec.data === true;
                     const cardClass = isActive ? "active-shutoff" : "inactive-shutoff";
                     const statusText = isActive ? "Bloqueo Activado" : "Motor Restablecido";
                     const statusIcon = isActive ? "lock" : "unlock";
                     const iconColor = isActive ? "var(--c-stopped)" : "var(--c-active)";
-                    
+
                     return `
                         <div class="history-card ${cardClass}">
                             <div class="history-card-top">
@@ -888,7 +880,7 @@ geotab.addin.boton_paro = (function () {
         if (ioListEl) {
             const outputs = [];
             const inputs = [];
-            
+
             Object.entries(currentDiags).forEach(([diagId, info]) => {
                 const labelMeta = DIAG_LABELS[diagId];
                 if (!labelMeta) return;
@@ -972,7 +964,7 @@ geotab.addin.boton_paro = (function () {
         let badgeClass = "inactive";
         let badgeText = "INACTIVO";
         let iconColor = "var(--text-3)";
-        
+
         if (isActive) {
             if (item.id === "DiagnosticDeviceRelayStateId" || item.id.includes("Output")) {
                 badgeClass = "active-red";
@@ -1020,21 +1012,21 @@ geotab.addin.boton_paro = (function () {
     const findNearestCoordinates = (eventTime, logRecords) => {
         if (!logRecords || logRecords.length === 0) return null;
         const targetMs = new Date(eventTime).getTime();
-        
+
         let closestRecord = logRecords[0];
         let minDiff = Math.abs(new Date(closestRecord.dateTime).getTime() - targetMs);
-        
+
         for (let i = 1; i < logRecords.length; i++) {
             const currentRecord = logRecords[i];
             if (!currentRecord.dateTime) continue;
-            
+
             const diff = Math.abs(new Date(currentRecord.dateTime).getTime() - targetMs);
             if (diff < minDiff) {
                 minDiff = diff;
                 closestRecord = currentRecord;
             }
         }
-        
+
         return {
             latitude: closestRecord.latitude,
             longitude: closestRecord.longitude
@@ -1047,10 +1039,10 @@ geotab.addin.boton_paro = (function () {
         const v = allVehicles.find(x => x.id === activeVehicleId);
         const name = v ? v.name : "Unidad";
         const plate = v ? v.plate : "S-N";
-        
+
         // Encabezados incluyendo coordenadas y mapa
         const headers = ["Vehículo", "Placa", "Fecha y Hora", "Evento", "Valor Relay", "Latitud", "Longitud", "Google Maps", "Diagnóstico"];
-        
+
         // Filas
         const rows = activeHistoryRecords.map(rec => {
             const isActive = rec.data === 1 || rec.data === true;
@@ -1059,7 +1051,7 @@ geotab.addin.boton_paro = (function () {
             const lat = rec.latitude ? rec.latitude.toFixed(6) : "—";
             const lon = rec.longitude ? rec.longitude.toFixed(6) : "—";
             const mapsUrl = (rec.latitude && rec.longitude) ? `https://www.google.com/maps?q=${rec.latitude},${rec.longitude}` : "—";
-            
+
             return [
                 `"${name}"`,
                 `"${plate}"`,
@@ -1072,13 +1064,13 @@ geotab.addin.boton_paro = (function () {
                 `"Relay de Paro de Motor"`
             ];
         });
-        
+
         // Unir CSV e incluir el BOM para correcta decodificación en Excel (caracteres en español)
         const csvContent = "\uFEFF" + [headers.join(",")].concat(rows.map(r => r.join(","))).join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const filename = `Historial_Paro_${name.replace(/\s+/g, "_")}_${formatDateToISOString(new Date())}.csv`;
-        
-        if (navigator.msSaveBlob) { 
+
+        if (navigator.msSaveBlob) {
             navigator.msSaveBlob(blob, filename);
         } else {
             const link = document.createElement("a");
@@ -1092,7 +1084,7 @@ geotab.addin.boton_paro = (function () {
                 document.body.removeChild(link);
             }
         }
-        
+
         toast(`Historial exportado correctamente a CSV.`, "success");
     };
 
@@ -1107,7 +1099,7 @@ geotab.addin.boton_paro = (function () {
         const today = new Date();
         const pastDate = new Date();
         pastDate.setDate(today.getDate() - 7);
-        
+
         if (dateFromInput) dateFromInput.value = formatDateToISOString(pastDate);
         if (dateToInput) dateToInput.value = formatDateToISOString(today);
 
@@ -1156,7 +1148,7 @@ geotab.addin.boton_paro = (function () {
         const dateFromEl = document.getElementById("gen-date-from");
         const dateToEl = document.getElementById("gen-date-to");
         const checkedBoxes = document.querySelectorAll(".gen-unit-cb:checked");
-        
+
         if (checkedBoxes.length === 0) {
             toast("Debe seleccionar al menos una unidad.", "error");
             return;
@@ -1175,11 +1167,11 @@ geotab.addin.boton_paro = (function () {
         if (isDemoMode) {
             setTimeout(() => {
                 const combinedRecords = [];
-                
+
                 selectedIds.forEach(id => {
                     const v = allVehicles.find(x => x.id === id);
                     const mockHistory = generateMockHistory(id, fromDate, toDate);
-                    
+
                     mockHistory.forEach(rec => {
                         combinedRecords.push({
                             vehicleName: v ? v.name : "Desconocido",
@@ -1262,7 +1254,7 @@ geotab.addin.boton_paro = (function () {
 
     const downloadCombinedCSV = (records) => {
         const headers = ["Vehículo", "Placa", "Fecha y Hora", "Evento", "Valor Relay", "Latitud", "Longitud", "Google Maps", "Diagnóstico"];
-        
+
         const rows = records.map(rec => {
             const isActive = rec.data === 1 || rec.data === true;
             const eventText = isActive ? "ACTIVADO (PARO ACTIVO)" : "DESACTIVADO (RESTABLECIDO)";
@@ -1288,7 +1280,7 @@ geotab.addin.boton_paro = (function () {
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const filename = `Historial_General_Paro_${formatDateToISOString(new Date())}.csv`;
 
-        if (navigator.msSaveBlob) { 
+        if (navigator.msSaveBlob) {
             navigator.msSaveBlob(blob, filename);
         } else {
             const link = document.createElement("a");
@@ -1302,7 +1294,7 @@ geotab.addin.boton_paro = (function () {
                 document.body.removeChild(link);
             }
         }
-        
+
         toast(`Historial general exportado correctamente a CSV (${records.length} registros).`, "success");
     };
 
