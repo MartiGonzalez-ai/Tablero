@@ -1,4 +1,4 @@
-﻿/* ================================================================
+/* ================================================================
    DEMO.CSS — Metricas de Flota: Distancia, Motor y Uso
    Geotab Add-In | Dark Premium Theme
    ================================================================ */
@@ -261,11 +261,11 @@
 ═══════════════════════════════════════════════ */
 .demo-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1.25rem;
 }
 
-@media (max-width: 900px) { .demo-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1024px) { .demo-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .demo-kpi-grid { grid-template-columns: 1fr; } }
 
 .demo-kpi-card {
@@ -291,6 +291,7 @@
 .demo-kpi-card:nth-child(1) { animation-delay: 0.04s; }
 .demo-kpi-card:nth-child(2) { animation-delay: 0.09s; }
 .demo-kpi-card:nth-child(3) { animation-delay: 0.14s; }
+.demo-kpi-card:nth-child(4) { animation-delay: 0.19s; }
 
 /* Top color strip */
 .demo-kpi-card::before {
@@ -301,9 +302,10 @@
     border-radius: var(--d-radius) var(--d-radius) 0 0;
 }
 
-.demo-kpi-card[data-accent="teal"]::before  { background: linear-gradient(90deg, var(--d-teal), var(--d-teal-dark)); }
-.demo-kpi-card[data-accent="green"]::before { background: linear-gradient(90deg, var(--d-green), var(--d-green-dark)); }
-.demo-kpi-card[data-accent="amber"]::before { background: linear-gradient(90deg, var(--d-amber), var(--d-amber-dark)); }
+.demo-kpi-card[data-accent="teal"]::before   { background: linear-gradient(90deg, var(--d-teal), var(--d-teal-dark)); }
+.demo-kpi-card[data-accent="green"]::before  { background: linear-gradient(90deg, var(--d-green), var(--d-green-dark)); }
+.demo-kpi-card[data-accent="purple"]::before { background: linear-gradient(90deg, #a855f7, #7e22ce); }
+.demo-kpi-card[data-accent="amber"]::before  { background: linear-gradient(90deg, var(--d-amber), var(--d-amber-dark)); }
 
 .demo-kpi-glow {
     position: absolute;
@@ -314,9 +316,10 @@
     pointer-events: none;
 }
 
-.demo-kpi-card[data-accent="teal"]  .demo-kpi-glow { background: var(--d-teal); }
-.demo-kpi-card[data-accent="green"] .demo-kpi-glow { background: var(--d-green); }
-.demo-kpi-card[data-accent="amber"] .demo-kpi-glow { background: var(--d-amber); }
+.demo-kpi-card[data-accent="teal"]   .demo-kpi-glow { background: var(--d-teal); }
+.demo-kpi-card[data-accent="green"]  .demo-kpi-glow { background: var(--d-green); }
+.demo-kpi-card[data-accent="purple"] .demo-kpi-glow { background: #a855f7; }
+.demo-kpi-card[data-accent="amber"]  .demo-kpi-glow { background: var(--d-amber); }
 
 .demo-kpi-icon {
     width: 50px; height: 50px;
@@ -328,9 +331,10 @@
     flex-shrink: 0;
 }
 
-.demo-kpi-card[data-accent="teal"]  .demo-kpi-icon { background: rgba(0,177,225,0.12); }
-.demo-kpi-card[data-accent="green"] .demo-kpi-icon { background: rgba(0,196,140,0.12); }
-.demo-kpi-card[data-accent="amber"] .demo-kpi-icon { background: rgba(245,158,11,0.12); }
+.demo-kpi-card[data-accent="teal"]   .demo-kpi-icon { background: rgba(0,177,225,0.12); }
+.demo-kpi-card[data-accent="green"]  .demo-kpi-icon { background: rgba(0,196,140,0.12); }
+.demo-kpi-card[data-accent="purple"] .demo-kpi-icon { background: rgba(168,85,247,0.12); }
+.demo-kpi-card[data-accent="amber"]  .demo-kpi-icon { background: rgba(245,158,11,0.12); }
 
 .demo-kpi-body { flex: 1; min-width: 0; }
 
@@ -777,3 +781,4 @@
     .demo-main   { padding: 1.2rem 0.75rem 3rem; }
     .demo-kpi-value { font-size: 1.55rem; }
 }
+
