@@ -37,6 +37,11 @@ geotab.addin.demo = function () {
     const ITEMS_PER_PAGE = 15;
     let currentTableData = [];
 
+    // Trips Table Pagination State
+    let currentTripsPage = 1;
+    const TRIPS_PER_PAGE = 10;
+    let rawTripsList = [];
+
     // Charts State
     let chartDist, chartHours;
 
@@ -51,11 +56,13 @@ geotab.addin.demo = function () {
     // KPI Elements
     const kpiDist         = $("demo-kpi-dist");
     const kpiHours        = $("demo-kpi-hours");
+    const kpiIdling       = $("demo-kpi-idling");
     const kpiPct          = $("demo-kpi-pct");
     const gaugeFill       = $("demo-gauge-fill");
     const gaugeLabel      = $("demo-gauge-label");
     const kpiDistSub      = $("demo-kpi-dist-sub");
     const kpiHoursSub     = $("demo-kpi-hours-sub");
+    const kpiIdlingSub    = $("demo-kpi-idling-sub");
     const kpiPctSub       = $("demo-kpi-pct-sub");
 
     // ── Diagnostic IDs de Geotab para StatusData ────────────────
@@ -208,8 +215,9 @@ geotab.addin.demo = function () {
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td class="demo-td-date">${row.date}</td>
-                <td class="demo-td-dist">${fmtNum(row.dist,1)} <span style="font-size:.7rem;color:var(--d-muted)">km</span></td>
-                <td class="demo-td-motor">${fmtHrs(row.hours)}</td>
+                <td class="demo-td-dist" style="text-align:right;">${fmtNum(row.dist,1)} <span style="font-size:.7rem;color:var(--d-muted)">km</span></td>
+                <td class="demo-td-motor" style="text-align:right;">${fmtHrs(row.hours)}</td>
+                <td class="demo-td-motor" style="text-align:right;color:#a855f7;">${fmtHrs(row.idlingSec || 0)}</td>
                 <td>
                     <div class="demo-spark-wrap">
                         <div class="demo-spark-bg">
@@ -233,6 +241,59 @@ geotab.addin.demo = function () {
         if (pageInd)  pageInd.textContent  = `Página ${currentPage} de ${totalPages}`;
         if (btnPrev)  btnPrev.disabled     = currentPage <= 1;
         if (btnNext)  btnNext.disabled     = currentPage >= totalPages;
+    };
+
+    // ── Render tabla paginada de viajes detallados ────────────────
+    const renderTripsTablePage = () => {
+        const tbody = $("demo-tbody-trips");
+        if (!tbody) return;
+        tbody.innerHTML = "";
+
+        const totalItems = rawTripsList.length;
+        const totalPages = Math.ceil(totalItems / TRIPS_PER_PAGE) || 1;
+        if (currentTripsPage > totalPages) currentTripsPage = totalPages;
+
+        const start    = (currentTripsPage - 1) * TRIPS_PER_PAGE;
+        const end      = Math.min(start + TRIPS_PER_PAGE, totalItems);
+        const pageData = rawTripsList.slice(start, end);
+
+        if (pageData.length === 0) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td colspan="6" style="text-align:center;color:var(--d-muted);padding:1.5rem;">No hay viajes registrados en el periodo seleccionado.</td>`;
+            tbody.appendChild(tr);
+        } else {
+            pageData.forEach(trip => {
+                const startDateStr = new Date(trip.start).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" });
+                const stopDateStr  = trip.stop ? new Date(trip.stop).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" }) : "En curso";
+                const distKm       = trip.distance || 0;
+                const drivingSec   = trip.drivingDuration || 0;
+                const idlingSec    = trip.idlingDuration  || 0;
+                const stopSec      = trip.stopDuration    || 0;
+                const motorSec     = drivingSec + idlingSec;
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td class="demo-td-date">${startDateStr}</td>
+                    <td class="demo-td-date">${stopDateStr}</td>
+                    <td class="demo-td-dist" style="text-align:right;">${fmtNum(distKm, 1)} <span style="font-size:.7rem;color:var(--d-muted)">km</span></td>
+                    <td class="demo-td-motor" style="text-align:right;">${fmtHrs(motorSec)}</td>
+                    <td class="demo-td-motor" style="text-align:right;color:#a855f7;">${fmtHrs(idlingSec)}</td>
+                    <td class="demo-td-motor" style="text-align:right;color:var(--d-muted);">${fmtHrs(stopSec)}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        const paginationEl = $("demo-trips-pagination");
+        const btnPrev  = $("demo-btn-trips-prev");
+        const btnNext  = $("demo-btn-trips-next");
+        const pageInd  = $("demo-trips-page-indicator");
+        const pInfo    = $("demo-trips-pagination-info");
+
+        if (paginationEl) paginationEl.style.display = totalItems > 0 ? "flex" : "none";
+        if (pInfo)   pInfo.textContent   = `Mostrando ${totalItems > 0 ? start+1 : 0}–${end} de ${totalItems} viajes`;
+        if (pageInd) pageInd.textContent = `Página ${currentTripsPage} de ${totalPages}`;
+        if (btnPrev) btnPrev.disabled    = currentTripsPage <= 1;
+        if (btnNext) btnNext.disabled    = currentTripsPage >= totalPages;
     };
 
     // ── Gráficas ApexCharts ──────────────────────────────────────
@@ -507,7 +568,7 @@ geotab.addin.demo = function () {
                     }
                 });
 
-                // KPI 3: % de tiempo en uso
+                // KPI 4: % de tiempo en uso
                 // Ventana disponible = 1 vehículo x días x 12h de jornada
                 const availableSec = historyDays * 12 * 3600;
                 const usagePct     = availableSec > 0
@@ -523,7 +584,11 @@ geotab.addin.demo = function () {
                 animateCount(kpiHours, totalMotorSec / 3600, 1);
                 kpiHoursSub.textContent = fmtHrs(totalMotorSec) + " acumuladas (" + fmtHrs(totalIdlingSec) + " ralentí)";
 
-                // KPI 3: % de tiempo en uso
+                // KPI 3: Tiempo en Ralentí
+                animateCount(kpiIdling, totalIdlingSec / 3600, 1);
+                if (kpiIdlingSub) kpiIdlingSub.textContent = fmtHrs(totalIdlingSec) + " en " + trips.length + " viajes";
+
+                // KPI 4: % de tiempo en uso
                 animateCount(kpiPct, usagePct, 1);
                 kpiPctSub.textContent = "De " + fmtNum(availableSec / 3600, 0) + " hrs disponibles";
 
@@ -552,11 +617,22 @@ geotab.addin.demo = function () {
                 currentPage = 1;
                 renderTablePage();
 
+                // ── Tabla de Viajes Detallados ───────────────────────────
+                rawTripsList = trips;
+                currentTripsPage = 1;
+                renderTripsTablePage();
+
                 // ── Etiqueta del periodo ──────────────────────────────────
                 const tableSubEl = $("demo-table-sub");
                 if (tableSubEl) {
                     const fmtD = d => localDateStr(d).split("-").reverse().join("/");
                     tableSubEl.textContent = fmtD(from) + " al " + fmtD(to);
+                }
+
+                const tripsTableSubEl = $("demo-trips-table-sub");
+                if (tripsTableSubEl) {
+                    const fmtD = d => localDateStr(d).split("-").reverse().join("/");
+                    tripsTableSubEl.textContent = trips.length + " viajes registrados del " + fmtD(from) + " al " + fmtD(to);
                 }
 
                 // ── Guardar datos para reagrupar ─────────────────────────
@@ -674,7 +750,7 @@ geotab.addin.demo = function () {
                 });
             }
 
-            // Paginación
+            // Paginación resumen diario
             const btnPrev = $("demo-btn-prev");
             const btnNext = $("demo-btn-next");
 
@@ -685,6 +761,19 @@ geotab.addin.demo = function () {
             if (btnNext) btnNext.addEventListener("click", () => {
                 const totalPages = Math.ceil(currentTableData.length / ITEMS_PER_PAGE);
                 if (currentPage < totalPages) { currentPage++; renderTablePage(); }
+            });
+
+            // Paginación viajes detallados
+            const btnTripsPrev = $("demo-btn-trips-prev");
+            const btnTripsNext = $("demo-btn-trips-next");
+
+            if (btnTripsPrev) btnTripsPrev.addEventListener("click", () => {
+                if (currentTripsPage > 1) { currentTripsPage--; renderTripsTablePage(); }
+            });
+
+            if (btnTripsNext) btnTripsNext.addEventListener("click", () => {
+                const totalPages = Math.ceil(rawTripsList.length / TRIPS_PER_PAGE);
+                if (currentTripsPage < totalPages) { currentTripsPage++; renderTripsTablePage(); }
             });
 
             if (window.lucide) lucide.createIcons();
