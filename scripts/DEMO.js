@@ -46,7 +46,33 @@ geotab.addin.demo = function () {
     const fmtNum = (n, dec = 1) =>
         n.toLocaleString("es-MX", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 
-    const fmtHrs = sec => {
+    const parseSeconds = val => {
+        if (val === undefined || val === null) return 0;
+        if (typeof val === "number") return val;
+        if (typeof val === "string") {
+            if (val.includes(":")) {
+                const parts = val.split(":");
+                if (parts.length === 3) {
+                    let hours = 0;
+                    if (parts[0].includes(".")) {
+                        const dayParts = parts[0].split(".");
+                        hours = parseInt(dayParts[0], 10) * 24 + parseInt(dayParts[1], 10);
+                    } else {
+                        hours = parseInt(parts[0], 10);
+                    }
+                    const mins = parseInt(parts[1], 10);
+                    const secs = parseFloat(parts[2]);
+                    return (hours * 3600) + (mins * 60) + secs;
+                }
+            }
+            const num = parseFloat(val);
+            return isNaN(num) ? 0 : num;
+        }
+        return 0;
+    };
+
+    const fmtHrs = val => {
+        const sec = parseSeconds(val);
         if (!sec || sec <= 0) return "0h 00m";
         const h = Math.floor(sec / 3600);
         const m = Math.floor((sec % 3600) / 60);
@@ -93,18 +119,22 @@ geotab.addin.demo = function () {
 
         if (pageData.length === 0) {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td colspan="8" style="text-align:center;color:var(--d-muted);padding:2rem;">No se encontraron viajes registrados para el periodo seleccionado.</td>`;
+            tr.innerHTML = `<td colspan="11" style="text-align:center;color:var(--d-muted);padding:2rem;">No se encontraron viajes registrados para el periodo seleccionado.</td>`;
             tbody.appendChild(tr);
         } else {
             pageData.forEach(trip => {
                 const tripId       = trip.id || "—";
                 const startDateStr = trip.start ? new Date(trip.start).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "medium" }) : "—";
                 const stopDateStr  = trip.stop  ? new Date(trip.stop).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "medium" }) : "<span style='color:var(--d-teal);font-weight:600;'>En curso</span>";
-                const distKm       = trip.distance !== undefined ? trip.distance : 0;
-                const drivingSec   = trip.drivingDuration || 0;
-                const idlingSec    = trip.idlingDuration  || 0;
-                const stopSec      = trip.stopDuration    || 0;
-                const maxSpeed     = trip.maximumSpeed    ? Math.round(trip.maximumSpeed) + " km/h" : "—";
+                
+                const distKm         = trip.distance !== undefined ? trip.distance : 0;
+                const drivingDur     = trip.drivingDuration;
+                const idlingDur      = trip.idlingDuration;
+                const stopDur        = trip.stopDuration;
+                const workDrivingDur = trip.workDrivingDuration;
+                const workStopDur    = trip.workStopDuration;
+                const avgSpeed       = trip.averageSpeed !== undefined && trip.averageSpeed !== null ? fmtNum(trip.averageSpeed, 1) + " km/h" : "—";
+                const engHours       = trip.engineHours !== undefined && trip.engineHours !== null ? (typeof trip.engineHours === "number" ? fmtNum(trip.engineHours, 1) + " hrs" : trip.engineHours) : "—";
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
@@ -112,10 +142,13 @@ geotab.addin.demo = function () {
                     <td class="demo-td-date">${startDateStr}</td>
                     <td class="demo-td-date">${stopDateStr}</td>
                     <td class="demo-td-dist" style="text-align:right;">${fmtNum(distKm, 1)} <span style="font-size:.7rem;color:var(--d-muted)">km</span></td>
-                    <td class="demo-td-motor" style="text-align:right;">${fmtHrs(drivingSec)}</td>
-                    <td class="demo-td-motor" style="text-align:right;color:#a855f7;">${fmtHrs(idlingSec)}</td>
-                    <td class="demo-td-motor" style="text-align:right;color:var(--d-muted);">${fmtHrs(stopSec)}</td>
-                    <td style="text-align:right;font-weight:500;">${maxSpeed}</td>`;
+                    <td class="demo-td-motor" style="text-align:right;">${fmtHrs(drivingDur)}</td>
+                    <td class="demo-td-motor" style="text-align:right;color:#a855f7;">${fmtHrs(idlingDur)}</td>
+                    <td class="demo-td-motor" style="text-align:right;color:var(--d-muted);">${fmtHrs(stopDur)}</td>
+                    <td class="demo-td-motor" style="text-align:right;">${fmtHrs(workDrivingDur)}</td>
+                    <td class="demo-td-motor" style="text-align:right;color:var(--d-muted);">${fmtHrs(workStopDur)}</td>
+                    <td style="text-align:right;font-weight:500;">${avgSpeed}</td>
+                    <td style="text-align:right;font-weight:500;color:var(--d-green);">${engHours}</td>`;
                 tbody.appendChild(tr);
             });
         }
