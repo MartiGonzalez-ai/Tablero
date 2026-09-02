@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
@@ -91,7 +91,23 @@
                         </div>
                     </div>
 
-                    <!-- KPI 3: Porcentaje de Uso -->
+                    <!-- KPI 3: Tiempo en Ralentí -->
+                    <div class="demo-kpi-card" data-accent="purple">
+                        <div class="demo-kpi-glow"></div>
+                        <div class="demo-kpi-icon">
+                            <i data-lucide="timer" width="24" height="24" stroke="#a855f7"></i>
+                        </div>
+                        <div class="demo-kpi-body">
+                            <div class="demo-kpi-label">Tiempo en ralentí</div>
+                            <div class="demo-kpi-value">
+                                <span id="demo-kpi-idling">0</span>
+                                <span class="demo-kpi-unit">hrs</span>
+                            </div>
+                            <div class="demo-kpi-sub" id="demo-kpi-idling-sub">Motor encendido sin movimiento</div>
+                        </div>
+                    </div>
+
+                    <!-- KPI 4: Porcentaje de Uso -->
                     <div class="demo-kpi-card" data-accent="amber">
                         <div class="demo-kpi-glow"></div>
                         <div class="demo-kpi-icon">
@@ -142,12 +158,12 @@
 
                 </div>
 
-                <!-- TABLE CARD -->
+                <!-- TABLE CARD 1: RESUMEN AGRUPADO -->
                 <div class="demo-table-card" style="margin-top: 1.5rem;">
                     <div class="demo-table-header">
                         <div>
                             <div class="demo-table-title">Desglose por Fecha</div>
-                            <span class="demo-table-sub" id="demo-table-sub">Detalle diario de distancia y horas de motor</span>
+                            <span class="demo-table-sub" id="demo-table-sub">Detalle diario de distancia, horas de motor y ralentí</span>
                         </div>
 
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -166,6 +182,7 @@
                                     <th>Fecha</th>
                                     <th style="text-align: right;">Distancia (km)</th>
                                     <th style="text-align: right;">Motor Encendido</th>
+                                    <th style="text-align: right;">Tiempo Ralentí</th>
                                     <th style="text-align: right;">% en Uso</th>
                                 </tr>
                             </thead>
@@ -181,6 +198,43 @@
                             <button id="demo-btn-prev" class="demo-btn-page">Anterior</button>
                             <span class="demo-page-indicator" id="demo-page-indicator">Página 1</span>
                             <button id="demo-btn-next" class="demo-btn-page">Siguiente</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABLE CARD 2: HISTORIAL DETALLADO DE VIAJES -->
+                <div class="demo-table-card" style="margin-top: 1.5rem;">
+                    <div class="demo-table-header">
+                        <div>
+                            <div class="demo-table-title">Historial Detallado de Viajes</div>
+                            <span class="demo-table-sub" id="demo-trips-table-sub">Registro de cada viaje individual realizado por la unidad</span>
+                        </div>
+                    </div>
+
+                    <div class="demo-table-scroll">
+                        <table class="demo-table">
+                            <thead>
+                                <tr>
+                                    <th>Inicio del Viaje</th>
+                                    <th>Fin del Viaje</th>
+                                    <th style="text-align: right;">Distancia (km)</th>
+                                    <th style="text-align: right;">Motor Encendido</th>
+                                    <th style="text-align: right;">Tiempo Ralentí</th>
+                                    <th style="text-align: right;">Tiempo Detenido</th>
+                                </tr>
+                            </thead>
+                            <tbody id="demo-tbody-trips">
+                                <!-- Populated dynamically by DEMO.js -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="demo-pagination" id="demo-trips-pagination">
+                        <span class="demo-pagination-info" id="demo-trips-pagination-info"></span>
+                        <div class="demo-pagination-controls">
+                            <button id="demo-btn-trips-prev" class="demo-btn-page">Anterior</button>
+                            <span class="demo-page-indicator" id="demo-trips-page-indicator">Página 1</span>
+                            <button id="demo-btn-trips-next" class="demo-btn-page">Siguiente</button>
                         </div>
                     </div>
                 </div>
