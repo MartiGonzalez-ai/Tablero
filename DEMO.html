@@ -1,0 +1,234 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="Métricas de Flota: Distancia, Horas de Motor y Porcentaje de Uso - Geotab Add-In">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Métricas de Flota – DEMO</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/DEMO.css">
+</head>
+<body>
+    <div id="app-demo">
+        <!-- ═══════════ HEADER ═══════════ -->
+        <header class="demo-header">
+            <div class="demo-nav-brand">
+                <div class="demo-nav-logo">
+                    <i data-lucide="gauge" width="20" height="20" stroke="#fff" stroke-width="2.5"></i>
+                </div>
+                <div>
+                    <h1>Métricas de Flota</h1>
+                    <span class="demo-sub">Geotab Add-In</span>
+                </div>
+            </div>
+
+            <div class="demo-nav-controls">
+                <select id="demo-unit-select" class="demo-select">
+                    <option value="">Cargando unidades...</option>
+                </select>
+
+                <!-- Period Presets -->
+                <div class="demo-period-pills" id="demo-period-pills">
+                    <button class="demo-pill" data-period="day">Hoy</button>
+                    <button class="demo-pill" data-period="week">Semana</button>
+                    <button class="demo-pill active" data-period="month">Mes</button>
+                    <button class="demo-pill" data-period="bimester">Bimestre</button>
+                    <button class="demo-pill" data-period="trimester">Trimestre</button>
+                    <button class="demo-pill" data-period="semester">6 meses</button>
+                    <button class="demo-btn-custom" id="demo-btn-custom">
+                        <i data-lucide="calendar" width="13" height="13"></i>
+                        <span>Personalizado</span>
+                    </button>
+                </div>
+
+                <button id="demo-btn-consultar" class="demo-btn-consult">
+                    <i data-lucide="search" width="15" height="15"></i>
+                    <span>Consultar</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- ═══════════ MAIN CONTENT ═══════════ -->
+        <main class="demo-main">
+            <div id="demo-result-container" style="display: none;">
+                
+                <!-- KPI CARDS STRIP -->
+                <p class="demo-section-label">Resumen del Periodo</p>
+                <div class="demo-kpi-grid">
+                    
+                    <!-- KPI 1: Distancia Total -->
+                    <div class="demo-kpi-card" data-accent="teal">
+                        <div class="demo-kpi-glow"></div>
+                        <div class="demo-kpi-icon">
+                            <i data-lucide="route" width="24" height="24" stroke="var(--d-teal)"></i>
+                        </div>
+                        <div class="demo-kpi-body">
+                            <div class="demo-kpi-label">Distancia total recorrida</div>
+                            <div class="demo-kpi-value">
+                                <span id="demo-kpi-dist">0</span>
+                                <span class="demo-kpi-unit">km</span>
+                            </div>
+                            <div class="demo-kpi-sub" id="demo-kpi-dist-sub">Consultando...</div>
+                        </div>
+                    </div>
+
+                    <!-- KPI 2: Horas de Motor -->
+                    <div class="demo-kpi-card" data-accent="green">
+                        <div class="demo-kpi-glow"></div>
+                        <div class="demo-kpi-icon">
+                            <i data-lucide="clock" width="24" height="24" stroke="var(--d-green)"></i>
+                        </div>
+                        <div class="demo-kpi-body">
+                            <div class="demo-kpi-label">Horas de motor encendido</div>
+                            <div class="demo-kpi-value">
+                                <span id="demo-kpi-hours">0</span>
+                                <span class="demo-kpi-unit">hrs</span>
+                            </div>
+                            <div class="demo-kpi-sub" id="demo-kpi-hours-sub">Conducción + Ralentí</div>
+                        </div>
+                    </div>
+
+                    <!-- KPI 3: Porcentaje de Uso -->
+                    <div class="demo-kpi-card" data-accent="amber">
+                        <div class="demo-kpi-glow"></div>
+                        <div class="demo-kpi-icon">
+                            <i data-lucide="percent" width="24" height="24" stroke="var(--d-amber)"></i>
+                        </div>
+                        <div class="demo-kpi-body">
+                            <div class="demo-kpi-label">Porcentaje de tiempo en uso</div>
+                            <div class="demo-kpi-value">
+                                <span id="demo-kpi-pct">0</span>
+                                <span class="demo-kpi-unit">%</span>
+                            </div>
+                            <div class="demo-gauge-wrap">
+                                <div class="demo-gauge-bg">
+                                    <div class="demo-gauge-fill" id="demo-gauge-fill"></div>
+                                </div>
+                                <span class="demo-gauge-label" id="demo-gauge-label">0%</span>
+                            </div>
+                            <div class="demo-kpi-sub" id="demo-kpi-pct-sub">Horas uso / Horas disponibles</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- CHARTS ROW -->
+                <div class="demo-charts-row" style="margin-top: 1.5rem;">
+                    
+                    <!-- Chart: Distancia Diaria -->
+                    <div class="demo-chart-card">
+                        <div class="demo-chart-header">
+                            <div class="demo-chart-title">
+                                <i data-lucide="bar-chart-2" width="16" height="16" stroke="var(--d-teal)"></i>
+                                <span>Distancia Recorrida (km)</span>
+                            </div>
+                        </div>
+                        <div id="demo-chart-dist"></div>
+                    </div>
+
+                    <!-- Chart: Horas de Motor -->
+                    <div class="demo-chart-card">
+                        <div class="demo-chart-header">
+                            <div class="demo-chart-title">
+                                <i data-lucide="trending-up" width="16" height="16" stroke="var(--d-green)"></i>
+                                <span>Horas de Motor Encendido</span>
+                            </div>
+                        </div>
+                        <div id="demo-chart-hours"></div>
+                    </div>
+
+                </div>
+
+                <!-- TABLE CARD -->
+                <div class="demo-table-card" style="margin-top: 1.5rem;">
+                    <div class="demo-table-header">
+                        <div>
+                            <div class="demo-table-title">Desglose por Fecha</div>
+                            <span class="demo-table-sub" id="demo-table-sub">Detalle diario de distancia y horas de motor</span>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <select id="demo-group-select" class="demo-trend-select">
+                                <option value="day" selected>Vista por Día</option>
+                                <option value="week">Vista por Semana</option>
+                                <option value="month">Vista por Mes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="demo-table-scroll">
+                        <table class="demo-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th style="text-align: right;">Distancia (km)</th>
+                                    <th style="text-align: right;">Motor Encendido</th>
+                                    <th style="text-align: right;">% en Uso</th>
+                                </tr>
+                            </thead>
+                            <tbody id="demo-tbody">
+                                <!-- Populated dynamically by DEMO.js -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="demo-pagination" id="demo-pagination">
+                        <span class="demo-pagination-info" id="demo-pagination-info"></span>
+                        <div class="demo-pagination-controls">
+                            <button id="demo-btn-prev" class="demo-btn-page">Anterior</button>
+                            <span class="demo-page-indicator" id="demo-page-indicator">Página 1</span>
+                            <button id="demo-btn-next" class="demo-btn-page">Siguiente</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- ═══════════ CUSTOM DATE MODAL ═══════════ -->
+        <div id="demo-modal" class="demo-modal-overlay" style="display:none;">
+            <div class="demo-modal-box">
+                <div class="demo-modal-head">
+                    <i data-lucide="calendar" width="16" height="16"></i>
+                    <span>Rango personalizado</span>
+                    <button id="demo-modal-close" class="demo-modal-close">&times;</button>
+                </div>
+                <div class="demo-modal-body">
+                    <div class="demo-modal-field">
+                        <label for="demo-modal-from">Fecha Desde</label>
+                        <input type="date" id="demo-modal-from" class="demo-modal-input">
+                    </div>
+                    <div class="demo-modal-field">
+                        <label for="demo-modal-to">Fecha Hasta</label>
+                        <input type="date" id="demo-modal-to" class="demo-modal-input">
+                    </div>
+                </div>
+                <div class="demo-modal-footer">
+                    <button id="demo-modal-cancel" class="demo-modal-btn demo-modal-btn--ghost">Cancelar</button>
+                    <button id="demo-modal-apply" class="demo-modal-btn demo-modal-btn--primary">Aplicar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOADING OVERLAY -->
+        <div id="demo-loading" class="demo-loading" style="display: none;">
+            <div class="demo-spinner"></div>
+            <p>Consultando métricas de la API Geotab...</p>
+        </div>
+
+        <!-- ERROR TOAST -->
+        <div id="demo-error-toast" class="demo-toast">
+            <i data-lucide="alert-circle" width="16" height="16"></i>
+            <span id="demo-error-msg">Error de conexión.</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="scripts/DEMO.js"></script>
+</body>
+</html>
