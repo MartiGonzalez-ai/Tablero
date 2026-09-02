@@ -1,12 +1,20 @@
-﻿/**
+/**
  * ===================================================================
- * DEMO.JS — Metricas de Flota: Distancia, Motor y Uso
- * Geotab Add-In | Sigue el patron de recorrido.js
+ * DEMO.JS — Métricas de Flota: Distancia, Horas de Motor y Uso
+ * Geotab Add-In | ESM Logic
  *
- * KPIs:
- *   1. Distancia total recorrida  (suma trip.distance en km)
- *   2. Horas de motor encendido   (suma trip.drivingDuration + trip.idlingDuration)
- *   3. % de tiempo en uso         (motor / horas disponibles * 100)
+ * Fuentes de datos de Geotab API:
+ *   1. Objeto Trip (fromDate, toDate):
+ *      - distance: distancia recorrida en el viaje (km)
+ *      - drivingDuration: tiempo en conducción (segundos)
+ *      - idlingDuration: ralentí al final del viaje (segundos)
+ *      - stopDuration: tiempo detenido (segundos)
+ *      - odometer: lectura de odómetro al cierre del viaje
+ *      - engineHours: horas de motor registradas al cierre del viaje
+ *
+ *   2. Objeto StatusData (DiagnosticOdometerId, DiagnosticEngineHoursId):
+ *      - Lecturas en tiempo real de odómetro y horas de motor para vehículos
+ *        que no han completado un viaje o como anclaje base.
  * ===================================================================
  */
 
@@ -24,15 +32,15 @@ geotab.addin.demo = function () {
     let lastDailyHours = {};
     let dailyGrouping  = "day";
 
-    // Pagination
+    // Pagination State
     let currentPage = 1;
     const ITEMS_PER_PAGE = 15;
     let currentTableData = [];
 
-    // Charts
+    // Charts State
     let chartDist, chartHours;
 
-    // ── DOM refs ────────────────────────────────────────────────
+    // ── DOM References ──────────────────────────────────────────
     const $  = id => document.getElementById(id);
     const unitSelect      = $("demo-unit-select");
     const btnConsultar    = $("demo-btn-consultar");
@@ -40,7 +48,7 @@ geotab.addin.demo = function () {
     const errorToast      = $("demo-error-toast");
     const errorToastMsg   = $("demo-error-msg");
 
-    // KPI elements
+    // KPI Elements
     const kpiDist         = $("demo-kpi-dist");
     const kpiHours        = $("demo-kpi-hours");
     const kpiPct          = $("demo-kpi-pct");
@@ -50,13 +58,17 @@ geotab.addin.demo = function () {
     const kpiHoursSub     = $("demo-kpi-hours-sub");
     const kpiPctSub       = $("demo-kpi-pct-sub");
 
-    // ── Diagnosticos de odometro (igual que recorrido.js) ───────
-    // No usados en el calculo de KPIs, pero disponibles si se necesita odo
-    const ODOMETER_DIAGS = [
+    // ── Diagnostic IDs de Geotab para StatusData ────────────────
+    const ODOMETER_DIAGNOSTICS = [
         "DiagnosticOdometerAdjustmentId",
         "DiagnosticOdometerId",
         "DiagnosticOBDOdometerReaderId",
         "DiagnosticJ1939TotalVehicleDistanceId"
+    ];
+
+    const ENGINE_HOURS_DIAGNOSTICS = [
+        "DiagnosticEngineHoursId",
+        "DiagnosticEngineHoursAdjustmentId"
     ];
 
     // ── Helpers ─────────────────────────────────────────────────
@@ -80,17 +92,18 @@ geotab.addin.demo = function () {
     const fmtHrs = sec => {
         const h = Math.floor(sec / 3600);
         const m = Math.floor((sec % 3600) / 60);
-        return `${h}h ${String(m).padStart(2,"0")}m`;
+        return `${h}h ${String(m).padStart(2, "0")}m`;
     };
 
     const formatDateReadable = isoStr => {
         if (!isoStr) return "—";
         const d = new Date(isoStr + "T00:00:00");
-        return d.toLocaleDateString("es-MX", { day:"2-digit", month:"long", year:"numeric" });
+        return d.toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" });
     };
 
-    // ── Quartic ease-out counter (identico a recorrido.js) ──────
+    // ── Quartic ease-out counter ────────────────────────────────
     const animateCount = (el, target, decimals = 0) => {
+        if (!el) return;
         const duration = 1200;
         const start    = performance.now();
         const startVal = parseFloat(el.textContent.replace(/[^\d.-]/g, "")) || 0;
@@ -107,7 +120,7 @@ geotab.addin.demo = function () {
         requestAnimationFrame(step);
     };
 
-    // ── Rango de fechas (identico a recorrido.js) ────────────────
+    // ── Rango de fechas seleccionado ────────────────────────────
     const getSelectedRange = () => {
         const toDate   = new Date();
         const fromDate = new Date();
@@ -131,10 +144,10 @@ geotab.addin.demo = function () {
         return { from: fromDate, to: toDate };
     };
 
-    // ── Agrupacion de tabla (semana / mes / etc.) ────────────────
+    // ── Agrupación para la tabla (Día, Semana, Mes) ─────────────
     const groupTableData = (rawRows, grouping) => {
         if (grouping === "day") {
-            return rawRows.map(r => ({ ...r, odoFin: r.odo }));
+            return rawRows.map(r => ({ ...r }));
         }
         const grouped = {};
         rawRows.forEach(row => {
@@ -153,14 +166,18 @@ geotab.addin.demo = function () {
             } else {
                 key = row.date; label = row.date;
             }
-            if (!grouped[key]) grouped[key] = { label, dist:0, hours:0, sortKey:key };
-            grouped[key].dist  += row.dist;
-            grouped[key].hours += row.hours;
+            if (!grouped[key]) grouped[key] = { label, dist:0, hours:0, idlingSec:0, stopSec:0, sortKey:key };
+            grouped[key].dist      += row.dist;
+            grouped[key].hours     += row.hours;
+            grouped[key].idlingSec += row.idlingSec || 0;
+            grouped[key].stopSec   += row.stopSec   || 0;
         });
         return Object.keys(grouped).sort((a,b)=>b.localeCompare(a)).map(k=>({
-            date:  grouped[k].label,
-            dist:  grouped[k].dist,
-            hours: grouped[k].hours,
+            date:      grouped[k].label,
+            dist:      grouped[k].dist,
+            hours:     grouped[k].hours,
+            idlingSec: grouped[k].idlingSec,
+            stopSec:   grouped[k].stopSec
         }));
     };
 
@@ -181,7 +198,7 @@ geotab.addin.demo = function () {
 
         const range = getSelectedRange();
         const days  = range ? Math.max(1, Math.ceil((range.to - range.from) / 86400000)) : 1;
-        const availSec = days * 12 * 3600;   // 12h jornada por dia
+        const availSec = days * 12 * 3600;   // 12h jornada por día
 
         pageData.forEach(row => {
             const pct      = availSec > 0 ? Math.min(100, (row.hours / availSec) * 100) : 0;
@@ -204,7 +221,7 @@ geotab.addin.demo = function () {
             tbody.appendChild(tr);
         });
 
-        // Pagination controls
+        // Controles de paginación
         const paginationEl = $("demo-pagination");
         const btnPrev  = $("demo-btn-prev");
         const btnNext  = $("demo-btn-next");
@@ -218,8 +235,7 @@ geotab.addin.demo = function () {
         if (btnNext)  btnNext.disabled     = currentPage >= totalPages;
     };
 
-
-    // ── Graficas ApexCharts ──────────────────────────────────────
+    // ── Gráficas ApexCharts ──────────────────────────────────────
     const renderCharts = (dailyDist, dailyHours) => {
         if (!window.ApexCharts) return;
 
@@ -251,7 +267,7 @@ geotab.addin.demo = function () {
         };
         const commonGrid = { borderColor:"rgba(255,255,255,0.05)", strokeDashArray: 4 };
 
-        // Grafica 1: Distancia diaria (barras)
+        // Gráfica 1: Distancia diaria (barras)
         if (chartDist) chartDist.destroy();
         const elDist = document.querySelector("#demo-chart-dist");
         if (elDist) {
@@ -274,7 +290,7 @@ geotab.addin.demo = function () {
             chartDist.render();
         }
 
-        // Grafica 2: Horas de motor (area)
+        // Gráfica 2: Horas de motor (área)
         if (chartHours) chartHours.destroy();
         const elHours = document.querySelector("#demo-chart-hours");
         if (elHours) {
@@ -300,7 +316,7 @@ geotab.addin.demo = function () {
         }
     };
 
-    // ── Cargar unidades desde Geotab ─────────────────────────────
+    // ── Cargar dispositivos desde Geotab ─────────────────────────
     const loadUnits = () => {
         api.call("Get", { typeName: "Device" }, result => {
             units = result || [];
@@ -320,15 +336,16 @@ geotab.addin.demo = function () {
 
     // ════════════════════════════════════════════════════════════
     // CORE: calculateMetrics
-    // Consulta la API Geotab igual que calculateDistance en recorrido.js,
-    // pero extrae ademas drivingDuration + idlingDuration para el motor.
+    // Realiza llamadas a StatusData (para obtener odómetro y horas de motor actuales)
+    // y llamadas a Trip (para extraer distance, drivingDuration, idlingDuration,
+    // stopDuration, odometer y engineHours).
     // ════════════════════════════════════════════════════════════
     const calculateMetrics = () => {
         const deviceId = unitSelect.value;
         const range    = getSelectedRange();
 
         if (!deviceId) { showError("Por favor, selecciona una unidad."); return; }
-        if (!range)    { showError("Por favor, selecciona un rango de fechas valido."); return; }
+        if (!range)    { showError("Por favor, selecciona un rango de fechas válido."); return; }
 
         loadingOverlay.style.display = "flex";
         btnConsultar.disabled = true;
@@ -338,7 +355,42 @@ geotab.addin.demo = function () {
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         const historyDays = Math.max(diffDays, 1);
 
-        // Chunking identico a recorrido.js (lotes de 30 dias)
+        const searchToDateToken   = to.toISOString();
+        const searchFromDateToken = from.toISOString();
+
+        // Call A: StatusData para Odómetro actual (DiagnosticOdometerId)
+        const calls = ODOMETER_DIAGNOSTICS.map(diagId => [
+            "Get",
+            {
+                typeName: "StatusData",
+                search: {
+                    deviceSearch:     { id: deviceId },
+                    diagnosticSearch: { id: diagId },
+                    toDate:           searchToDateToken,
+                    resultsLimit:     1,
+                    applyLatest:      true
+                }
+            }
+        ]);
+
+        // Call B: StatusData para Horas de Motor actuales (DiagnosticEngineHoursId)
+        ENGINE_HOURS_DIAGNOSTICS.forEach(diagId => {
+            calls.push([
+                "Get",
+                {
+                    typeName: "StatusData",
+                    search: {
+                        deviceSearch:     { id: deviceId },
+                        diagnosticSearch: { id: diagId },
+                        toDate:           searchToDateToken,
+                        resultsLimit:     1,
+                        applyLatest:      true
+                    }
+                }
+            ]);
+        });
+
+        // Call C: Objeto Trip por lotes (30 días)
         const chunks = [];
         let chunkStart = new Date(from);
         while (chunkStart < to) {
@@ -349,25 +401,49 @@ geotab.addin.demo = function () {
             chunkStart = new Date(chunkEnd);
         }
 
-        const calls = chunks.map(chunk => [
-            "Get",
-            {
-                typeName: "Trip",
-                search: {
-                    deviceSearch: { id: deviceId },
-                    fromDate:     chunk.start,
-                    toDate:       chunk.end
+        chunks.forEach(chunk => {
+            calls.push([
+                "Get",
+                {
+                    typeName: "Trip",
+                    search: {
+                        deviceSearch: { id: deviceId },
+                        fromDate:     chunk.start,
+                        toDate:       chunk.end
+                    }
                 }
-            }
-        ]);
+            ]);
+        });
 
         api.multiCall(calls, results => {
             loadingOverlay.style.display = "none";
             btnConsultar.disabled = false;
 
             try {
-                // Unir todos los lotes y eliminar duplicados (igual que recorrido.js)
-                const tripsRaw = results.flat().filter(t => t);
+                const numStatusCalls = ODOMETER_DIAGNOSTICS.length + ENGINE_HOURS_DIAGNOSTICS.length;
+
+                // 1. Extraer StatusData de Odómetro y Horas de Motor
+                const statusResults = results.slice(0, numStatusCalls).flat().filter(r => r && r.data !== undefined);
+                
+                let latestOdoData = null;
+                let latestEngineHoursData = null;
+
+                statusResults.forEach(sr => {
+                    const diagId = sr.diagnostic ? sr.diagnostic.id : "";
+                    if (ODOMETER_DIAGNOSTICS.includes(diagId) || diagId.toLowerCase().includes("odometer")) {
+                        if (!latestOdoData || new Date(sr.dateTime) > new Date(latestOdoData.dateTime)) {
+                            latestOdoData = sr;
+                        }
+                    }
+                    if (ENGINE_HOURS_DIAGNOSTICS.includes(diagId) || diagId.toLowerCase().includes("enginehours")) {
+                        if (!latestEngineHoursData || new Date(sr.dateTime) > new Date(latestEngineHoursData.dateTime)) {
+                            latestEngineHoursData = sr;
+                        }
+                    }
+                });
+
+                // 2. Extraer Objeto Trip
+                const tripsRaw = results.slice(numStatusCalls).flat().filter(t => t);
                 const tripsIdSet = new Set();
                 const trips = [];
                 tripsRaw.forEach(t => {
@@ -377,61 +453,81 @@ geotab.addin.demo = function () {
                     }
                 });
 
+                // Ordenar del más reciente al más antiguo
+                trips.sort((a, b) => new Date(b.stop || b.start) - new Date(a.stop || a.start));
+
                 // ── Inicializar acumuladores diarios ─────────────────────
-                const dailyDist  = {};   // date -> km (identico a dailyDistanceData en recorrido.js)
-                const dailyHours = {};   // date -> segundos de motor encendido
+                const dailyDist      = {};   // date -> km
+                const dailyHours     = {};   // date -> segundos de motor encendido
+                const dailyIdling    = {};   // date -> ralentí (idlingDuration)
+                const dailyStop      = {};   // date -> tiempo detenido (stopDuration)
 
                 for (let i = 0; i < historyDays; i++) {
                     const d = new Date(to); d.setDate(d.getDate() - i);
                     const k = localDateStr(d);
-                    dailyDist[k]  = 0;
-                    dailyHours[k] = 0;
+                    dailyDist[k]   = 0;
+                    dailyHours[k]  = 0;
+                    dailyIdling[k] = 0;
+                    dailyStop[k]   = 0;
                 }
 
-                // ── Procesar cada trip ───────────────────────────────────
-                let totalDistKm    = 0;
-                let totalMotorSec  = 0;
+                // ── Procesar Objeto Trip ─────────────────────────────────
+                let totalDistKm   = 0;
+                let totalMotorSec = 0;
+                let totalIdlingSec = 0;
+                let totalStopSec   = 0;
 
                 trips.forEach(trip => {
-                    const dStr  = localDateStr(new Date(trip.start));
+                    const dStr = localDateStr(new Date(trip.start));
 
-                    // KPI 1: Distancia — trip.distance (km), igual que recorrido.js
+                    // Distancia (trip.distance en km)
                     const distKm = trip.distance || 0;
                     totalDistKm += distKm;
 
-                    // KPI 2: Horas de motor — drivingDuration + idlingDuration (seg)
-                    // Geotab: drivingDuration = tiempo en movimiento
-                    //         idlingDuration  = motor encendido, veh detenido
-                    const motorSec = (trip.drivingDuration || 0) + (trip.idlingDuration || 0);
-                    totalMotorSec += motorSec;
+                    // Duraciones según especificación del objeto Trip:
+                    // drivingDuration: tiempo en movimiento
+                    // idlingDuration: ralentí al final del viaje
+                    // stopDuration: tiempo detenido
+                    const drivingSec = trip.drivingDuration || 0;
+                    const idlingSec  = trip.idlingDuration  || 0;
+                    const stopSec    = trip.stopDuration    || 0;
+
+                    // Tiempo de motor encendido = conducción + ralentí
+                    const motorSec   = drivingSec + idlingSec;
+
+                    totalMotorSec  += motorSec;
+                    totalIdlingSec += idlingSec;
+                    totalStopSec   += stopSec;
 
                     if (dailyDist[dStr] !== undefined) {
-                        dailyDist[dStr]  += distKm;
-                        dailyHours[dStr] += motorSec;
+                        dailyDist[dStr]   += distKm;
+                        dailyHours[dStr]  += motorSec;
+                        dailyIdling[dStr] += idlingSec;
+                        dailyStop[dStr]   += stopSec;
                     }
                 });
 
                 // KPI 3: % de tiempo en uso
-                // Disponible = 1 vehiculo x dias del periodo x 12h jornada laboral
+                // Ventana disponible = 1 vehículo x días x 12h de jornada
                 const availableSec = historyDays * 12 * 3600;
                 const usagePct     = availableSec > 0
                     ? Math.min(100, (totalMotorSec / availableSec) * 100)
                     : 0;
 
                 // ── Actualizar KPIs ──────────────────────────────────────
-                // KPI 1: Distancia
+                // KPI 1: Distancia total
                 animateCount(kpiDist, totalDistKm, 1);
-                kpiDistSub.textContent = historyDays + " dia" + (historyDays > 1 ? "s" : "") + " · " + trips.length + " viajes";
+                kpiDistSub.textContent = historyDays + " día" + (historyDays > 1 ? "s" : "") + " · " + trips.length + " viajes registrados";
 
-                // KPI 2: Horas motor
+                // KPI 2: Horas de motor encendido
                 animateCount(kpiHours, totalMotorSec / 3600, 1);
-                kpiHoursSub.textContent = fmtHrs(totalMotorSec) + " acumuladas";
+                kpiHoursSub.textContent = fmtHrs(totalMotorSec) + " acumuladas (" + fmtHrs(totalIdlingSec) + " ralentí)";
 
-                // KPI 3: % uso
+                // KPI 3: % de tiempo en uso
                 animateCount(kpiPct, usagePct, 1);
                 kpiPctSub.textContent = "De " + fmtNum(availableSec / 3600, 0) + " hrs disponibles";
 
-                // Gauge animada
+                // Gauge animado
                 setTimeout(() => {
                     if (gaugeFill) {
                         gaugeFill.style.width = usagePct + "%";
@@ -444,59 +540,60 @@ geotab.addin.demo = function () {
                     if (gaugeLabel) gaugeLabel.textContent = fmtNum(usagePct, 1) + "%";
                 }, 60);
 
-                // ── Tabla por dia ────────────────────────────────────────
+                // ── Tabla por día ────────────────────────────────────────
                 const sortedDatesDesc = Object.keys(dailyDist).sort((a,b) => b.localeCompare(a));
                 currentTableData = sortedDatesDesc.map(date => ({
                     date,
-                    dist:  dailyDist[date],
-                    hours: dailyHours[date]
+                    dist:      dailyDist[date],
+                    hours:     dailyHours[date],
+                    idlingSec: dailyIdling[date],
+                    stopSec:   dailyStop[date]
                 }));
                 currentPage = 1;
                 renderTablePage();
 
-                // ── Periodo label ────────────────────────────────────────
+                // ── Etiqueta del periodo ──────────────────────────────────
                 const tableSubEl = $("demo-table-sub");
                 if (tableSubEl) {
                     const fmtD = d => localDateStr(d).split("-").reverse().join("/");
                     tableSubEl.textContent = fmtD(from) + " al " + fmtD(to);
                 }
 
-                // ── Guardar para re-agrupacion ───────────────────────────
+                // ── Guardar datos para reagrupar ─────────────────────────
                 lastDailyDist  = dailyDist;
                 lastDailyHours = dailyHours;
 
-                // ── Graficas ─────────────────────────────────────────────
+                // ── Renderizar gráficas ──────────────────────────────────
                 renderCharts(dailyDist, dailyHours);
 
-                // Mostrar resultado
+                // Mostrar contenedor de resultados
                 const resultContainer = $("demo-result-container");
                 if (resultContainer) {
                     resultContainer.style.display = "block";
-                    setTimeout(() => resultContainer.scrollIntoView({ behavior:"smooth", block:"nearest" }), 100);
+                    setTimeout(() => resultContainer.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
                 }
 
                 if (window.lucide) lucide.createIcons();
 
             } catch (err) {
-                console.error("Error procesando datos:", err);
-                showError("Error al procesar los datos de la API.");
+                console.error("Error procesando datos de Geotab:", err);
+                showError("Error al procesar los viajes y diagnósticos de la API.");
             }
 
         }, err => {
             loadingOverlay.style.display = "none";
             btnConsultar.disabled = false;
             console.error("MultiCall Error:", err);
-            showError("Error de conexion con Geotab.");
+            showError("Error de conexión con Geotab.");
         });
     };
 
-
-    // ── Lifecycle de Geotab Add-In ────────────────────────────────
+    // ── Lifecycle Add-In ──────────────────────────────────────────
     return {
         initialize: function (_api, state, callback) {
             api = _api;
 
-            // ── Selector de periodo ──────────────────────────────
+            // Presets de periodos
             const presetButtons = document.querySelectorAll("#demo-period-pills .demo-pill");
 
             presetButtons.forEach(btn => {
@@ -504,7 +601,6 @@ geotab.addin.demo = function () {
                     const period = this.getAttribute("data-period");
 
                     if (this.id === "demo-btn-custom" || !period) {
-                        // Abrir modal rango personalizado
                         const modal = $("demo-modal");
                         if (modal) {
                             const today  = new Date().toISOString().split("T")[0];
@@ -522,7 +618,6 @@ geotab.addin.demo = function () {
                     this.classList.add("active");
                     selectedPeriod = period;
 
-                    // Agrupacion automatica segun periodo
                     dailyGrouping = (period === "semester" || period === "trimester" || period === "bimester")
                         ? "month" : "day";
 
@@ -533,10 +628,9 @@ geotab.addin.demo = function () {
                 });
             });
 
-            // ── Boton consultar ──────────────────────────────────
             if (btnConsultar) btnConsultar.addEventListener("click", calculateMetrics);
 
-            // ── Modal de rango personalizado ─────────────────────
+            // Modal Rango Personalizado
             const modal       = $("demo-modal");
             const modalClose  = $("demo-modal-close");
             const modalCancel = $("demo-modal-cancel");
@@ -567,7 +661,7 @@ geotab.addin.demo = function () {
                 });
             }
 
-            // ── Selector agrupacion tabla/grafica ────────────────
+            // Agrupación de tabla / gráficas
             const groupSelect = $("demo-group-select");
             if (groupSelect) {
                 groupSelect.addEventListener("change", function () {
@@ -580,7 +674,7 @@ geotab.addin.demo = function () {
                 });
             }
 
-            // ── Paginacion ───────────────────────────────────────
+            // Paginación
             const btnPrev = $("demo-btn-prev");
             const btnNext = $("demo-btn-next");
 
@@ -593,10 +687,8 @@ geotab.addin.demo = function () {
                 if (currentPage < totalPages) { currentPage++; renderTablePage(); }
             });
 
-            // ── Inicializar Lucide ───────────────────────────────
             if (window.lucide) lucide.createIcons();
 
-            // ── Cargar unidades ──────────────────────────────────
             loadUnits();
 
             callback();
@@ -610,4 +702,4 @@ geotab.addin.demo = function () {
         blur: function () {}
     };
 
-}; // fin geotab.addin.demo
+};
