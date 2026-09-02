@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <meta name="description" content="Métricas de Flota: Distancia, Horas de Motor y Porcentaje de Uso - Geotab Add-In">
+    <meta name="description" content="Consulta de viajes - Geotab Trip Object Add-In">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Métricas de Flota – DEMO</title>
+    <title>Tabla Trip – Geotab Add-In</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,15 +13,15 @@
 </head>
 <body>
     <div id="app-demo">
-        <!-- ═══════════ HEADER ═══════════ -->
+        <!-- ═══════════ HEADER / FILTROS ═══════════ -->
         <header class="demo-header">
             <div class="demo-nav-brand">
                 <div class="demo-nav-logo">
-                    <i data-lucide="gauge" width="20" height="20" stroke="#fff" stroke-width="2.5"></i>
+                    <i data-lucide="route" width="20" height="20" stroke="#fff" stroke-width="2.5"></i>
                 </div>
                 <div>
-                    <h1>Métricas de Flota</h1>
-                    <span class="demo-sub">Geotab Add-In</span>
+                    <h1>Tabla Trip (Geotab)</h1>
+                    <span class="demo-sub">Consulta de Viajes</span>
                 </div>
             </div>
 
@@ -55,123 +55,12 @@
         <main class="demo-main">
             <div id="demo-result-container" style="display: none;">
                 
-                <!-- KPI CARDS STRIP -->
-                <p class="demo-section-label">Resumen del Periodo</p>
-                <div class="demo-kpi-grid">
-                    
-                    <!-- KPI 1: Distancia Total -->
-                    <div class="demo-kpi-card" data-accent="teal">
-                        <div class="demo-kpi-glow"></div>
-                        <div class="demo-kpi-icon">
-                            <i data-lucide="route" width="24" height="24" stroke="var(--d-teal)"></i>
-                        </div>
-                        <div class="demo-kpi-body">
-                            <div class="demo-kpi-label">Distancia total recorrida</div>
-                            <div class="demo-kpi-value">
-                                <span id="demo-kpi-dist">0</span>
-                                <span class="demo-kpi-unit">km</span>
-                            </div>
-                            <div class="demo-kpi-sub" id="demo-kpi-dist-sub">Consultando...</div>
-                        </div>
-                    </div>
-
-                    <!-- KPI 2: Horas de Motor -->
-                    <div class="demo-kpi-card" data-accent="green">
-                        <div class="demo-kpi-glow"></div>
-                        <div class="demo-kpi-icon">
-                            <i data-lucide="clock" width="24" height="24" stroke="var(--d-green)"></i>
-                        </div>
-                        <div class="demo-kpi-body">
-                            <div class="demo-kpi-label">Horas de motor encendido</div>
-                            <div class="demo-kpi-value">
-                                <span id="demo-kpi-hours">0</span>
-                                <span class="demo-kpi-unit">hrs</span>
-                            </div>
-                            <div class="demo-kpi-sub" id="demo-kpi-hours-sub">Conducción + Ralentí</div>
-                        </div>
-                    </div>
-
-                    <!-- KPI 3: Tiempo en Ralentí -->
-                    <div class="demo-kpi-card" data-accent="purple">
-                        <div class="demo-kpi-glow"></div>
-                        <div class="demo-kpi-icon">
-                            <i data-lucide="timer" width="24" height="24" stroke="#a855f7"></i>
-                        </div>
-                        <div class="demo-kpi-body">
-                            <div class="demo-kpi-label">Tiempo en ralentí</div>
-                            <div class="demo-kpi-value">
-                                <span id="demo-kpi-idling">0</span>
-                                <span class="demo-kpi-unit">hrs</span>
-                            </div>
-                            <div class="demo-kpi-sub" id="demo-kpi-idling-sub">Motor encendido sin movimiento</div>
-                        </div>
-                    </div>
-
-                    <!-- KPI 4: Porcentaje de Uso -->
-                    <div class="demo-kpi-card" data-accent="amber">
-                        <div class="demo-kpi-glow"></div>
-                        <div class="demo-kpi-icon">
-                            <i data-lucide="percent" width="24" height="24" stroke="var(--d-amber)"></i>
-                        </div>
-                        <div class="demo-kpi-body">
-                            <div class="demo-kpi-label">Porcentaje de tiempo en uso</div>
-                            <div class="demo-kpi-value">
-                                <span id="demo-kpi-pct">0</span>
-                                <span class="demo-kpi-unit">%</span>
-                            </div>
-                            <div class="demo-gauge-wrap">
-                                <div class="demo-gauge-bg">
-                                    <div class="demo-gauge-fill" id="demo-gauge-fill"></div>
-                                </div>
-                                <span class="demo-gauge-label" id="demo-gauge-label">0%</span>
-                            </div>
-                            <div class="demo-kpi-sub" id="demo-kpi-pct-sub">Horas uso / Horas disponibles</div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- CHARTS ROW -->
-                <div class="demo-charts-row" style="margin-top: 1.5rem;">
-                    
-                    <!-- Chart: Distancia Diaria -->
-                    <div class="demo-chart-card">
-                        <div class="demo-chart-header">
-                            <div class="demo-chart-title">
-                                <i data-lucide="bar-chart-2" width="16" height="16" stroke="var(--d-teal)"></i>
-                                <span>Distancia Recorrida (km)</span>
-                            </div>
-                        </div>
-                        <div id="demo-chart-dist"></div>
-                    </div>
-
-                    <!-- Chart: Horas de Motor -->
-                    <div class="demo-chart-card">
-                        <div class="demo-chart-header">
-                            <div class="demo-chart-title">
-                                <i data-lucide="trending-up" width="16" height="16" stroke="var(--d-green)"></i>
-                                <span>Horas de Motor Encendido</span>
-                            </div>
-                        </div>
-                        <div id="demo-chart-hours"></div>
-                    </div>
-
-                </div>
-
-                <!-- TABLE CARD 1: RESUMEN AGRUPADO -->
-                <div class="demo-table-card" style="margin-top: 1.5rem;">
+                <!-- TABLE CARD: DATOS DE LA TABLA TRIP -->
+                <div class="demo-table-card">
                     <div class="demo-table-header">
                         <div>
-                            <div class="demo-table-title">Desglose por Fecha</div>
-                            <span class="demo-table-sub" id="demo-table-sub">Detalle diario de distancia, horas de motor y ralentí</span>
-                        </div>
-
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <select id="demo-group-select" class="demo-trend-select">
-                                <option value="day" selected>Vista por Día</option>
-                                <option value="week">Vista por Semana</option>
-                                <option value="month">Vista por Mes</option>
-                            </select>
+                            <div class="demo-table-title">Registros de la Tabla Trip</div>
+                            <span class="demo-table-sub" id="demo-trips-table-sub">Datos de viajes obtenidos directamente de la API de Geotab</span>
                         </div>
                     </div>
 
@@ -179,48 +68,14 @@
                         <table class="demo-table">
                             <thead>
                                 <tr>
-                                    <th>Fecha</th>
+                                    <th>ID Viaje</th>
+                                    <th>Inicio (start)</th>
+                                    <th>Fin (stop)</th>
                                     <th style="text-align: right;">Distancia (km)</th>
-                                    <th style="text-align: right;">Motor Encendido</th>
-                                    <th style="text-align: right;">Tiempo Ralentí</th>
-                                    <th style="text-align: right;">% en Uso</th>
-                                </tr>
-                            </thead>
-                            <tbody id="demo-tbody">
-                                <!-- Populated dynamically by DEMO.js -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="demo-pagination" id="demo-pagination">
-                        <span class="demo-pagination-info" id="demo-pagination-info"></span>
-                        <div class="demo-pagination-controls">
-                            <button id="demo-btn-prev" class="demo-btn-page">Anterior</button>
-                            <span class="demo-page-indicator" id="demo-page-indicator">Página 1</span>
-                            <button id="demo-btn-next" class="demo-btn-page">Siguiente</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TABLE CARD 2: HISTORIAL DETALLADO DE VIAJES -->
-                <div class="demo-table-card" style="margin-top: 1.5rem;">
-                    <div class="demo-table-header">
-                        <div>
-                            <div class="demo-table-title">Historial Detallado de Viajes</div>
-                            <span class="demo-table-sub" id="demo-trips-table-sub">Registro de cada viaje individual realizado por la unidad</span>
-                        </div>
-                    </div>
-
-                    <div class="demo-table-scroll">
-                        <table class="demo-table">
-                            <thead>
-                                <tr>
-                                    <th>Inicio del Viaje</th>
-                                    <th>Fin del Viaje</th>
-                                    <th style="text-align: right;">Distancia (km)</th>
-                                    <th style="text-align: right;">Motor Encendido</th>
-                                    <th style="text-align: right;">Tiempo Ralentí</th>
+                                    <th style="text-align: right;">Conducción</th>
+                                    <th style="text-align: right;">Ralentí</th>
                                     <th style="text-align: right;">Tiempo Detenido</th>
+                                    <th style="text-align: right;">Vel. Máxima</th>
                                 </tr>
                             </thead>
                             <tbody id="demo-tbody-trips">
@@ -270,7 +125,7 @@
         <!-- LOADING OVERLAY -->
         <div id="demo-loading" class="demo-loading" style="display: none;">
             <div class="demo-spinner"></div>
-            <p>Consultando métricas de la API Geotab...</p>
+            <p>Consultando datos de la tabla Trip en Geotab API...</p>
         </div>
 
         <!-- ERROR TOAST -->
@@ -281,8 +136,8 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="scripts/DEMO.js"></script>
 </body>
 </html>
+
