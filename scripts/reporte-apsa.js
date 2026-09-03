@@ -253,6 +253,13 @@
                             <span>${escapeHtml(name)}</span>
                         </div>
                     </td>
+                    <td style="font-size:0.85rem;color:var(--apsa-muted);font-weight:500;">${escapeHtml(producto)}</td>
+                    <td>
+                        ${estadoFact !== "Sin registro" 
+                            ? `<span class="apsa-status-badge">${escapeHtml(estadoFact)}</span>`
+                            : `<span style="color:var(--apsa-muted);font-size:0.8rem;">Sin registro</span>`}
+                    </td>
+                    <td style="font-size:0.85rem;font-weight:600;color:var(--apsa-text);">${escapeHtml(duracion)}</td>
                     <td>
                         ${plate !== "—" 
                             ? `<span class="apsa-plate-pill">${escapeHtml(plate)}</span>` 
@@ -260,34 +267,27 @@
                     </td>
                     <td>
                         <div style="display:flex;align-items:center;gap:0.4rem;">
-                            <span class="apsa-td-mono">${escapeHtml(vin)}</span>
-                            ${vin !== "—" ? `<button class="apsa-copy-btn" title="Copiar VIN" onclick="apsaCopyText('${escapeHtml(vin)}', 'VIN')"><i data-lucide="copy" width="13" height="13"></i></button>` : ''}
+                            ${imei !== "—" 
+                                ? `<span class="apsa-imei-tag"><i data-lucide="cpu" width="12" height="12"></i> ${escapeHtml(imei)}</span>
+                                   <button class="apsa-copy-btn" title="Copiar N.° de serie" onclick="apsaCopyText('${escapeHtml(imei)}', 'N.° de serie')"><i data-lucide="copy" width="13" height="13"></i></button>`
+                                : `<span style="color:var(--apsa-muted);">—</span>`}
                         </div>
                     </td>
                     <td>
                         <div style="display:flex;align-items:center;gap:0.4rem;">
-                            ${imei !== "—" 
-                                ? `<span class="apsa-imei-tag"><i data-lucide="cpu" width="12" height="12"></i> ${escapeHtml(imei)}</span>
-                                   <button class="apsa-copy-btn" title="Copiar IMEI" onclick="apsaCopyText('${escapeHtml(imei)}', 'IMEI')"><i data-lucide="copy" width="13" height="13"></i></button>`
-                                : `<span style="color:var(--apsa-muted);">—</span>`}
+                            <span class="apsa-td-mono">${escapeHtml(vin)}</span>
+                            ${vin !== "—" ? `<button class="apsa-copy-btn" title="Copiar Número de identificación" onclick="apsaCopyText('${escapeHtml(vin)}', 'Número de identificación')"><i data-lucide="copy" width="13" height="13"></i></button>` : ''}
                         </div>
                     </td>
-                    <td style="font-weight:600;color:#ffffff;">${escapeHtml(nombreEmpresa)}</td>
                     <td>
                         <div style="display:flex;align-items:center;gap:0.3rem;">
                             ${simCard !== "—" 
                                 ? `<span class="apsa-sim-tag"><i data-lucide="sim-card" width="11" height="11"></i> ${escapeHtml(simCard)}</span>
-                                   <button class="apsa-copy-btn" title="Copiar SIM" onclick="apsaCopyText('${escapeHtml(simCard)}', 'SIM')"><i data-lucide="copy" width="13" height="13"></i></button>`
+                                   <button class="apsa-copy-btn" title="Copiar Número de SIM" onclick="apsaCopyText('${escapeHtml(simCard)}', 'Número de SIM')"><i data-lucide="copy" width="13" height="13"></i></button>`
                                 : `<span style="color:var(--apsa-muted);">—</span>`}
                         </div>
                     </td>
-                    <td>
-                        ${estadoFact !== "Sin registro" 
-                            ? `<span class="apsa-status-badge">${escapeHtml(estadoFact)}</span>`
-                            : `<span style="color:var(--apsa-muted);font-size:0.8rem;">Sin registro</span>`}
-                    </td>
-                    <td style="font-size:0.82rem;color:var(--apsa-muted);">${escapeHtml(producto)}</td>
-                    <td style="font-size:0.85rem;font-weight:600;color:var(--apsa-text);">${escapeHtml(duracion)}</td>
+                    <td style="font-weight:600;color:#ffffff;">${escapeHtml(nombreEmpresa)}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -400,21 +400,21 @@
             return;
         }
 
-        const headers = ["Nombre de Vehículo", "Placa", "VIN", "IMEI del GPS", "Nombre / Empresa", "Tarjeta SIM", "Estado Facturación", "Producto", "Duración"];
+        const headers = ["Vehículo", "Dispositivo", "Estado", "Duración", "Matrícula", "N.° de serie", "Número de identificación", "Número de SIM", "Nombre / Empresa"];
         const rows = filteredDevices.map(dev => {
             const vin = dev.vehicleIdentificationNumber || dev.vin || "";
             const driveMatch = getDriveMatchByVin(vin);
 
             return [
                 `"${(dev.name || "").replace(/"/g, '""')}"`,
-                `"${(dev.licensePlate || "").replace(/"/g, '""')}"`,
-                `"${vin.replace(/"/g, '""')}"`,
-                `"${(dev.serialNumber || "").replace(/"/g, '""')}"`,
-                `"${(driveMatch ? driveMatch.nombre : "").replace(/"/g, '""')}"`,
-                `"${(driveMatch ? driveMatch.sim : "").replace(/"/g, '""')}"`,
-                `"${(driveMatch ? driveMatch.estado : "Sin registro").replace(/"/g, '""')}"`,
                 `"${(driveMatch ? driveMatch.producto : "").replace(/"/g, '""')}"`,
-                `"${(driveMatch ? driveMatch.duracion + " meses" : "").replace(/"/g, '""')}"`
+                `"${(driveMatch ? driveMatch.estado : "Sin registro").replace(/"/g, '""')}"`,
+                `"${(driveMatch ? driveMatch.duracion + " meses" : "").replace(/"/g, '""')}"`,
+                `"${(dev.licensePlate || "").replace(/"/g, '""')}"`,
+                `"${(dev.serialNumber || "").replace(/"/g, '""')}"`,
+                `"${vin.replace(/"/g, '""')}"`,
+                `"${(driveMatch ? driveMatch.sim : "").replace(/"/g, '""')}"`,
+                `"${(driveMatch ? driveMatch.nombre : "").replace(/"/g, '""')}"`
             ];
         });
 
