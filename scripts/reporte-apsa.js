@@ -2,9 +2,8 @@
  * ===================================================================
  * REPORTE-APSA.JS — Inventario de Vehículos (Geotab + Google Drive VIN Join)
  * ===================================================================
- * 1. Tabla 1: Dispositivos de Geotab API enriquecida cruzando por VIN
- *    con Google Drive (Nombre/Empresa, SIM, Estado, Producto, Duración)
- * 2. Tabla 2: Hoja de cálculo de Google Drive (Referencia de Facturación)
+ * Tabla Única Enriquecida: Obtiene vehículos de Geotab y cruza por VIN
+ * con los datos de Google Drive (Nombre/Empresa, SIM, Estado, Producto, Duración).
  * ===================================================================
  */
 
@@ -18,12 +17,8 @@
     let currentPage = 1;
     const ITEMS_PER_PAGE = 15;
 
-    // ── Estado Global Tabla 2 (Google Drive) ─────────────────────
+    // ── Estado Global Google Drive ───────────────────────────────
     let rawDriveData = [];
-    let filteredDriveData = [];
-    let currentDrivePage = 1;
-    const DRIVE_ITEMS_PER_PAGE = 15;
-
     const GOOGLE_DRIVE_CSV_URL = "https://docs.google.com/spreadsheets/d/14kMu2pQkO3zwDZuvPPnD-VBvXHKPHX4A/export?format=csv";
 
     // ── Helper Selector DOM ──────────────────────────────────────
@@ -43,7 +38,7 @@
         { id: "b10", name: "Utilitario 02", licensePlate: "UTL-3391", vehicleIdentificationNumber: "3HSDJAPT9DN200190", serialNumber: "G97PJ7H7Z6S0" }
     ];
 
-    // ── Datos Fallback Tabla 2 (Google Drive Backup) ─────────────
+    // ── Datos Fallback Google Drive (Backup) ─────────────────────
     const GOOGLE_DRIVE_FALLBACK = [
         { serie: "G9074HT7U4TS", hwId: "567197836", cliente: "APSA (JUAN MANUEL YAÑEZ MERIDA)", estado: "Activo", vin: "3HSDJAPT7KN321040", producto: "GO9LTETEFM", db: "enerkom", sim: "8934072100273190085", imei: "015718009408717", duracion: "36", nombre: "AUTOTANQUES PENINSULARES" },
         { serie: "G90V2H15BY6M", hwId: "566902371", cliente: "APSA (JUAN MANUEL YAÑEZ MERIDA)", estado: "Activo", vin: "3HSCNAPT57N364430", producto: "GO9LTETEFM", db: "enerkom", sim: "8934072100273169147", imei: "015718009399890", duracion: "36", nombre: "AUTOTANQUES PENINSULARES" },
@@ -133,7 +128,7 @@
     };
 
     // ══════════════════════════════════════════════════════════════
-    // TABLA 1: GEOTAB API DEVICES (ENRIQUECIDA POR VIN)
+    // TABLA PRINCIPAL: GEOTAB API DEVICES (ENRIQUECIDA POR VIN)
     // ══════════════════════════════════════════════════════════════
     const fetchVehicles = () => {
         setLoading(true);
@@ -188,7 +183,6 @@
                 const vin = (dev.vehicleIdentificationNumber || dev.vin || "").toLowerCase();
                 const imei = (dev.serialNumber || "").toLowerCase();
 
-                // Datos cruzados por VIN
                 const driveMatch = getDriveMatchByVin(vin);
                 const nombreEmpresa = driveMatch ? (driveMatch.nombre || "").toLowerCase() : "";
                 const sim = driveMatch ? (driveMatch.sim || "").toLowerCase() : "";
@@ -242,7 +236,6 @@
                 const vin = dev.vehicleIdentificationNumber || dev.vin || "—";
                 const imei = dev.serialNumber || "—";
 
-                // Datos cruzados de Google Drive por VIN
                 const driveMatch = getDriveMatchByVin(vin);
                 const nombreEmpresa = driveMatch ? driveMatch.nombre : "—";
                 const simCard = driveMatch ? driveMatch.sim : "—";
@@ -284,7 +277,7 @@
                         <div style="display:flex;align-items:center;gap:0.3rem;">
                             ${simCard !== "—" 
                                 ? `<span class="apsa-sim-tag"><i data-lucide="sim-card" width="11" height="11"></i> ${escapeHtml(simCard)}</span>
-                                   <button class="apsa-copy-btn" title="Copiar SIM" onclick="apsaCopyText('${escapeHtml(simCard)}', 'SIM')"><i data-lucide="copy" width="12" height="12"></i></button>`
+                                   <button class="apsa-copy-btn" title="Copiar SIM" onclick="apsaCopyText('${escapeHtml(simCard)}', 'SIM')"><i data-lucide="copy" width="13" height="13"></i></button>`
                                 : `<span style="color:var(--apsa-muted);">—</span>`}
                         </div>
                     </td>
@@ -309,7 +302,7 @@
     };
 
     // ══════════════════════════════════════════════════════════════
-    // TABLA 2: GOOGLE DRIVE SPREADSHEET
+    // OBSTENCIÓN DE DATOS DESDE GOOGLE DRIVE (PARA EL CRUCE)
     // ══════════════════════════════════════════════════════════════
     const fetchGoogleDriveData = () => {
         fetch(GOOGLE_DRIVE_CSV_URL)
@@ -336,13 +329,8 @@
                     }));
 
                     rawDriveData = dataRows;
-                    filteredDriveData = [...rawDriveData];
-                    currentDrivePage = 1;
-
-                    // Al cargar Google Drive, re-renderizamos la Tabla 1 para actualizar los cruces por VIN
                     renderTable1();
-                    renderDriveTable();
-                    console.log(`Cargados ${rawDriveData.length} registros desde Google Drive Live API.`);
+                    console.log(`Cargados ${rawDriveData.length} registros desde Google Drive Live API para cruce.`);
                 } else {
                     useDriveFallback();
                 }
@@ -355,116 +343,7 @@
 
     const useDriveFallback = () => {
         rawDriveData = GOOGLE_DRIVE_FALLBACK;
-        filteredDriveData = [...rawDriveData];
-        currentDrivePage = 1;
         renderTable1();
-        renderDriveTable();
-    };
-
-    const applyDriveSearchFilter = () => {
-        const searchInput = $("apsa-drive-search-input");
-        const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
-
-        if (!query) {
-            filteredDriveData = [...rawDriveData];
-        } else {
-            filteredDriveData = rawDriveData.filter(item => {
-                return (
-                    (item.serie || "").toLowerCase().includes(query) ||
-                    (item.nombre || "").toLowerCase().includes(query) ||
-                    (item.cliente || "").toLowerCase().includes(query) ||
-                    (item.vin || "").toLowerCase().includes(query) ||
-                    (item.imei || "").toLowerCase().includes(query) ||
-                    (item.sim || "").toLowerCase().includes(query) ||
-                    (item.estado || "").toLowerCase().includes(query)
-                );
-            });
-        }
-
-        currentDrivePage = 1;
-        renderDriveTable();
-    };
-
-    const renderDriveTable = () => {
-        const tbody = $("apsa-drive-tbody");
-        const countBadge = $("apsa-drive-total-count");
-        const pageInfo = $("apsa-drive-page-info");
-        const pageIndicator = $("apsa-drive-page-indicator");
-        const btnPrev = $("apsa-btn-drive-prev");
-        const btnNext = $("apsa-btn-drive-next");
-
-        if (!tbody) return;
-        tbody.innerHTML = "";
-
-        const totalItems = filteredDriveData.length;
-        if (countBadge) countBadge.textContent = rawDriveData.length;
-
-        const totalPages = Math.ceil(totalItems / DRIVE_ITEMS_PER_PAGE) || 1;
-        if (currentDrivePage > totalPages) currentDrivePage = totalPages;
-
-        const startIndex = (currentDrivePage - 1) * DRIVE_ITEMS_PER_PAGE;
-        const endIndex = Math.min(startIndex + DRIVE_ITEMS_PER_PAGE, totalItems);
-        const pageData = filteredDriveData.slice(startIndex, endIndex);
-
-        if (pageData.length === 0) {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td colspan="10" class="apsa-empty-state">
-                    <div style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;">
-                        <i data-lucide="folder-search" width="36" height="36" class="apsa-empty-icon"></i>
-                        <span style="font-weight:600;color:var(--apsa-text);">No se encontraron registros en Google Drive</span>
-                    </div>
-                </td>`;
-            tbody.appendChild(tr);
-        } else {
-            pageData.forEach(item => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>
-                        <div style="display:flex;align-items:center;gap:0.3rem;">
-                            <span class="apsa-td-mono" style="color:var(--apsa-teal);font-weight:600;">${escapeHtml(item.serie)}</span>
-                            ${item.serie !== "—" ? `<button class="apsa-copy-btn" title="Copiar Serie" onclick="apsaCopyText('${escapeHtml(item.serie)}', 'Serie')"><i data-lucide="copy" width="12" height="12"></i></button>` : ''}
-                        </div>
-                    </td>
-                    <td style="font-weight:600;color:#ffffff;">${escapeHtml(item.nombre)}</td>
-                    <td style="font-size:0.82rem;color:var(--apsa-muted);">${escapeHtml(item.cliente)}</td>
-                    <td>
-                        <div style="display:flex;align-items:center;gap:0.3rem;">
-                            <span class="apsa-td-mono">${escapeHtml(item.vin)}</span>
-                            ${item.vin !== "—" ? `<button class="apsa-copy-btn" title="Copiar VIN" onclick="apsaCopyText('${escapeHtml(item.vin)}', 'VIN')"><i data-lucide="copy" width="12" height="12"></i></button>` : ''}
-                        </div>
-                    </td>
-                    <td>
-                        <div style="display:flex;align-items:center;gap:0.3rem;">
-                            ${item.imei !== "—" 
-                                ? `<span class="apsa-imei-tag"><i data-lucide="cpu" width="11" height="11"></i> ${escapeHtml(item.imei)}</span>
-                                   <button class="apsa-copy-btn" title="Copiar IMEI" onclick="apsaCopyText('${escapeHtml(item.imei)}', 'IMEI')"><i data-lucide="copy" width="12" height="12"></i></button>`
-                                : `<span style="color:var(--apsa-muted);">—</span>`}
-                        </div>
-                    </td>
-                    <td>
-                        <div style="display:flex;align-items:center;gap:0.3rem;">
-                            ${item.sim !== "—" 
-                                ? `<span class="apsa-sim-tag"><i data-lucide="sim-card" width="11" height="11"></i> ${escapeHtml(item.sim)}</span>
-                                   <button class="apsa-copy-btn" title="Copiar SIM" onclick="apsaCopyText('${escapeHtml(item.sim)}', 'SIM')"><i data-lucide="copy" width="12" height="12"></i></button>`
-                                : `<span style="color:var(--apsa-muted);">—</span>`}
-                        </div>
-                    </td>
-                    <td><span class="apsa-status-badge">${escapeHtml(item.estado)}</span></td>
-                    <td style="font-size:0.8rem;color:var(--apsa-muted);">${escapeHtml(item.producto)}</td>
-                    <td style="font-size:0.8rem;color:var(--apsa-teal);">${escapeHtml(item.db)}</td>
-                    <td style="text-align:center;font-weight:600;">${escapeHtml(item.duracion)} <span style="font-size:0.72rem;color:var(--apsa-muted)">meses</span></td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        if (pageInfo) pageInfo.textContent = `Mostrando ${totalItems > 0 ? startIndex + 1 : 0}–${endIndex} de ${totalItems} registros de Drive`;
-        if (pageIndicator) pageIndicator.textContent = `Página ${currentDrivePage} de ${totalPages}`;
-        if (btnPrev) btnPrev.disabled = currentDrivePage <= 1;
-        if (btnNext) btnNext.disabled = currentDrivePage >= totalPages;
-
-        if (window.lucide) lucide.createIcons();
     };
 
     // ── Parser CSV ───────────────────────────────────────────────
@@ -514,7 +393,7 @@
             .replace(/'/g, "&#039;");
     };
 
-    // ── Exportación CSV Tabla 1 (Enriquecida) ────────────────────
+    // ── Exportación CSV Tabla Principal ──────────────────────────
     const exportGeotabToCSV = () => {
         if (filteredDevices.length === 0) {
             showToast("No hay datos para exportar", "error");
@@ -543,32 +422,6 @@
         downloadCSVFile(csvContent, "Reporte_APSA_Enriquecido.csv");
     };
 
-    // ── Exportación CSV Tabla 2 (Google Drive) ───────────────────
-    const exportDriveToCSV = () => {
-        if (filteredDriveData.length === 0) {
-            showToast("No hay datos de Google Drive para exportar", "error");
-            return;
-        }
-
-        const headers = ["Número de Serie", "ID Hardware", "Cliente", "Estado Facturación", "VIN", "Código Producto", "BD Primaria", "Tarjeta SIM", "IMEI", "Duración", "Nombre / Empresa"];
-        const rows = filteredDriveData.map(item => [
-            `"${(item.serie || "").replace(/"/g, '""')}"`,
-            `"${(item.hwId || "").replace(/"/g, '""')}"`,
-            `"${(item.cliente || "").replace(/"/g, '""')}"`,
-            `"${(item.estado || "").replace(/"/g, '""')}"`,
-            `"${(item.vin || "").replace(/"/g, '""')}"`,
-            `"${(item.producto || "").replace(/"/g, '""')}"`,
-            `"${(item.db || "").replace(/"/g, '""')}"`,
-            `"${(item.sim || "").replace(/"/g, '""')}"`,
-            `"${(item.imei || "").replace(/"/g, '""')}"`,
-            `"${(item.duracion || "").replace(/"/g, '""')}"`,
-            `"${(item.nombre || "").replace(/"/g, '""')}"`
-        ]);
-
-        const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-        downloadCSVFile(csvContent, "Reporte_APSA_Google_Drive.csv");
-    };
-
     const downloadCSVFile = (content, filename) => {
         const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
@@ -584,7 +437,6 @@
 
     // ── Event Listeners ──────────────────────────────────────────
     const initEvents = () => {
-        // Tabla 1
         const searchInput1 = $("apsa-search-input");
         const btnExport1 = $("apsa-btn-export");
         const btnRefresh1 = $("apsa-btn-refresh");
@@ -601,20 +453,6 @@
         if (btnNext1) btnNext1.addEventListener("click", () => {
             const totalPages = Math.ceil(filteredDevices.length / ITEMS_PER_PAGE);
             if (currentPage < totalPages) { currentPage++; renderTable1(); }
-        });
-
-        // Tabla 2 (Drive)
-        const searchInput2 = $("apsa-drive-search-input");
-        const btnExport2 = $("apsa-btn-export-drive");
-        const btnPrev2 = $("apsa-btn-drive-prev");
-        const btnNext2 = $("apsa-btn-drive-next");
-
-        if (searchInput2) searchInput2.addEventListener("input", applyDriveSearchFilter);
-        if (btnExport2) btnExport2.addEventListener("click", exportDriveToCSV);
-        if (btnPrev2) btnPrev2.addEventListener("click", () => { if (currentDrivePage > 1) { currentDrivePage--; renderDriveTable(); } });
-        if (btnNext2) btnNext2.addEventListener("click", () => {
-            const totalPages = Math.ceil(filteredDriveData.length / DRIVE_ITEMS_PER_PAGE);
-            if (currentDrivePage < totalPages) { currentDrivePage++; renderDriveTable(); }
         });
     };
 
