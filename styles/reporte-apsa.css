@@ -57,7 +57,7 @@
 }
 
 .apsa-container {
-    max-width: 1350px;
+    max-width: 1450px;
     margin: 0 auto;
     position: relative;
     z-index: 1;
@@ -168,7 +168,7 @@
 /* Search Box */
 .apsa-search-wrapper {
     position: relative;
-    min-width: 280px;
+    min-width: 300px;
 }
 
 .apsa-search-icon {
@@ -202,7 +202,7 @@
     color: #64748b;
 }
 
-/* Buttons */
+/* Buttons & Links */
 .apsa-btn {
     background: var(--apsa-card);
     border: 1px solid var(--apsa-border);
@@ -218,6 +218,7 @@
     gap: 0.5rem;
     transition: all 0.2s ease;
     user-select: none;
+    text-decoration: none;
 }
 
 .apsa-btn:hover {
@@ -259,6 +260,28 @@
     overflow: hidden;
 }
 
+.apsa-table-header-title {
+    padding: 1.1rem 1.25rem 0.9rem 1.25rem;
+    border-bottom: 1px solid var(--apsa-border);
+    background: rgba(10, 15, 30, 0.4);
+}
+
+.apsa-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.apsa-card-sub {
+    font-size: 0.8rem;
+    color: var(--apsa-muted);
+    margin-top: 2px;
+    display: block;
+}
+
 .apsa-table-wrapper {
     width: 100%;
     overflow-x: auto;
@@ -272,19 +295,19 @@
 }
 
 .apsa-table th {
-    background: rgba(10, 15, 30, 0.75);
+    background: rgba(10, 15, 30, 0.85);
     color: var(--apsa-muted);
     font-weight: 600;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    padding: 1rem 1.25rem;
+    padding: 0.9rem 1.1rem;
     border-bottom: 1px solid var(--apsa-border);
     white-space: nowrap;
 }
 
 .apsa-table td {
-    padding: 0.95rem 1.25rem;
+    padding: 0.85rem 1.1rem;
     border-bottom: 1px solid var(--apsa-border);
     vertical-align: middle;
     color: var(--apsa-text);
@@ -343,7 +366,7 @@
 
 .apsa-td-mono {
     font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
-    font-size: 0.83rem;
+    font-size: 0.82rem;
     letter-spacing: 0.03em;
     color: #cbd5e1;
 }
@@ -358,7 +381,42 @@
     padding: 3px 9px;
     border-radius: 6px;
     font-family: monospace;
-    font-size: 0.82rem;
+    font-size: 0.81rem;
+}
+
+.apsa-sim-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    color: var(--apsa-amber);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 0.80rem;
+}
+
+.apsa-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(0, 196, 140, 0.12);
+    border: 1px solid rgba(0, 196, 140, 0.3);
+    color: var(--apsa-green);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.apsa-status-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--apsa-green);
+    box-shadow: 0 0 6px var(--apsa-green);
 }
 
 .apsa-copy-btn {
@@ -396,7 +454,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.25rem;
+    padding: 0.9rem 1.25rem;
     background: rgba(10, 15, 30, 0.6);
     border-top: 1px solid var(--apsa-border);
     flex-wrap: wrap;
