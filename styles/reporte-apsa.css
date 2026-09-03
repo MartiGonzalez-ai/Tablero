@@ -1,6 +1,6 @@
 /* ================================================================
    REPORTE-APSA.CSS — Reporte de Inventario de Vehículos (Geotab)
-   Dark Premium Theme | Glassmorphic Interface
+   Dark Premium Theme | Spacious & Clean Layout
    ================================================================ */
 
 :root {
@@ -8,7 +8,7 @@
     --apsa-navy-mid:   #003480;
     --apsa-teal:       #00b1e1;
     --apsa-teal-dark:  #0090b8;
-    --apsa-teal-glow:  rgba(0, 177, 225, 0.15);
+    --apsa-teal-glow:  rgba(0, 177, 225, 0.18);
     --apsa-green:      #00c48c;
     --apsa-amber:      #f59e0b;
     --apsa-red:        #ef4444;
@@ -20,9 +20,9 @@
     --apsa-text:       #f1f5f9;
     --apsa-muted:      #94a3b8;
     --apsa-font:       'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --apsa-radius:     14px;
-    --apsa-radius-sm:  8px;
-    --apsa-shadow:     0 10px 30px rgba(0, 0, 0, 0.5);
+    --apsa-radius:     16px;
+    --apsa-radius-sm:  10px;
+    --apsa-shadow:     0 12px 35px rgba(0, 0, 0, 0.55);
 }
 
 /* ── Reset & Baseline ──────────────────────────────────────── */
@@ -39,7 +39,7 @@
     background: var(--apsa-bg);
     color: var(--apsa-text);
     min-height: 100vh;
-    padding: 1.5rem;
+    padding: 1.75rem;
     position: relative;
     -webkit-font-smoothing: antialiased;
 }
@@ -50,14 +50,14 @@
     position: fixed;
     inset: 0;
     background:
-        radial-gradient(ellipse 70% 50% at 15% -5%, rgba(0, 177, 225, 0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 40% at 85% 105%, rgba(0, 32, 96, 0.35) 0%, transparent 55%);
+        radial-gradient(ellipse 70% 50% at 15% -5%, rgba(0, 177, 225, 0.14) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 85% 105%, rgba(0, 32, 96, 0.38) 0%, transparent 55%);
     pointer-events: none;
     z-index: 0;
 }
 
 .apsa-container {
-    max-width: 1450px;
+    max-width: 1550px;
     margin: 0 auto;
     position: relative;
     z-index: 1;
@@ -91,8 +91,8 @@
 }
 
 .apsa-brand-icon {
-    width: 46px;
-    height: 46px;
+    width: 48px;
+    height: 48px;
     background: linear-gradient(135deg, var(--apsa-navy-mid), var(--apsa-teal-dark));
     border-radius: 12px;
     display: flex;
@@ -108,7 +108,7 @@
     letter-spacing: -0.02em;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.55rem;
 }
 
 .apsa-badge-tag {
@@ -116,7 +116,7 @@
     color: var(--apsa-teal);
     font-size: 0.72rem;
     font-weight: 600;
-    padding: 2px 8px;
+    padding: 3px 9px;
     border-radius: 20px;
     border: 1px solid rgba(0, 177, 225, 0.3);
     text-transform: uppercase;
@@ -124,9 +124,9 @@
 }
 
 .apsa-brand-text p {
-    font-size: 0.82rem;
+    font-size: 0.83rem;
     color: var(--apsa-muted);
-    margin-top: 2px;
+    margin-top: 3px;
 }
 
 /* ═══════════════════════════════════════════════
@@ -141,10 +141,10 @@
 }
 
 .apsa-stats-pill {
-    background: rgba(17, 24, 39, 0.7);
+    background: rgba(17, 24, 39, 0.75);
     border: 1px solid var(--apsa-border);
     border-radius: var(--apsa-radius-sm);
-    padding: 0.6rem 1rem;
+    padding: 0.65rem 1.1rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -168,12 +168,12 @@
 /* Search Box */
 .apsa-search-wrapper {
     position: relative;
-    min-width: 300px;
+    min-width: 340px;
 }
 
 .apsa-search-icon {
     position: absolute;
-    left: 0.85rem;
+    left: 0.95rem;
     top: 50%;
     transform: translateY(-50%);
     color: var(--apsa-muted);
@@ -182,10 +182,10 @@
 
 .apsa-search-input {
     width: 100%;
-    background: rgba(17, 24, 39, 0.8);
+    background: rgba(17, 24, 39, 0.85);
     border: 1px solid var(--apsa-border);
     border-radius: var(--apsa-radius-sm);
-    padding: 0.6rem 0.85rem 0.6rem 2.4rem;
+    padding: 0.65rem 0.95rem 0.65rem 2.6rem;
     color: var(--apsa-text);
     font-family: inherit;
     font-size: 0.88rem;
@@ -207,15 +207,15 @@
     background: var(--apsa-card);
     border: 1px solid var(--apsa-border);
     color: var(--apsa-text);
-    padding: 0.6rem 1.1rem;
+    padding: 0.65rem 1.2rem;
     border-radius: var(--apsa-radius-sm);
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.86rem;
     font-weight: 600;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.55rem;
     transition: all 0.2s ease;
     user-select: none;
     text-decoration: none;
@@ -235,12 +235,12 @@
     background: linear-gradient(135deg, #0080b3, var(--apsa-teal));
     color: #ffffff;
     border: none;
-    box-shadow: 0 4px 12px rgba(0, 177, 225, 0.3);
+    box-shadow: 0 4px 14px rgba(0, 177, 225, 0.3);
 }
 
 .apsa-btn-primary:hover {
     background: linear-gradient(135deg, #0090c8, #00c2f7);
-    box-shadow: 0 6px 16px rgba(0, 177, 225, 0.4);
+    box-shadow: 0 6px 18px rgba(0, 177, 225, 0.4);
 }
 
 .apsa-btn-secondary {
@@ -248,12 +248,12 @@
 }
 
 /* ═══════════════════════════════════════════════
-   TABLE CARD
+   TABLE CARD & SPACIOUS HORIZONTAL SCROLL
 ═══════════════════════════════════════════════ */
 .apsa-table-card {
-    background: rgba(17, 24, 39, 0.8);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(17, 24, 39, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--apsa-border);
     border-radius: var(--apsa-radius);
     box-shadow: var(--apsa-shadow);
@@ -261,85 +261,118 @@
 }
 
 .apsa-table-header-title {
-    padding: 1.1rem 1.25rem 0.9rem 1.25rem;
+    padding: 1.25rem 1.5rem 1rem 1.5rem;
     border-bottom: 1px solid var(--apsa-border);
-    background: rgba(10, 15, 30, 0.4);
+    background: rgba(10, 15, 30, 0.45);
 }
 
 .apsa-card-title {
-    font-size: 1.05rem;
+    font-size: 1.08rem;
     font-weight: 700;
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-
-.apsa-card-sub {
-    font-size: 0.8rem;
-    color: var(--apsa-muted);
-    margin-top: 2px;
-    display: block;
-}
-
-.apsa-table-wrapper {
-    width: 100%;
-    overflow-x: auto;
-}
-
-.apsa-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-    font-size: 0.88rem;
-}
-
-.apsa-table th {
-    background: rgba(10, 15, 30, 0.85);
-    color: var(--apsa-muted);
-    font-weight: 600;
-    font-size: 0.76rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 0.9rem 1.1rem;
-    border-bottom: 1px solid var(--apsa-border);
-    white-space: nowrap;
-}
-
-.apsa-table td {
-    padding: 0.85rem 1.1rem;
-    border-bottom: 1px solid var(--apsa-border);
-    vertical-align: middle;
-    color: var(--apsa-text);
-    transition: background 0.15s ease;
-}
-
-.apsa-table tbody tr {
-    transition: background 0.15s ease;
-}
-
-.apsa-table tbody tr:hover {
-    background: rgba(0, 177, 225, 0.04);
-}
-
-.apsa-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-/* Column Specific Styles */
-.apsa-td-vehicle {
-    font-weight: 600;
     color: #ffffff;
     display: flex;
     align-items: center;
     gap: 0.65rem;
 }
 
+.apsa-card-sub {
+    font-size: 0.82rem;
+    color: var(--apsa-muted);
+    margin-top: 3px;
+    display: block;
+}
+
+/* Scroll Horizontal Adaptativo y fluido */
+.apsa-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+/* Custom Styled Scrollbar */
+.apsa-table-wrapper::-webkit-scrollbar {
+    height: 10px;
+}
+
+.apsa-table-wrapper::-webkit-scrollbar-track {
+    background: rgba(10, 15, 30, 0.9);
+    border-radius: 6px;
+}
+
+.apsa-table-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(0, 177, 225, 0.35);
+    border-radius: 6px;
+    border: 2px solid rgba(10, 15, 30, 0.9);
+    transition: background 0.2s ease;
+}
+
+.apsa-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--apsa-teal);
+}
+
+/* Tabla con min-width para evitar empaquetamiento achocado */
+.apsa-table {
+    width: 100%;
+    min-width: 1420px; /* Otorga ancho cómodo a cada columna */
+    border-collapse: separate;
+    border-spacing: 0;
+    text-align: left;
+    font-size: 0.9rem;
+}
+
+/* Cabecera con Sticky y Padding Generoso */
+.apsa-table th {
+    background: rgba(10, 15, 30, 0.95);
+    color: var(--apsa-muted);
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 1.15rem 1.35rem;
+    border-bottom: 1px solid var(--apsa-border);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+/* Espaciado generoso entre filas (padding 1.2rem vertical) */
+.apsa-table td {
+    padding: 1.2rem 1.35rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+    color: var(--apsa-text);
+    white-space: nowrap;
+    transition: background 0.15s ease;
+}
+
+.apsa-table tbody tr {
+    transition: background 0.2s ease;
+}
+
+.apsa-table tbody tr:hover {
+    background: rgba(0, 177, 225, 0.06);
+}
+
+.apsa-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Column Specific Styles con espacio de respiración */
+.apsa-td-vehicle {
+    font-weight: 600;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
 .apsa-vehicle-icon {
-    width: 32px;
-    height: 32px;
-    background: rgba(0, 177, 225, 0.1);
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    background: rgba(0, 177, 225, 0.12);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -354,19 +387,19 @@
 
 .apsa-plate-pill {
     display: inline-block;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     color: #f8fafc;
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-size: 0.84rem;
-    letter-spacing: 0.05em;
+    padding: 5px 12px;
+    border-radius: 7px;
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
     font-weight: 700;
 }
 
 .apsa-td-mono {
     font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     letter-spacing: 0.03em;
     color: #cbd5e1;
 }
@@ -374,40 +407,40 @@
 .apsa-imei-tag {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    background: rgba(0, 196, 140, 0.08);
-    border: 1px solid rgba(0, 196, 140, 0.2);
+    gap: 0.45rem;
+    background: rgba(0, 196, 140, 0.1);
+    border: 1px solid rgba(0, 196, 140, 0.25);
     color: var(--apsa-green);
-    padding: 3px 9px;
-    border-radius: 6px;
-    font-family: monospace;
-    font-size: 0.81rem;
+    padding: 5px 11px;
+    border-radius: 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.83rem;
 }
 
 .apsa-sim-tag {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.2);
+    gap: 0.4rem;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.25);
     color: var(--apsa-amber);
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-family: monospace;
-    font-size: 0.80rem;
+    padding: 5px 11px;
+    border-radius: 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.83rem;
 }
 
 .apsa-status-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    background: rgba(0, 196, 140, 0.12);
-    border: 1px solid rgba(0, 196, 140, 0.3);
+    gap: 0.45rem;
+    background: rgba(0, 196, 140, 0.14);
+    border: 1px solid rgba(0, 196, 140, 0.35);
     color: var(--apsa-green);
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 12px;
+    padding: 4px 11px;
+    border-radius: 14px;
 }
 
 .apsa-status-badge::before {
@@ -424,8 +457,8 @@
     border: none;
     color: var(--apsa-muted);
     cursor: pointer;
-    padding: 2px 4px;
-    border-radius: 4px;
+    padding: 4px 6px;
+    border-radius: 5px;
     opacity: 0.4;
     transition: all 0.2s ease;
 }
@@ -433,12 +466,12 @@
 .apsa-copy-btn:hover {
     opacity: 1;
     color: var(--apsa-teal);
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .apsa-empty-state {
     text-align: center;
-    padding: 3.5rem 1.5rem !important;
+    padding: 4rem 1.5rem !important;
     color: var(--apsa-muted);
 }
 
@@ -454,39 +487,39 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.9rem 1.25rem;
-    background: rgba(10, 15, 30, 0.6);
+    padding: 1.1rem 1.5rem;
+    background: rgba(10, 15, 30, 0.65);
     border-top: 1px solid var(--apsa-border);
     flex-wrap: wrap;
     gap: 1rem;
 }
 
 .apsa-page-info {
-    font-size: 0.84rem;
+    font-size: 0.86rem;
     color: var(--apsa-muted);
 }
 
 .apsa-page-controls {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
 }
 
 .apsa-btn-page {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--apsa-border);
     color: var(--apsa-text);
-    padding: 0.4rem 0.85rem;
+    padding: 0.45rem 0.95rem;
     border-radius: var(--apsa-radius-sm);
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .apsa-btn-page:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .apsa-btn-page:disabled {
@@ -495,7 +528,7 @@
 }
 
 .apsa-page-indicator {
-    font-size: 0.84rem;
+    font-size: 0.86rem;
     font-weight: 600;
     color: var(--apsa-text);
     padding: 0 0.5rem;
@@ -597,6 +630,6 @@
     }
 
     .apsa-table th, .apsa-table td {
-        padding: 0.75rem 0.85rem;
+        padding: 0.95rem 1.1rem;
     }
 }
