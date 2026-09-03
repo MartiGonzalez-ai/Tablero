@@ -1,16 +1,17 @@
 /**
  * ===================================================================
- * REPORTE-APSA.JS — Inventario de Vehículos (Geotab) & Google Drive
+ * REPORTE-APSA.JS — Inventario de Vehículos (Geotab + Google Drive VIN Join)
  * ===================================================================
- * 1. Tabla 1: Dispositivos de Geotab API (Nombre, Placa, VIN, IMEI)
- * 2. Tabla 2: Hoja de cálculo de Google Drive (Facturación y Hardware)
+ * 1. Tabla 1: Dispositivos de Geotab API enriquecida cruzando por VIN
+ *    con Google Drive (Nombre/Empresa, SIM, Estado, Producto, Duración)
+ * 2. Tabla 2: Hoja de cálculo de Google Drive (Referencia de Facturación)
  * ===================================================================
  */
 
 "use strict";
 
 (function () {
-    // ── Estado Global Tabla 1 (Geotab) ───────────────────────────
+    // ── Estado Global Tabla 1 (Geotab Enriquecida) ───────────────
     let geotabApi = null;
     let rawDevices = [];
     let filteredDevices = [];
@@ -30,16 +31,16 @@
 
     // ── Datos MOCK Tabla 1 (Geotab Standalone) ───────────────────
     const MOCK_DEVICES = [
-        { id: "b1", name: "Camión APSA-01", licensePlate: "TRK-9821", vehicleIdentificationNumber: "3AKJHHDR5LS982101", serialNumber: "G90123456789" },
-        { id: "b2", name: "Camión APSA-02", licensePlate: "TRK-9822", vehicleIdentificationNumber: "3AKJHHDR5LS982102", serialNumber: "G90123456790" },
-        { id: "b3", name: "PickUp Sup 01", licensePlate: "PKP-4410", vehicleIdentificationNumber: "1FTFW1ED4MFA44103", serialNumber: "G90123456791" },
-        { id: "b4", name: "PickUp Sup 02", licensePlate: "PKP-4411", vehicleIdentificationNumber: "1FTFW1ED4MFA44104", serialNumber: "G90123456792" },
-        { id: "b5", name: "Tractor APSA-10", licensePlate: "TT-7701", vehicleIdentificationNumber: "1XPDD49X5MD770105", serialNumber: "G90123456793" },
-        { id: "b6", name: "Tractor APSA-11", licensePlate: "TT-7702", vehicleIdentificationNumber: "1XPDD49X5MD770106", serialNumber: "G90123456794" },
-        { id: "b7", name: "Furgón Entrega 01", licensePlate: "FRG-1205", vehicleIdentificationNumber: "3FA6P0H78KR120507", serialNumber: "G90123456795" },
-        { id: "b8", name: "Furgón Entrega 02", licensePlate: "FRG-1206", vehicleIdentificationNumber: "3FA6P0H78KR120508", serialNumber: "G90123456796" },
-        { id: "b9", name: "Utilitario 01", licensePlate: "UTL-3390", vehicleIdentificationNumber: "NM0ER4E21LT339009", serialNumber: "G90123456797" },
-        { id: "b10", name: "Utilitario 02", licensePlate: "UTL-3391", vehicleIdentificationNumber: "NM0ER4E21LT339010", serialNumber: "G90123456798" }
+        { id: "b1", name: "Camión APSA-01", licensePlate: "TRK-9821", vehicleIdentificationNumber: "3HSDJAPT7KN321040", serialNumber: "G9074HT7U4TS" },
+        { id: "b2", name: "Camión APSA-02", licensePlate: "TRK-9822", vehicleIdentificationNumber: "3HSCNAPT57N364430", serialNumber: "G90V2H15BY6M" },
+        { id: "b3", name: "PickUp Sup 01", licensePlate: "PKP-4410", vehicleIdentificationNumber: "3HSDJAPTXFN658811", serialNumber: "G92HV3H8C276" },
+        { id: "b4", name: "PickUp Sup 02", licensePlate: "PKP-4411", vehicleIdentificationNumber: "3HSDJAPT3KN329782", serialNumber: "G92PFKZ246AZ" },
+        { id: "b5", name: "Tractor APSA-10", licensePlate: "TT-7701", vehicleIdentificationNumber: "3HSDZAPT8PN687251", serialNumber: "G93BTKTB3422" },
+        { id: "b6", name: "Tractor APSA-11", licensePlate: "TT-7702", vehicleIdentificationNumber: "3HSDJAPT1JN327978", serialNumber: "G93NZHD476KM" },
+        { id: "b7", name: "Furgón Entrega 01", licensePlate: "FRG-1205", vehicleIdentificationNumber: "3HSDZAPTXPN687252", serialNumber: "G93VP04AMY2D" },
+        { id: "b8", name: "Furgón Entrega 02", licensePlate: "FRG-1206", vehicleIdentificationNumber: "3HSDJAPT0HN478465", serialNumber: "G94TWU81BHFK" },
+        { id: "b9", name: "Utilitario 01", licensePlate: "UTL-3390", vehicleIdentificationNumber: "MR0EX8DD0J0254632", serialNumber: "G957BVFSJKUD" },
+        { id: "b10", name: "Utilitario 02", licensePlate: "UTL-3391", vehicleIdentificationNumber: "3HSDJAPT9DN200190", serialNumber: "G97PJ7H7Z6S0" }
     ];
 
     // ── Datos Fallback Tabla 2 (Google Drive Backup) ─────────────
@@ -116,6 +117,13 @@
         });
     };
 
+    // ── Helper Cruce por VIN con Google Drive ────────────────────
+    const getDriveMatchByVin = (vin) => {
+        if (!vin || vin === "—") return null;
+        const cleanVin = String(vin).trim().toUpperCase();
+        return rawDriveData.find(d => d.vin && String(d.vin).trim().toUpperCase() === cleanVin) || null;
+    };
+
     // ── Mostrar / Ocultar Loading ─────────────────────────────────
     const setLoading = (isLoading, message = "Cargando vehículos de la flota...") => {
         const overlay = $("apsa-loading");
@@ -125,20 +133,19 @@
     };
 
     // ══════════════════════════════════════════════════════════════
-    // TABLA 1: GEOTAB API DEVEICES
+    // TABLA 1: GEOTAB API DEVICES (ENRIQUECIDA POR VIN)
     // ══════════════════════════════════════════════════════════════
     const fetchVehicles = () => {
         setLoading(true);
 
         if (!geotabApi || typeof geotabApi.call !== "function") {
-            // Modo de prueba Standalone / Demo
             setTimeout(() => {
                 rawDevices = MOCK_DEVICES;
                 filteredDevices = [...rawDevices];
                 currentPage = 1;
                 renderTable1();
                 setLoading(false);
-                showToast("Modo Demo Geotab: 10 vehículos cargados");
+                showToast("Modo Demo: Vehículos vinculados por VIN con Google Drive");
             }, 500);
             return;
         }
@@ -155,7 +162,7 @@
             currentPage = 1;
 
             renderTable1();
-            showToast(`${rawDevices.length} vehículos Geotab cargados`);
+            showToast(`${rawDevices.length} vehículos Geotab procesados`);
         }, error => {
             setLoading(false);
             console.error("Error al obtener vehículos de Geotab:", error);
@@ -181,7 +188,15 @@
                 const vin = (dev.vehicleIdentificationNumber || dev.vin || "").toLowerCase();
                 const imei = (dev.serialNumber || "").toLowerCase();
 
-                return name.includes(query) || plate.includes(query) || vin.includes(query) || imei.includes(query);
+                // Datos cruzados por VIN
+                const driveMatch = getDriveMatchByVin(vin);
+                const nombreEmpresa = driveMatch ? (driveMatch.nombre || "").toLowerCase() : "";
+                const sim = driveMatch ? (driveMatch.sim || "").toLowerCase() : "";
+                const estado = driveMatch ? (driveMatch.estado || "").toLowerCase() : "";
+                const producto = driveMatch ? (driveMatch.producto || "").toLowerCase() : "";
+
+                return name.includes(query) || plate.includes(query) || vin.includes(query) || imei.includes(query) ||
+                       nombreEmpresa.includes(query) || sim.includes(query) || estado.includes(query) || producto.includes(query);
             });
         }
 
@@ -213,7 +228,7 @@
         if (pageData.length === 0) {
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td colspan="4" class="apsa-empty-state">
+                <td colspan="9" class="apsa-empty-state">
                     <div style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;">
                         <i data-lucide="search-x" width="36" height="36" class="apsa-empty-icon"></i>
                         <span style="font-weight:600;color:var(--apsa-text);">No se encontraron vehículos</span>
@@ -226,6 +241,14 @@
                 const plate = dev.licensePlate || "—";
                 const vin = dev.vehicleIdentificationNumber || dev.vin || "—";
                 const imei = dev.serialNumber || "—";
+
+                // Datos cruzados de Google Drive por VIN
+                const driveMatch = getDriveMatchByVin(vin);
+                const nombreEmpresa = driveMatch ? driveMatch.nombre : "—";
+                const simCard = driveMatch ? driveMatch.sim : "—";
+                const estadoFact = driveMatch ? driveMatch.estado : "Sin registro";
+                const producto = driveMatch ? driveMatch.producto : "—";
+                const duracion = driveMatch ? (driveMatch.duracion + " meses") : "—";
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
@@ -256,6 +279,22 @@
                                 : `<span style="color:var(--apsa-muted);">—</span>`}
                         </div>
                     </td>
+                    <td style="font-weight:600;color:#ffffff;">${escapeHtml(nombreEmpresa)}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:0.3rem;">
+                            ${simCard !== "—" 
+                                ? `<span class="apsa-sim-tag"><i data-lucide="sim-card" width="11" height="11"></i> ${escapeHtml(simCard)}</span>
+                                   <button class="apsa-copy-btn" title="Copiar SIM" onclick="apsaCopyText('${escapeHtml(simCard)}', 'SIM')"><i data-lucide="copy" width="12" height="12"></i></button>`
+                                : `<span style="color:var(--apsa-muted);">—</span>`}
+                        </div>
+                    </td>
+                    <td>
+                        ${estadoFact !== "Sin registro" 
+                            ? `<span class="apsa-status-badge">${escapeHtml(estadoFact)}</span>`
+                            : `<span style="color:var(--apsa-muted);font-size:0.8rem;">Sin registro</span>`}
+                    </td>
+                    <td style="font-size:0.82rem;color:var(--apsa-muted);">${escapeHtml(producto)}</td>
+                    <td style="font-size:0.85rem;font-weight:600;color:var(--apsa-text);">${escapeHtml(duracion)}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -281,7 +320,6 @@
             .then(text => {
                 const parsedRows = parseCSV(text);
                 if (parsedRows.length > 1) {
-                    // Omitir fila 0 (encabezados)
                     const dataRows = parsedRows.slice(1).map(row => ({
                         serie: row[0] || "—",
                         hwId: row[1] || "—",
@@ -300,6 +338,9 @@
                     rawDriveData = dataRows;
                     filteredDriveData = [...rawDriveData];
                     currentDrivePage = 1;
+
+                    // Al cargar Google Drive, re-renderizamos la Tabla 1 para actualizar los cruces por VIN
+                    renderTable1();
                     renderDriveTable();
                     console.log(`Cargados ${rawDriveData.length} registros desde Google Drive Live API.`);
                 } else {
@@ -316,6 +357,7 @@
         rawDriveData = GOOGLE_DRIVE_FALLBACK;
         filteredDriveData = [...rawDriveData];
         currentDrivePage = 1;
+        renderTable1();
         renderDriveTable();
     };
 
@@ -425,7 +467,7 @@
         if (window.lucide) lucide.createIcons();
     };
 
-    // ── Evaluador de CSV robusto ─────────────────────────────────
+    // ── Parser CSV ───────────────────────────────────────────────
     const parseCSV = text => {
         const lines = [];
         let row = [];
@@ -463,7 +505,6 @@
         return lines;
     };
 
-    // Helper HTML escape
     const escapeHtml = str => {
         return String(str || "")
             .replace(/&/g, "&amp;")
@@ -473,23 +514,33 @@
             .replace(/'/g, "&#039;");
     };
 
-    // ── Exportación CSV Tabla 1 ───────────────────────────────────
+    // ── Exportación CSV Tabla 1 (Enriquecida) ────────────────────
     const exportGeotabToCSV = () => {
         if (filteredDevices.length === 0) {
-            showToast("No hay datos de Geotab para exportar", "error");
+            showToast("No hay datos para exportar", "error");
             return;
         }
 
-        const headers = ["Nombre de Vehículo", "Placa", "Número de Serie Carro (VIN)", "IMEI del GPS"];
-        const rows = filteredDevices.map(dev => [
-            `"${(dev.name || "").replace(/"/g, '""')}"`,
-            `"${(dev.licensePlate || "").replace(/"/g, '""')}"`,
-            `"${(dev.vehicleIdentificationNumber || dev.vin || "").replace(/"/g, '""')}"`,
-            `"${(dev.serialNumber || "").replace(/"/g, '""')}"`
-        ]);
+        const headers = ["Nombre de Vehículo", "Placa", "VIN", "IMEI del GPS", "Nombre / Empresa", "Tarjeta SIM", "Estado Facturación", "Producto", "Duración"];
+        const rows = filteredDevices.map(dev => {
+            const vin = dev.vehicleIdentificationNumber || dev.vin || "";
+            const driveMatch = getDriveMatchByVin(vin);
+
+            return [
+                `"${(dev.name || "").replace(/"/g, '""')}"`,
+                `"${(dev.licensePlate || "").replace(/"/g, '""')}"`,
+                `"${vin.replace(/"/g, '""')}"`,
+                `"${(dev.serialNumber || "").replace(/"/g, '""')}"`,
+                `"${(driveMatch ? driveMatch.nombre : "").replace(/"/g, '""')}"`,
+                `"${(driveMatch ? driveMatch.sim : "").replace(/"/g, '""')}"`,
+                `"${(driveMatch ? driveMatch.estado : "Sin registro").replace(/"/g, '""')}"`,
+                `"${(driveMatch ? driveMatch.producto : "").replace(/"/g, '""')}"`,
+                `"${(driveMatch ? driveMatch.duracion + " meses" : "").replace(/"/g, '""')}"`
+            ];
+        });
 
         const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-        downloadCSVFile(csvContent, "Reporte_APSA_Geotab.csv");
+        downloadCSVFile(csvContent, "Reporte_APSA_Enriquecido.csv");
     };
 
     // ── Exportación CSV Tabla 2 (Google Drive) ───────────────────
@@ -542,7 +593,10 @@
 
         if (searchInput1) searchInput1.addEventListener("input", applySearchFilter1);
         if (btnExport1) btnExport1.addEventListener("click", exportGeotabToCSV);
-        if (btnRefresh1) btnRefresh1.addEventListener("click", fetchVehicles);
+        if (btnRefresh1) btnRefresh1.addEventListener("click", () => {
+            fetchVehicles();
+            fetchGoogleDriveData();
+        });
         if (btnPrev1) btnPrev1.addEventListener("click", () => { if (currentPage > 1) { currentPage--; renderTable1(); } });
         if (btnNext1) btnNext1.addEventListener("click", () => {
             const totalPages = Math.ceil(filteredDevices.length / ITEMS_PER_PAGE);
@@ -603,8 +657,8 @@
     document.addEventListener("DOMContentLoaded", () => {
         initEvents();
         setTimeout(() => {
-            if (rawDevices.length === 0) fetchVehicles();
             if (rawDriveData.length === 0) fetchGoogleDriveData();
+            if (rawDevices.length === 0) fetchVehicles();
         }, 300);
     });
 
