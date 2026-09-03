@@ -273,6 +273,7 @@
                                 : `<span style="color:var(--apsa-muted);">—</span>`}
                         </div>
                     </td>
+                    <td style="font-weight:600;color:#ffffff;">${escapeHtml(nombreEmpresa)}</td>
                     <td>
                         <div style="display:flex;align-items:center;gap:0.4rem;">
                             <span class="apsa-td-mono">${escapeHtml(vin)}</span>
@@ -287,7 +288,6 @@
                                 : `<span style="color:var(--apsa-muted);">—</span>`}
                         </div>
                     </td>
-                    <td style="font-weight:600;color:#ffffff;">${escapeHtml(nombreEmpresa)}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -400,7 +400,7 @@
             return;
         }
 
-        const headers = ["Vehículo", "Dispositivo", "Estado", "Duración", "Matrícula", "N.° de serie", "Número de identificación", "Número de SIM", "Nombre / Empresa"];
+        const headers = ["Vehículo", "Dispositivo", "Estado", "Duración", "Matrícula", "N.° de serie", "Nombre / Empresa", "Número de identificación", "Número de SIM"];
         const rows = filteredDevices.map(dev => {
             const vin = dev.vehicleIdentificationNumber || dev.vin || "";
             const driveMatch = getDriveMatchByVin(vin);
@@ -412,9 +412,9 @@
                 `"${(driveMatch ? driveMatch.duracion + " meses" : "").replace(/"/g, '""')}"`,
                 `"${(dev.licensePlate || "").replace(/"/g, '""')}"`,
                 `"${(dev.serialNumber || "").replace(/"/g, '""')}"`,
+                `"${(driveMatch ? driveMatch.nombre : "").replace(/"/g, '""')}"`,
                 `"${vin.replace(/"/g, '""')}"`,
-                `"${(driveMatch ? driveMatch.sim : "").replace(/"/g, '""')}"`,
-                `"${(driveMatch ? driveMatch.nombre : "").replace(/"/g, '""')}"`
+                `"${(driveMatch ? driveMatch.sim : "").replace(/"/g, '""')}"`
             ];
         });
 
