@@ -1,0 +1,544 @@
+/* ================================================================
+   REPORTE-APSA.CSS — Reporte de Inventario de Vehículos (Geotab)
+   Dark Premium Theme | Glassmorphic Interface
+   ================================================================ */
+
+:root {
+    --apsa-navy:       #002060;
+    --apsa-navy-mid:   #003480;
+    --apsa-teal:       #00b1e1;
+    --apsa-teal-dark:  #0090b8;
+    --apsa-teal-glow:  rgba(0, 177, 225, 0.15);
+    --apsa-green:      #00c48c;
+    --apsa-amber:      #f59e0b;
+    --apsa-red:        #ef4444;
+    --apsa-bg:         #0a0f1e;
+    --apsa-card:       #111827;
+    --apsa-card-hover: #162032;
+    --apsa-border:     rgba(255, 255, 255, 0.08);
+    --apsa-border-focus: rgba(0, 177, 225, 0.4);
+    --apsa-text:       #f1f5f9;
+    --apsa-muted:      #94a3b8;
+    --apsa-font:       'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --apsa-radius:     14px;
+    --apsa-radius-sm:  8px;
+    --apsa-shadow:     0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Reset & Baseline ──────────────────────────────────────── */
+#app-apsa *,
+#app-apsa *::before,
+#app-apsa *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+#app-apsa {
+    font-family: var(--apsa-font);
+    background: var(--apsa-bg);
+    color: var(--apsa-text);
+    min-height: 100vh;
+    padding: 1.5rem;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Background Ambient Glow */
+#app-apsa::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 70% 50% at 15% -5%, rgba(0, 177, 225, 0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 85% 105%, rgba(0, 32, 96, 0.35) 0%, transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.apsa-container {
+    max-width: 1350px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* ═══════════════════════════════════════════════
+   HEADER & NAVBAR
+═══════════════════════════════════════════════ */
+.apsa-header {
+    background: rgba(17, 24, 39, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--apsa-border);
+    border-radius: var(--apsa-radius);
+    padding: 1.25rem 1.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--apsa-shadow);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.apsa-brand {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.apsa-brand-icon {
+    width: 46px;
+    height: 46px;
+    background: linear-gradient(135deg, var(--apsa-navy-mid), var(--apsa-teal-dark));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 177, 225, 0.25);
+}
+
+.apsa-brand-text h1 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.apsa-badge-tag {
+    background: rgba(0, 177, 225, 0.15);
+    color: var(--apsa-teal);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 177, 225, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.apsa-brand-text p {
+    font-size: 0.82rem;
+    color: var(--apsa-muted);
+    margin-top: 2px;
+}
+
+/* ═══════════════════════════════════════════════
+   TOOLBAR & METRICS
+═══════════════════════════════════════════════ */
+.apsa-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.apsa-stats-pill {
+    background: rgba(17, 24, 39, 0.7);
+    border: 1px solid var(--apsa-border);
+    border-radius: var(--apsa-radius-sm);
+    padding: 0.6rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.88rem;
+    color: var(--apsa-muted);
+}
+
+.apsa-stats-count {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.apsa-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* Search Box */
+.apsa-search-wrapper {
+    position: relative;
+    min-width: 280px;
+}
+
+.apsa-search-icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--apsa-muted);
+    pointer-events: none;
+}
+
+.apsa-search-input {
+    width: 100%;
+    background: rgba(17, 24, 39, 0.8);
+    border: 1px solid var(--apsa-border);
+    border-radius: var(--apsa-radius-sm);
+    padding: 0.6rem 0.85rem 0.6rem 2.4rem;
+    color: var(--apsa-text);
+    font-family: inherit;
+    font-size: 0.88rem;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.apsa-search-input:focus {
+    border-color: var(--apsa-teal);
+    box-shadow: 0 0 0 3px var(--apsa-teal-glow);
+}
+
+.apsa-search-input::placeholder {
+    color: #64748b;
+}
+
+/* Buttons */
+.apsa-btn {
+    background: var(--apsa-card);
+    border: 1px solid var(--apsa-border);
+    color: var(--apsa-text);
+    padding: 0.6rem 1.1rem;
+    border-radius: var(--apsa-radius-sm);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.apsa-btn:hover {
+    background: var(--apsa-card-hover);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.apsa-btn:active {
+    transform: translateY(0);
+}
+
+.apsa-btn-primary {
+    background: linear-gradient(135deg, #0080b3, var(--apsa-teal));
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 177, 225, 0.3);
+}
+
+.apsa-btn-primary:hover {
+    background: linear-gradient(135deg, #0090c8, #00c2f7);
+    box-shadow: 0 6px 16px rgba(0, 177, 225, 0.4);
+}
+
+.apsa-btn-secondary {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* ═══════════════════════════════════════════════
+   TABLE CARD
+═══════════════════════════════════════════════ */
+.apsa-table-card {
+    background: rgba(17, 24, 39, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--apsa-border);
+    border-radius: var(--apsa-radius);
+    box-shadow: var(--apsa-shadow);
+    overflow: hidden;
+}
+
+.apsa-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.apsa-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.88rem;
+}
+
+.apsa-table th {
+    background: rgba(10, 15, 30, 0.75);
+    color: var(--apsa-muted);
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--apsa-border);
+    white-space: nowrap;
+}
+
+.apsa-table td {
+    padding: 0.95rem 1.25rem;
+    border-bottom: 1px solid var(--apsa-border);
+    vertical-align: middle;
+    color: var(--apsa-text);
+    transition: background 0.15s ease;
+}
+
+.apsa-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.apsa-table tbody tr:hover {
+    background: rgba(0, 177, 225, 0.04);
+}
+
+.apsa-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Column Specific Styles */
+.apsa-td-vehicle {
+    font-weight: 600;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.apsa-vehicle-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 177, 225, 0.1);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--apsa-teal);
+    flex-shrink: 0;
+}
+
+.apsa-td-plate {
+    font-family: inherit;
+    font-weight: 600;
+}
+
+.apsa-plate-pill {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #f8fafc;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+}
+
+.apsa-td-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 0.83rem;
+    letter-spacing: 0.03em;
+    color: #cbd5e1;
+}
+
+.apsa-imei-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(0, 196, 140, 0.08);
+    border: 1px solid rgba(0, 196, 140, 0.2);
+    color: var(--apsa-green);
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 0.82rem;
+}
+
+.apsa-copy-btn {
+    background: transparent;
+    border: none;
+    color: var(--apsa-muted);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    opacity: 0.4;
+    transition: all 0.2s ease;
+}
+
+.apsa-copy-btn:hover {
+    opacity: 1;
+    color: var(--apsa-teal);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.apsa-empty-state {
+    text-align: center;
+    padding: 3.5rem 1.5rem !important;
+    color: var(--apsa-muted);
+}
+
+.apsa-empty-icon {
+    margin-bottom: 0.75rem;
+    color: #475569;
+}
+
+/* ═══════════════════════════════════════════════
+   PAGINATION
+═══════════════════════════════════════════════ */
+.apsa-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: rgba(10, 15, 30, 0.6);
+    border-top: 1px solid var(--apsa-border);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.apsa-page-info {
+    font-size: 0.84rem;
+    color: var(--apsa-muted);
+}
+
+.apsa-page-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.apsa-btn-page {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--apsa-border);
+    color: var(--apsa-text);
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--apsa-radius-sm);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.apsa-btn-page:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.apsa-btn-page:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.apsa-page-indicator {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--apsa-text);
+    padding: 0 0.5rem;
+}
+
+/* ═══════════════════════════════════════════════
+   LOADING OVERLAY & TOASTS
+═══════════════════════════════════════════════ */
+.apsa-loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 15, 30, 0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    z-index: 999;
+}
+
+.apsa-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(0, 177, 225, 0.15);
+    border-top-color: var(--apsa-teal);
+    border-radius: 50%;
+    animation: apsaSpin 0.9s infinite linear;
+}
+
+@keyframes apsaSpin {
+    to { transform: rotate(360deg); }
+}
+
+.apsa-loading-text {
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--apsa-text);
+}
+
+/* Toast */
+.apsa-toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: #1e293b;
+    border: 1px solid var(--apsa-border);
+    color: #ffffff;
+    padding: 0.85rem 1.25rem;
+    border-radius: var(--apsa-radius-sm);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.88rem;
+    z-index: 1000;
+    animation: apsaSlideUp 0.3s ease;
+}
+
+.apsa-toast-success {
+    border-left: 4px solid var(--apsa-green);
+}
+
+.apsa-toast-error {
+    border-left: 4px solid var(--apsa-red);
+}
+
+@keyframes apsaSlideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE LAYOUT
+═══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    #app-apsa {
+        padding: 1rem;
+    }
+
+    .apsa-header {
+        padding: 1rem;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .apsa-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .apsa-search-wrapper {
+        min-width: 100%;
+    }
+
+    .apsa-actions {
+        justify-content: flex-start;
+    }
+
+    .apsa-table th, .apsa-table td {
+        padding: 0.75rem 0.85rem;
+    }
+}
