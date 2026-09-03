@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="Reporte APSA - Inventario de Vehículos y GPS Geotab">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reporte APSA – Inventario de Vehículos</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles/reporte-apsa.css">
+</head>
+<body>
+    <div id="app-apsa">
+        <div class="apsa-container">
+            
+            <!-- ═══════════ HEADER ═══════════ -->
+            <header class="apsa-header">
+                <div class="apsa-brand">
+                    <div class="apsa-brand-icon">
+                        <i data-lucide="shield-check" width="26" height="26" stroke="#ffffff" stroke-width="2.2"></i>
+                    </div>
+                    <div class="apsa-brand-text">
+                        <h1>
+                            Reporte APSA
+                            <span class="apsa-badge-tag">Geotab Add-In</span>
+                        </h1>
+                        <p>Inventario general de vehículos, placas, VIN y serie GPS (IMEI)</p>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ═══════════ TOOLBAR & ACTIONS ═══════════ -->
+            <section class="apsa-toolbar">
+                <div class="apsa-stats-pill">
+                    <i data-lucide="truck" width="18" height="18" style="color:var(--apsa-teal);"></i>
+                    <span>Total Flota: <strong id="apsa-total-count" class="apsa-stats-count">0</strong> vehículos</span>
+                </div>
+
+                <div class="apsa-actions">
+                    <!-- Buscador rápido en tabla -->
+                    <div class="apsa-search-wrapper">
+                        <i data-lucide="search" width="16" height="16" class="apsa-search-icon"></i>
+                        <input type="text" id="apsa-search-input" class="apsa-search-input" placeholder="Buscar por vehículo, placa, VIN o IMEI...">
+                    </div>
+
+                    <!-- Botón Exportar Excel/CSV -->
+                    <button id="apsa-btn-export" class="apsa-btn apsa-btn-primary" title="Exportar a archivo CSV / Excel">
+                        <i data-lucide="download" width="16" height="16"></i>
+                        <span>Exportar CSV</span>
+                    </button>
+
+                    <!-- Botón Recargar -->
+                    <button id="apsa-btn-refresh" class="apsa-btn apsa-btn-secondary" title="Actualizar datos">
+                        <i data-lucide="refresh-cw" width="15" height="15"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- ═══════════ TABLA PRINCIPAL ═══════════ -->
+            <main class="apsa-table-card">
+                <div class="apsa-table-wrapper">
+                    <table class="apsa-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre de Vehículo</th>
+                                <th>Placa</th>
+                                <th>Número de Serie del Carro (VIN)</th>
+                                <th>IMEI del GPS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="apsa-tbody">
+                            <!-- Filas generadas dinámicamente desde reporte-apsa.js -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginador -->
+                <div class="apsa-pagination">
+                    <span class="apsa-page-info" id="apsa-page-info">Cargando información...</span>
+                    <div class="apsa-page-controls">
+                        <button id="apsa-btn-prev" class="apsa-btn-page" disabled>Anterior</button>
+                        <span id="apsa-page-indicator" class="apsa-page-indicator">Página 1</span>
+                        <button id="apsa-btn-next" class="apsa-btn-page" disabled>Siguiente</button>
+                    </div>
+                </div>
+            </main>
+
+        </div>
+    </div>
+
+    <!-- ═══════════ OVERLAY DE CARGA ═══════════ -->
+    <div id="apsa-loading" class="apsa-loading-overlay" style="display: none;">
+        <div class="apsa-spinner"></div>
+        <span id="apsa-loading-text" class="apsa-loading-text">Cargando vehículos de la flota...</span>
+    </div>
+
+    <!-- ═══════════ TOAST NOTIFICATION ═══════════ -->
+    <div id="apsa-toast" class="apsa-toast" style="display: none;">
+        <i data-lucide="info" width="18" height="18"></i>
+        <span id="apsa-toast-msg">Notificación</span>
+    </div>
+
+    <!-- Custom Script -->
+    <script src="scripts/reporte-apsa.js"></script>
+</body>
+</html>
