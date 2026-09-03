@@ -33,44 +33,44 @@
                             Reporte APSA
                             <span class="apsa-badge-tag">Geotab Add-In</span>
                         </h1>
-                        <p>Inventario general de vehículos, equipos GPS y tabla de facturación Google Drive</p>
+                        <p>Inventario general de vehículos enriquecido con datos de facturación Google Drive</p>
                     </div>
                 </div>
             </header>
 
-            <!-- ═══════════ TOOLBAR & ACCIONES TABLA 1 (GEOTAB) ═══════════ -->
+            <!-- ═══════════ TOOLBAR & ACCIONES TABLA 1 (GEOTAB ENRIQUECIDA) ═══════════ -->
             <section class="apsa-toolbar">
                 <div class="apsa-stats-pill">
                     <i data-lucide="truck" width="18" height="18" style="color:var(--apsa-teal);"></i>
-                    <span>Total Vehículos Geotab: <strong id="apsa-total-count" class="apsa-stats-count">0</strong></span>
+                    <span>Total Vehículos: <strong id="apsa-total-count" class="apsa-stats-count">0</strong></span>
                 </div>
 
                 <div class="apsa-actions">
                     <!-- Buscador en tabla Geotab -->
                     <div class="apsa-search-wrapper">
                         <i data-lucide="search" width="16" height="16" class="apsa-search-icon"></i>
-                        <input type="text" id="apsa-search-input" class="apsa-search-input" placeholder="Buscar en tabla Geotab (vehículo, placa, VIN, IMEI)...">
+                        <input type="text" id="apsa-search-input" class="apsa-search-input" placeholder="Buscar por vehículo, placa, VIN, IMEI, empresa, SIM...">
                     </div>
 
                     <!-- Botón Exportar Excel/CSV -->
-                    <button id="apsa-btn-export" class="apsa-btn apsa-btn-primary" title="Exportar tabla de Geotab a CSV">
+                    <button id="apsa-btn-export" class="apsa-btn apsa-btn-primary" title="Exportar tabla enriquecida a CSV">
                         <i data-lucide="download" width="16" height="16"></i>
                         <span>Exportar CSV</span>
                     </button>
 
                     <!-- Botón Recargar -->
-                    <button id="apsa-btn-refresh" class="apsa-btn apsa-btn-secondary" title="Actualizar datos de Geotab">
+                    <button id="apsa-btn-refresh" class="apsa-btn apsa-btn-secondary" title="Actualizar datos de Geotab y Drive">
                         <i data-lucide="refresh-cw" width="15" height="15"></i>
                     </button>
                 </div>
             </section>
 
-            <!-- ═══════════ TABLA 1: GEOTAB ═══════════ -->
+            <!-- ═══════════ TABLA 1: GEOTAB ENRIQUECIDA POR VIN ═══════════ -->
             <main class="apsa-table-card">
                 <div class="apsa-table-header-title">
                     <div>
-                        <h2 class="apsa-card-title"><i data-lucide="server" width="18" height="18" style="color:var(--apsa-teal);"></i> Inventario de Flota Geotab</h2>
-                        <span class="apsa-card-sub">Dispositivos activos registrados directamente en el servidor de Geotab</span>
+                        <h2 class="apsa-card-title"><i data-lucide="server" width="18" height="18" style="color:var(--apsa-teal);"></i> Inventario de Flota Geotab (Vinculado por VIN con Google Drive)</h2>
+                        <span class="apsa-card-sub">Tabla consolidada con Nombre de Vehículo, Placa, VIN, IMEI, Empresa, SIM, Estado Facturación, Producto y Duración</span>
                     </div>
                 </div>
 
@@ -80,8 +80,13 @@
                             <tr>
                                 <th>Nombre de Vehículo</th>
                                 <th>Placa</th>
-                                <th>Número de Serie del Carro (VIN)</th>
+                                <th>VIN</th>
                                 <th>IMEI del GPS</th>
+                                <th>Nombre / Empresa</th>
+                                <th>Tarjeta SIM</th>
+                                <th>Estado Facturación</th>
+                                <th>Producto</th>
+                                <th>Duración</th>
                             </tr>
                         </thead>
                         <tbody id="apsa-tbody">
@@ -101,7 +106,7 @@
                 </div>
             </main>
 
-            <!-- ═══════════ TOOLBAR & ACCIONES TABLA 2 (GOOGLE DRIVE) ═══════════ -->
+            <!-- ═══════════ TOOLBAR & ACCIONES TABLA 2 (GOOGLE DRIVE REFERENCIA) ═══════════ -->
             <section class="apsa-toolbar" style="margin-top: 1.5rem;">
                 <div class="apsa-stats-pill">
                     <i data-lucide="file-spreadsheet" width="18" height="18" style="color:var(--apsa-green);"></i>
@@ -129,12 +134,12 @@
                 </div>
             </section>
 
-            <!-- ═══════════ TABLA 2: GOOGLE DRIVE ═══════════ -->
+            <!-- ═══════════ TABLA 2: GOOGLE DRIVE REFERENCIA ═══════════ -->
             <main class="apsa-table-card">
                 <div class="apsa-table-header-title">
                     <div>
-                        <h2 class="apsa-card-title"><i data-lucide="database" width="18" height="18" style="color:var(--apsa-green);"></i> Tabla de Control y Facturación (Google Drive)</h2>
-                        <span class="apsa-card-sub">Información de hardware, tarjetas SIM y estado de facturación desde Google Sheets</span>
+                        <h2 class="apsa-card-title"><i data-lucide="database" width="18" height="18" style="color:var(--apsa-green);"></i> Tabla de Control Original (Google Drive)</h2>
+                        <span class="apsa-card-sub">Base de datos de facturación de origen para verificación de coincidencias de VIN</span>
                     </div>
                 </div>
 
@@ -155,7 +160,7 @@
                             </tr>
                         </thead>
                         <tbody id="apsa-drive-tbody">
-                            <!-- Generado dinámicamente desde reporte-apsa.js -->
+                            <!-- Generado dinámicamente -->
                         </tbody>
                     </table>
                 </div>
