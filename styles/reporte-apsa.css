@@ -144,36 +144,37 @@
     background: rgba(17, 24, 39, 0.75);
     border: 1px solid var(--apsa-border);
     border-radius: var(--apsa-radius-sm);
-    padding: 0.65rem 1.1rem;
+    padding: 0.85rem 1.3rem;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    font-size: 0.88rem;
+    gap: 0.8rem;
+    font-size: 0.92rem;
     color: var(--apsa-muted);
+    min-height: 48px;
 }
 
 .apsa-stats-count {
     color: #ffffff;
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
 }
 
 .apsa-actions {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.85rem;
     flex-wrap: wrap;
 }
 
 /* Search Box */
 .apsa-search-wrapper {
     position: relative;
-    min-width: 340px;
+    min-width: 360px;
 }
 
 .apsa-search-icon {
     position: absolute;
-    left: 0.95rem;
+    left: 1.05rem;
     top: 50%;
     transform: translateY(-50%);
     color: var(--apsa-muted);
@@ -185,11 +186,12 @@
     background: rgba(17, 24, 39, 0.85);
     border: 1px solid var(--apsa-border);
     border-radius: var(--apsa-radius-sm);
-    padding: 0.65rem 0.95rem 0.65rem 2.6rem;
+    padding: 0.85rem 1.05rem 0.85rem 2.8rem;
     color: var(--apsa-text);
     font-family: inherit;
-    font-size: 0.88rem;
+    font-size: 0.92rem;
     outline: none;
+    min-height: 48px;
     transition: all 0.2s ease;
 }
 
@@ -207,15 +209,16 @@
     background: var(--apsa-card);
     border: 1px solid var(--apsa-border);
     color: var(--apsa-text);
-    padding: 0.65rem 1.2rem;
+    padding: 0.85rem 1.4rem;
     border-radius: var(--apsa-radius-sm);
     font-family: inherit;
-    font-size: 0.86rem;
+    font-size: 0.92rem;
     font-weight: 600;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.65rem;
+    min-height: 48px;
     transition: all 0.2s ease;
     user-select: none;
     text-decoration: none;
@@ -321,15 +324,15 @@
     font-size: 0.9rem;
 }
 
-/* Cabecera con Sticky y Padding Generoso */
+/* Cabecera con Sticky y Padding Generoso y Mayor Altura */
 .apsa-table th {
     background: rgba(10, 15, 30, 0.95);
     color: var(--apsa-muted);
     font-weight: 700;
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
-    padding: 1.15rem 1.35rem;
+    letter-spacing: 0.08em;
+    padding: 1.45rem 1.4rem;
     border-bottom: 1px solid var(--apsa-border);
     white-space: nowrap;
     position: sticky;
