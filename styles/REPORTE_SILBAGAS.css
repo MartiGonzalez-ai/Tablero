@@ -757,6 +757,43 @@
 .silbagas-btn-page:hover:not(:disabled) { border-color: var(--s-amber); color: var(--s-amber); }
 .silbagas-btn-page:disabled { opacity: 0.35; cursor: not-allowed; }
 
+/* ── Unit Table Action Button & Badges ───────────────────────── */
+.silbagas-btn-detail {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(0, 177, 225, 0.12);
+    color: var(--s-teal);
+    border: 1px solid rgba(0, 177, 225, 0.3);
+    border-radius: 6px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.silbagas-btn-detail:hover:not(:disabled) {
+    background: rgba(0, 177, 225, 0.25);
+    color: #fff;
+    border-color: var(--s-teal);
+    transform: translateY(-1px);
+}
+
+.silbagas-btn-detail:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--s-border);
+    color: var(--s-muted);
+}
+
+.silbagas-badge.idle {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--s-muted);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* ═══════════════════════════════════════════════
    ANIMATIONS
 ═══════════════════════════════════════════════ */
