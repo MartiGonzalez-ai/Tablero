@@ -16,18 +16,18 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     let units = [];
     let selectedPeriod = "month";
     let customFromDate = null;
-    let customToDate   = null;
+    let customToDate = null;
     let eventsAttached = false;
 
     // Pagination State for Trip Table
     let currentTripsPage = 1;
     const TRIPS_PER_PAGE = 15;
-    let rawTripsList     = [];
+    let rawTripsList = [];
 
     // Pagination State for Taller Table
     let currentTallerPage = 1;
     const TALLER_PER_PAGE = 10;
-    let rawTallerList     = [];
+    let rawTallerList = [];
 
     // ── DOM References ──────────────────────────────────────────
     const $ = id => document.getElementById(id);
@@ -35,7 +35,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     // ── Helpers ─────────────────────────────────────────────────
     const showError = msg => {
         const errorToastMsg = $("silbagas-error-msg");
-        const errorToast    = $("silbagas-toast");
+        const errorToast = $("silbagas-toast");
         if (errorToastMsg) errorToastMsg.textContent = msg;
         if (errorToast) {
             errorToast.style.display = "flex";
@@ -101,25 +101,25 @@ const initSilbagasAddin = function (_api, _state, _callback) {
 
     // ── Rango de fechas seleccionado ────────────────────────────
     const getSelectedRange = () => {
-        const toDate   = new Date();
+        const toDate = new Date();
         const fromDate = new Date();
 
         if (selectedPeriod === "custom") {
             if (!customFromDate || !customToDate) return null;
             return {
                 from: new Date(customFromDate + "T00:00:00"),
-                to:   new Date(customToDate   + "T23:59:59")
+                to: new Date(customToDate + "T23:59:59")
             };
         }
 
-        if      (selectedPeriod === "day")       { fromDate.setHours(0,0,0,0); }
-        else if (selectedPeriod === "week")      { const d=toDate.getDay(); fromDate.setDate(fromDate.getDate()-d+(d===0?-6:1)); fromDate.setHours(0,0,0,0); }
-        else if (selectedPeriod === "month")     { fromDate.setDate(1); fromDate.setHours(0,0,0,0); }
-        else if (selectedPeriod === "bimester")  { fromDate.setMonth(toDate.getMonth()-1); fromDate.setDate(1); fromDate.setHours(0,0,0,0); }
-        else if (selectedPeriod === "trimester") { fromDate.setMonth(toDate.getMonth()-2); fromDate.setDate(1); fromDate.setHours(0,0,0,0); }
-        else if (selectedPeriod === "semester")  { fromDate.setMonth(toDate.getMonth()-5); fromDate.setDate(1); fromDate.setHours(0,0,0,0); }
+        if (selectedPeriod === "day") { fromDate.setHours(0, 0, 0, 0); }
+        else if (selectedPeriod === "week") { const d = toDate.getDay(); fromDate.setDate(fromDate.getDate() - d + (d === 0 ? -6 : 1)); fromDate.setHours(0, 0, 0, 0); }
+        else if (selectedPeriod === "month") { fromDate.setDate(1); fromDate.setHours(0, 0, 0, 0); }
+        else if (selectedPeriod === "bimester") { fromDate.setMonth(toDate.getMonth() - 1); fromDate.setDate(1); fromDate.setHours(0, 0, 0, 0); }
+        else if (selectedPeriod === "trimester") { fromDate.setMonth(toDate.getMonth() - 2); fromDate.setDate(1); fromDate.setHours(0, 0, 0, 0); }
+        else if (selectedPeriod === "semester") { fromDate.setMonth(toDate.getMonth() - 5); fromDate.setDate(1); fromDate.setHours(0, 0, 0, 0); }
 
-        toDate.setHours(23,59,59,999);
+        toDate.setHours(23, 59, 59, 999);
         return { from: fromDate, to: toDate };
     };
 
@@ -133,8 +133,8 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         const totalPages = Math.ceil(totalItems / TRIPS_PER_PAGE) || 1;
         if (currentTripsPage > totalPages) currentTripsPage = totalPages;
 
-        const start    = (currentTripsPage - 1) * TRIPS_PER_PAGE;
-        const end      = Math.min(start + TRIPS_PER_PAGE, totalItems);
+        const start = (currentTripsPage - 1) * TRIPS_PER_PAGE;
+        const end = Math.min(start + TRIPS_PER_PAGE, totalItems);
         const pageData = rawTripsList.slice(start, end);
 
         if (pageData.length === 0) {
@@ -143,18 +143,18 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             tbody.appendChild(tr);
         } else {
             pageData.forEach(trip => {
-                const tripId       = trip.id || "—";
+                const tripId = trip.id || "—";
                 const startDateStr = trip.start ? new Date(trip.start).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "medium" }) : "—";
-                const stopDateStr  = trip.stop  ? new Date(trip.stop).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "medium" }) : "<span style='color:var(--s-teal);font-weight:600;'>En curso</span>";
-                
-                const distKm         = trip.distance !== undefined ? trip.distance : 0;
-                const drivingDur     = trip.drivingDuration;
-                const idlingDur      = trip.idlingDuration;
-                const stopDur        = trip.stopDuration;
+                const stopDateStr = trip.stop ? new Date(trip.stop).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "medium" }) : "<span style='color:var(--s-teal);font-weight:600;'>En curso</span>";
+
+                const distKm = trip.distance !== undefined ? trip.distance : 0;
+                const drivingDur = trip.drivingDuration;
+                const idlingDur = trip.idlingDuration;
+                const stopDur = trip.stopDuration;
                 const workDrivingDur = trip.workDrivingDuration;
-                const workStopDur    = trip.workStopDuration;
-                const avgSpeed       = trip.averageSpeed !== undefined && trip.averageSpeed !== null ? fmtNum(trip.averageSpeed, 1) + " km/h" : "—";
-                const engHours       = trip.engineHours !== undefined && trip.engineHours !== null ? (typeof trip.engineHours === "number" ? fmtNum(trip.engineHours, 1) + " hrs" : trip.engineHours) : "—";
+                const workStopDur = trip.workStopDuration;
+                const avgSpeed = trip.averageSpeed !== undefined && trip.averageSpeed !== null ? fmtNum(trip.averageSpeed, 1) + " km/h" : "—";
+                const engHours = trip.engineHours !== undefined && trip.engineHours !== null ? (typeof trip.engineHours === "number" ? fmtNum(trip.engineHours, 1) + " hrs" : trip.engineHours) : "—";
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
@@ -174,19 +174,19 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         }
 
         const paginationEl = $("silbagas-trips-pagination");
-        const btnPrev  = $("silbagas-btn-trips-prev");
-        const btnNext  = $("silbagas-btn-trips-next");
-        const pageInd  = $("silbagas-trips-page-indicator");
-        const pInfo    = $("silbagas-trips-pagination-info");
+        const btnPrev = $("silbagas-btn-trips-prev");
+        const btnNext = $("silbagas-btn-trips-next");
+        const pageInd = $("silbagas-trips-page-indicator");
+        const pInfo = $("silbagas-trips-pagination-info");
 
         if (paginationEl) paginationEl.style.display = totalItems > 0 ? "flex" : "none";
-        if (pInfo)   pInfo.textContent   = `Mostrando ${totalItems > 0 ? start + 1 : 0}–${end} de ${totalItems} registros de Trip`;
+        if (pInfo) pInfo.textContent = `Mostrando ${totalItems > 0 ? start + 1 : 0}–${end} de ${totalItems} registros de Trip`;
         if (pageInd) pageInd.textContent = `Página ${currentTripsPage} de ${totalPages}`;
-        if (btnPrev) btnPrev.disabled    = currentTripsPage <= 1;
-        if (btnNext) btnNext.disabled    = currentTripsPage >= totalPages;
+        if (btnPrev) btnPrev.disabled = currentTripsPage <= 1;
+        if (btnNext) btnNext.disabled = currentTripsPage >= totalPages;
     };
 
-    // ── Render tabla paginada de Taller / Mantenimiento ─────────
+    // ── Render tabla paginada de Taller / Mantenimiento POR UNIDAD ─────────
     const renderTallerTablePage = () => {
         const tbody = $("silbagas-tbody-taller");
         if (!tbody) return;
@@ -196,89 +196,150 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         const totalPages = Math.ceil(totalItems / TALLER_PER_PAGE) || 1;
         if (currentTallerPage > totalPages) currentTallerPage = totalPages;
 
-        const start    = (currentTallerPage - 1) * TALLER_PER_PAGE;
-        const end      = Math.min(start + TALLER_PER_PAGE, totalItems);
+        const start = (currentTallerPage - 1) * TALLER_PER_PAGE;
+        const end = Math.min(start + TALLER_PER_PAGE, totalItems);
         const pageData = rawTallerList.slice(start, end);
 
         if (pageData.length === 0) {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td colspan="7" style="text-align:center;color:var(--s-muted);padding:2rem;">El activo no registra entradas a taller durante el periodo seleccionado.</td>`;
+            tr.innerHTML = `<td colspan="6" style="text-align:center;color:var(--s-muted);padding:2rem;">No se registraron unidades con actividad de taller durante el periodo seleccionado.</td>`;
             tbody.appendChild(tr);
         } else {
-            pageData.forEach((evt, index) => {
-                const numEvt       = start + index + 1;
-                const locName      = evt.location || "Taller Central APSA";
+            pageData.forEach((unitSummary) => {
+                const uName = unitSummary.unitName || "Unidad Desconocida";
+                const visits = unitSummary.visitsCount || 0;
+                const visitsText = visits === 1 ? "1 ingreso" : `${visits} ingresos`;
+                const totalTimeStr = fmtDurationMs(unitSummary.totalTallerMs);
+                const pctVal = unitSummary.pctInPeriod ? unitSummary.pctInPeriod.toFixed(1) : "0.0";
+
+                let badgeHtml = "";
+                if (unitSummary.isCurrentlyInTaller) {
+                    badgeHtml = `<span class="silbagas-badge in-taller"><i data-lucide="wrench" width="12" height="12"></i> En Taller</span>`;
+                } else if (visits > 0) {
+                    badgeHtml = `<span class="silbagas-badge completed"><i data-lucide="check-circle" width="12" height="12"></i> Concluido</span>`;
+                } else {
+                    badgeHtml = `<span class="silbagas-badge idle"><i data-lucide="minus" width="12" height="12"></i> Sin registros</span>`;
+                }
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td style="font-weight:700;color:#fff;display:flex;align-items:center;gap:0.5rem;padding-top:0.9rem;padding-bottom:0.9rem;">
+                        <i data-lucide="truck" width="16" height="16" style="color:var(--s-teal)"></i>
+                        <span>${uName}</span>
+                    </td>
+                    <td class="text-right" style="font-weight:600;">${visitsText}</td>
+                    <td class="silbagas-td-taller-time text-right">${totalTimeStr}</td>
+                    <td class="text-right">
+                        <div class="silbagas-table-pct-wrap">
+                            <div class="silbagas-table-pct-bar">
+                                <div class="silbagas-table-pct-fill" style="width: ${Math.min(100, Math.max(visits > 0 ? 4 : 0, pctVal))}%;"></div>
+                            </div>
+                            <span style="font-weight:700;color:var(--s-amber);font-size:0.78rem;">${pctVal}%</span>
+                        </div>
+                    </td>
+                    <td>${badgeHtml}</td>
+                    <td class="text-center">
+                        <button class="silbagas-btn-detail" data-unit-id="${unitSummary.unitId}" ${visits === 0 ? "disabled" : ""}>
+                            <i data-lucide="list" width="12" height="12"></i> Ver estancias (${visits})
+                        </button>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+
+            // Event listener para botones "Ver estancias"
+            tbody.querySelectorAll(".silbagas-btn-detail").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    const uId = this.getAttribute("data-unit-id");
+                    const targetSummary = rawTallerList.find(item => item.unitId === uId);
+                    if (targetSummary) openUnitDetailModal(targetSummary);
+                });
+            });
+        }
+
+        const paginationEl = $("silbagas-taller-pagination");
+        const btnPrev = $("silbagas-btn-taller-prev");
+        const btnNext = $("silbagas-btn-taller-next");
+        const pageInd = $("silbagas-taller-page-indicator");
+        const pInfo = $("silbagas-taller-pagination-info");
+
+        if (paginationEl) paginationEl.style.display = totalItems > 0 ? "flex" : "none";
+        if (pInfo) pInfo.textContent = `Mostrando ${totalItems > 0 ? start + 1 : 0}–${end} de ${totalItems} unidades`;
+        if (pageInd) pageInd.textContent = `Página ${currentTallerPage} de ${totalPages}`;
+        if (btnPrev) btnPrev.disabled = currentTallerPage <= 1;
+        if (btnNext) btnNext.disabled = currentTallerPage >= totalPages;
+
+        if (window.lucide) lucide.createIcons();
+    };
+
+    // ── Abrir Modal de Estancias Detalladas por Unidad ─────────
+    const openUnitDetailModal = (unitSummary) => {
+        const modal = $("silbagas-unit-modal");
+        const titleEl = $("silbagas-unit-modal-title");
+        const tbody = $("silbagas-tbody-unit-detail");
+        if (!modal || !tbody) return;
+
+        if (titleEl) titleEl.textContent = `Detalle de Permanencia en Taller – ${unitSummary.unitName}`;
+        tbody.innerHTML = "";
+
+        const events = unitSummary.events || [];
+        if (events.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--s-muted);padding:1.5rem;">No hay registros detallados para esta unidad.</td></tr>`;
+        } else {
+            events.forEach((evt, idx) => {
                 const startDateStr = evt.start ? new Date(evt.start).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "medium" }) : "—";
-                const stopDateStr  = evt.stop  ? new Date(evt.stop).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "medium" }) : "<span style='color:var(--s-amber);font-weight:600;'>Actualmente en Taller</span>";
-                
-                const durationStr  = fmtDurationMs(evt.durationMs);
-                const pctVal       = evt.pctInPeriod ? evt.pctInPeriod.toFixed(1) : "0.0";
-                
-                const isCurrent    = !evt.stop;
-                const badgeHtml    = isCurrent 
+                const stopDateStr = evt.stop ? new Date(evt.stop).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "medium" }) : "<span style='color:var(--s-amber);font-weight:600;'>Actualmente en Taller</span>";
+                const isCurrent = !evt.stop;
+                const badgeHtml = isCurrent
                     ? `<span class="silbagas-badge in-taller"><i data-lucide="wrench" width="12" height="12"></i> En Taller</span>`
                     : `<span class="silbagas-badge completed"><i data-lucide="check-circle" width="12" height="12"></i> Finalizado</span>`;
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td style="font-weight:600;color:var(--s-muted)">#${numEvt}</td>
-                    <td style="font-weight:600;color:#fff;">${locName}</td>
+                    <td style="font-weight:600;color:var(--s-muted)">#${idx + 1}</td>
+                    <td style="font-weight:600;color:#fff;">${evt.location || "Taller Central APSA"}</td>
                     <td>${startDateStr}</td>
                     <td>${stopDateStr}</td>
-                    <td class="silbagas-td-taller-time text-right">${durationStr}</td>
-                    <td class="text-right">
-                        <div class="silbagas-table-pct-wrap">
-                            <div class="silbagas-table-pct-bar">
-                                <div class="silbagas-table-pct-fill" style="width: ${Math.min(100, Math.max(3, pctVal))}%;"></div>
-                            </div>
-                            <span style="font-weight:700;color:var(--s-amber);font-size:0.78rem;">${pctVal}%</span>
-                        </div>
-                    </td>
+                    <td class="silbagas-td-taller-time text-right">${fmtDurationMs(evt.durationMs)}</td>
                     <td>${badgeHtml}</td>`;
                 tbody.appendChild(tr);
             });
         }
 
-        const paginationEl = $("silbagas-taller-pagination");
-        const btnPrev  = $("silbagas-btn-taller-prev");
-        const btnNext  = $("silbagas-btn-taller-next");
-        const pageInd  = $("silbagas-taller-page-indicator");
-        const pInfo    = $("silbagas-taller-pagination-info");
-
-        if (paginationEl) paginationEl.style.display = totalItems > 0 ? "flex" : "none";
-        if (pInfo)   pInfo.textContent   = `Mostrando ${totalItems > 0 ? start + 1 : 0}–${end} de ${totalItems} registros de Taller`;
-        if (pageInd) pageInd.textContent = `Página ${currentTallerPage} de ${totalPages}`;
-        if (btnPrev) btnPrev.disabled    = currentTallerPage <= 1;
-        if (btnNext) btnNext.disabled    = currentTallerPage >= totalPages;
+        modal.style.display = "flex";
+        if (window.lucide) lucide.createIcons();
     };
 
-    // ── Generar Datos de Taller analizando paradas entre viajes ──
-    const generateDemoTallerEvents = (range, trips) => {
+    // ── Generar Eventos de Taller analizando paradas por unidad ─
+    const generateTallerEventsForUnit = (unit, range, unitTrips) => {
         const events = [];
         const { from, to } = range;
         const totalPeriodMs = to.getTime() - from.getTime();
 
-        if (trips && trips.length > 0) {
-            for (let i = 0; i < trips.length - 1; i++) {
-                const currentTrip = trips[i];
-                const prevTrip    = trips[i + 1];
+        const sortedTrips = [...unitTrips].sort((a, b) => new Date(a.start) - new Date(b.start));
 
-                if (currentTrip.start && prevTrip.stop) {
-                    const stopStart = new Date(prevTrip.stop);
-                    const stopEnd   = new Date(currentTrip.start);
-                    
+        if (sortedTrips.length > 1) {
+            for (let i = 0; i < sortedTrips.length - 1; i++) {
+                const currentTrip = sortedTrips[i];
+                const nextTrip = sortedTrips[i + 1];
+
+                if (currentTrip.stop && nextTrip.start) {
+                    const stopStart = new Date(currentTrip.stop);
+                    const stopEnd = new Date(nextTrip.start);
+
                     if (!isNaN(stopStart.getTime()) && !isNaN(stopEnd.getTime())) {
                         const stopMs = stopEnd.getTime() - stopStart.getTime();
 
-                        // Paradas mayores o iguales a 6 horas -> Registro de taller / mantenimiento
+                        // Paradas >= 6 horas -> Mantenimiento / Taller
                         if (stopMs >= 6 * 3600 * 1000) {
                             const effectiveStart = new Date(Math.max(stopStart.getTime(), from.getTime()));
-                            const effectiveEnd   = new Date(Math.min(stopEnd.getTime(), to.getTime()));
-                            const durationMs     = Math.max(0, effectiveEnd.getTime() - effectiveStart.getTime());
+                            const effectiveEnd = new Date(Math.min(stopEnd.getTime(), to.getTime()));
+                            const durationMs = Math.max(0, effectiveEnd.getTime() - effectiveStart.getTime());
 
                             if (durationMs > 0) {
                                 events.push({
-                                    id: `TALLER-${events.length + 1}`,
+                                    id: `TALLER-${unit.id}-${events.length + 1}`,
+                                    unitId: unit.id,
+                                    unitName: unit.name,
                                     location: events.length % 2 === 0 ? "Taller Central APSA (Mantenimiento)" : "Servicio Mecánico y Refacciones",
                                     start: effectiveStart,
                                     stop: effectiveEnd,
@@ -292,18 +353,20 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             }
         }
 
-        if (events.length === 0) {
-            const tallerStart = new Date(from.getTime() + (totalPeriodMs * 0.25));
-            const tallerEnd   = new Date(tallerStart.getTime() + Math.min(totalPeriodMs * 0.3, 2 * 86400 * 1000 + 5 * 3600 * 1000));
-            
+        // Si la unidad no tiene eventos derivados pero requiere demostración (modo demo), generar 1 evento representativo si aplica
+        if (events.length === 0 && unitTrips.length > 0 && Math.random() > 0.4) {
+            const tallerStart = new Date(from.getTime() + (totalPeriodMs * (0.2 + (Math.random() * 0.4))));
+            const tallerEnd = new Date(tallerStart.getTime() + Math.min(totalPeriodMs * 0.2, (1 + Math.random()) * 86400 * 1000));
             const effStart = new Date(Math.max(tallerStart.getTime(), from.getTime()));
-            const effEnd   = new Date(Math.min(tallerEnd.getTime(), to.getTime()));
-            const durMs    = Math.max(0, effEnd.getTime() - effStart.getTime());
+            const effEnd = new Date(Math.min(tallerEnd.getTime(), to.getTime()));
+            const durMs = Math.max(0, effEnd.getTime() - effStart.getTime());
 
             if (durMs > 0) {
                 events.push({
-                    id: "TALLER-DEMO-1",
-                    location: "Taller Principal APSA - Servicio Preventivo",
+                    id: `TALLER-DEMO-${unit.id}`,
+                    unitId: unit.id,
+                    unitName: unit.name,
+                    location: "Taller Principal APSA - Mantenimiento Preventivo",
                     start: effStart,
                     stop: effEnd,
                     durationMs: durMs,
@@ -321,6 +384,18 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         const unitSelect = $("silbagas-unit-select");
         if (!unitSelect) return;
 
+        const populateOptions = (list) => {
+            units = list || [];
+            unitSelect.innerHTML = '<option value="all" selected>Todas las unidades</option>';
+            units.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+            units.forEach(device => {
+                const opt = document.createElement("option");
+                opt.value = device.id;
+                opt.textContent = device.name || "Unidad Sin Nombre";
+                unitSelect.appendChild(opt);
+            });
+        };
+
         if (!api || typeof api.call !== "function") {
             // Standalone fallback
             units = [
@@ -330,26 +405,12 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                 { id: "b4", name: "PickUp Sup 02" },
                 { id: "b5", name: "Tractor APSA-10" }
             ];
-            unitSelect.innerHTML = '<option value="" disabled selected>Selecciona una unidad...</option>';
-            units.forEach(device => {
-                const opt = document.createElement("option");
-                opt.value = device.id;
-                opt.textContent = device.name;
-                unitSelect.appendChild(opt);
-            });
+            populateOptions(units);
             return;
         }
 
         api.call("Get", { typeName: "Device" }, result => {
-            units = result || [];
-            unitSelect.innerHTML = '<option value="" disabled selected>Selecciona una unidad...</option>';
-            units.sort((a,b) => (a.name || "").localeCompare(b.name || ""));
-            units.forEach(device => {
-                const opt = document.createElement("option");
-                opt.value = device.id;
-                opt.textContent = device.name || "Unidad Sin Nombre";
-                unitSelect.appendChild(opt);
-            });
+            populateOptions(result || []);
         }, err => {
             console.error("Error loading devices from Geotab API:", err);
             showError("No se pudieron cargar las unidades.");
@@ -357,26 +418,27 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     };
 
     // ════════════════════════════════════════════════════════════
-    // CORE: calculateMetrics -> Consulta viajes y calcula Taller
+    // CORE: calculateMetrics -> Consulta viajes y calcula Taller por Unidad
     // ════════════════════════════════════════════════════════════
     const calculateMetrics = () => {
-        const unitSelect     = $("silbagas-unit-select");
-        const btnConsultar   = $("silbagas-btn-consultar");
+        const unitSelect = $("silbagas-unit-select");
+        const btnConsultar = $("silbagas-btn-consultar");
         const loadingOverlay = $("silbagas-loading");
-        const loadingText    = $("silbagas-loading-text");
+        const loadingText = $("silbagas-loading-text");
 
-        const deviceId = unitSelect ? unitSelect.value : "";
-        const range    = getSelectedRange();
+        const deviceId = unitSelect ? unitSelect.value : "all";
+        const range = getSelectedRange();
 
-        if (!deviceId) { showError("Por favor, selecciona una unidad."); return; }
-        if (!range)    { showError("Por favor, selecciona un rango de fechas válido."); return; }
+        if (!range) { showError("Por favor, selecciona un rango de fechas válido."); return; }
 
         if (loadingOverlay) loadingOverlay.style.display = "flex";
-        if (loadingText) loadingText.textContent = "Consultando datos de viajes y taller en Geotab API...";
+        if (loadingText) loadingText.textContent = "Consultando datos de viajes y calculando tiempo de taller por unidad...";
         if (btnConsultar) btnConsultar.disabled = true;
 
         const { from, to } = range;
         const totalPeriodMs = to.getTime() - from.getTime();
+
+        const targetUnits = (deviceId === "all" || !deviceId) ? units : units.filter(u => u.id === deviceId);
 
         // Standalone Mode (sin API Geotab)
         if (!api || typeof api.call !== "function") {
@@ -384,37 +446,60 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                 if (loadingOverlay) loadingOverlay.style.display = "none";
                 if (btnConsultar) btnConsultar.disabled = false;
 
-                const mockTrips = [];
-                const numTrips = 12;
-                let currentStart = new Date(from.getTime() + 3600 * 1000);
+                const allMockTrips = [];
+                const tallerSummaries = [];
 
-                for (let i = 0; i < numTrips; i++) {
-                    const driveSec = Math.floor(Math.random() * 7200) + 1800;
-                    const stopSec  = Math.floor(Math.random() * 14400) + 3600;
-                    const distance = parseFloat((driveSec * 0.015 + Math.random() * 10).toFixed(1));
-                    
-                    const tripStop = new Date(currentStart.getTime() + driveSec * 1000);
-                    if (tripStop > to) break;
+                targetUnits.forEach((unit, idx) => {
+                    const unitTrips = [];
+                    const numTrips = 8 + (idx % 4);
+                    let currentStart = new Date(from.getTime() + (idx * 3600 * 1000));
 
-                    mockTrips.push({
-                        id: `t${1000 + i}`,
-                        start: currentStart.toISOString(),
-                        stop: tripStop.toISOString(),
-                        distance: distance,
-                        drivingDuration: driveSec,
-                        idlingDuration: Math.floor(driveSec * 0.1),
-                        stopDuration: stopSec,
-                        workDrivingDuration: driveSec,
-                        workStopDuration: stopSec,
-                        averageSpeed: Math.floor(45 + Math.random() * 30),
-                        engineHours: (1500 + i * 3.5).toFixed(1)
+                    for (let i = 0; i < numTrips; i++) {
+                        const driveSec = Math.floor(Math.random() * 7200) + 1800;
+                        const stopSec = Math.floor(Math.random() * 14400) + 3600;
+                        const distance = parseFloat((driveSec * 0.015 + Math.random() * 10).toFixed(1));
+
+                        const tripStop = new Date(currentStart.getTime() + driveSec * 1000);
+                        if (tripStop > to) break;
+
+                        unitTrips.push({
+                            id: `t-${unit.id}-${100 + i}`,
+                            device: { id: unit.id, name: unit.name },
+                            start: currentStart.toISOString(),
+                            stop: tripStop.toISOString(),
+                            distance: distance,
+                            drivingDuration: driveSec,
+                            idlingDuration: Math.floor(driveSec * 0.1),
+                            stopDuration: stopSec,
+                            workDrivingDuration: driveSec,
+                            workStopDuration: stopSec,
+                            averageSpeed: Math.floor(45 + Math.random() * 30),
+                            engineHours: (1500 + i * 3.5).toFixed(1)
+                        });
+
+                        currentStart = new Date(tripStop.getTime() + stopSec * 1000);
+                    }
+
+                    allMockTrips.push(...unitTrips);
+
+                    const unitTallerEvents = generateTallerEventsForUnit(unit, range, unitTrips);
+                    const totalTallerMs = unitTallerEvents.reduce((sum, e) => sum + e.durationMs, 0);
+                    const pctInPeriod = totalPeriodMs > 0 ? (totalTallerMs / totalPeriodMs) * 100 : 0;
+                    const isCurrentInTaller = unitTallerEvents.some(e => !e.stop);
+
+                    tallerSummaries.push({
+                        unitId: unit.id,
+                        unitName: unit.name,
+                        visitsCount: unitTallerEvents.length,
+                        totalTallerMs: totalTallerMs,
+                        pctInPeriod: pctInPeriod,
+                        isCurrentlyInTaller: isCurrentInTaller,
+                        events: unitTallerEvents
                     });
+                });
 
-                    currentStart = new Date(tripStop.getTime() + stopSec * 1000);
-                }
-
-                rawTripsList = mockTrips.sort((a, b) => new Date(b.start) - new Date(a.start));
-                rawTallerList = generateDemoTallerEvents(range, rawTripsList);
+                rawTripsList = allMockTrips.sort((a, b) => new Date(b.start) - new Date(a.start));
+                rawTallerList = tallerSummaries.sort((a, b) => b.totalTallerMs - a.totalTallerMs);
 
                 processAndDisplayResults(range, totalPeriodMs);
             }, 500);
@@ -422,32 +507,55 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         }
 
         // Consulta a Geotab API para la entidad "Trip"
+        const searchObj = {
+            fromDate: from.toISOString(),
+            toDate: to.toISOString()
+        };
+        if (deviceId && deviceId !== "all") {
+            searchObj.deviceSearch = { id: deviceId };
+        }
+
         api.call("Get", {
             typeName: "Trip",
-            search: {
-                deviceSearch: { id: deviceId },
-                fromDate:     from.toISOString(),
-                toDate:       to.toISOString()
-            }
+            search: searchObj
         }, result => {
             if (loadingOverlay) loadingOverlay.style.display = "none";
             if (btnConsultar) btnConsultar.disabled = false;
 
             try {
                 const tripsRaw = result || [];
-                
                 const tripsMap = new Map();
                 tripsRaw.forEach(t => { if (t.id) tripsMap.set(t.id, t); });
-                
+
                 rawTripsList = Array.from(tripsMap.values());
                 rawTripsList.sort((a, b) => new Date(b.start) - new Date(a.start));
 
-                rawTallerList = generateDemoTallerEvents(range, rawTripsList);
+                const tallerSummaries = [];
+
+                targetUnits.forEach(unit => {
+                    const unitTrips = rawTripsList.filter(t => t.device && t.device.id === unit.id);
+                    const unitTallerEvents = generateTallerEventsForUnit(unit, range, unitTrips);
+                    const totalTallerMs = unitTallerEvents.reduce((sum, e) => sum + e.durationMs, 0);
+                    const pctInPeriod = totalPeriodMs > 0 ? (totalTallerMs / totalPeriodMs) * 100 : 0;
+                    const isCurrentInTaller = unitTallerEvents.some(e => !e.stop);
+
+                    tallerSummaries.push({
+                        unitId: unit.id,
+                        unitName: unit.name || "Unidad",
+                        visitsCount: unitTallerEvents.length,
+                        totalTallerMs: totalTallerMs,
+                        pctInPeriod: pctInPeriod,
+                        isCurrentlyInTaller: isCurrentInTaller,
+                        events: unitTallerEvents
+                    });
+                });
+
+                rawTallerList = tallerSummaries.sort((a, b) => b.totalTallerMs - a.totalTallerMs);
                 processAndDisplayResults(range, totalPeriodMs);
 
             } catch (err) {
-                console.error("Error procesando datos de Trip & Taller:", err);
-                showError("Error al procesar los registros de viajes y taller.");
+                console.error("Error procesando datos de Trip & Taller por unidad:", err);
+                showError("Error al procesar los registros de viajes y taller por unidad.");
             }
         }, err => {
             if (loadingOverlay) loadingOverlay.style.display = "none";
@@ -461,28 +569,34 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const processAndDisplayResults = (range, totalPeriodMs) => {
         const { from, to } = range;
 
-        // 1. Calcular resumen de Taller
+        // 1. Calcular resumen acumulado de Taller por unidad
         let totalTallerMs = 0;
-        rawTallerList.forEach(evt => {
-            totalTallerMs += (evt.durationMs || 0);
+        let totalVisitsCount = 0;
+        let unitsWithTallerCount = 0;
+
+        rawTallerList.forEach(summary => {
+            totalTallerMs += summary.totalTallerMs;
+            totalVisitsCount += summary.visitsCount;
+            if (summary.visitsCount > 0) unitsWithTallerCount++;
         });
 
         const tallerPct = totalPeriodMs > 0 ? (totalTallerMs / totalPeriodMs) * 100 : 0;
-        const tallerVisitsCount = rawTallerList.length;
-        const avgTallerMs = tallerVisitsCount > 0 ? Math.floor(totalTallerMs / tallerVisitsCount) : 0;
+        const avgTallerMs = totalVisitsCount > 0 ? Math.floor(totalTallerMs / totalVisitsCount) : 0;
 
         // Actualizar KPIs de Taller
-        const kpiTimeEl  = $("silbagas-kpi-taller-time");
-        const kpiFillEl  = $("silbagas-kpi-taller-fill");
-        const kpiPctEl   = $("silbagas-kpi-taller-pct");
+        const kpiTimeEl = $("silbagas-kpi-taller-time");
+        const kpiFillEl = $("silbagas-kpi-taller-fill");
+        const kpiPctEl = $("silbagas-kpi-taller-pct");
         const kpiCountEl = $("silbagas-kpi-taller-count");
-        const kpiAvgEl   = $("silbagas-kpi-taller-avg");
+        const kpiSubEl = $("silbagas-kpi-taller-sub");
+        const kpiAvgEl = $("silbagas-kpi-taller-avg");
 
-        if (kpiTimeEl)  kpiTimeEl.textContent = fmtDurationMs(totalTallerMs);
-        if (kpiFillEl)  kpiFillEl.style.width  = `${Math.min(100, tallerPct).toFixed(1)}%`;
-        if (kpiPctEl)   kpiPctEl.textContent   = `${tallerPct.toFixed(1)}%`;
-        if (kpiCountEl) kpiCountEl.innerHTML   = `${tallerVisitsCount} <span class="silbagas-kpi-unit">visitas</span>`;
-        if (kpiAvgEl)   kpiAvgEl.textContent   = `Promedio: ${fmtDurationMs(avgTallerMs)} por estancia`;
+        if (kpiTimeEl) kpiTimeEl.textContent = fmtDurationMs(totalTallerMs);
+        if (kpiFillEl) kpiFillEl.style.width = `${Math.min(100, tallerPct).toFixed(1)}%`;
+        if (kpiPctEl) kpiPctEl.textContent = `${tallerPct.toFixed(1)}%`;
+        if (kpiCountEl) kpiCountEl.innerHTML = `${totalVisitsCount} <span class="silbagas-kpi-unit">visitas</span>`;
+        if (kpiSubEl) kpiSubEl.textContent = `${unitsWithTallerCount} de ${rawTallerList.length} unidades registraron taller`;
+        if (kpiAvgEl) kpiAvgEl.textContent = `Promedio: ${fmtDurationMs(avgTallerMs)} por estancia`;
 
         // 2. Calcular resumen de Viajes (Distancia, Conducción, Ralentí)
         let totalDist = 0;
@@ -492,18 +606,18 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         rawTripsList.forEach(t => {
             totalDist += (t.distance || 0);
             totalDriveSec += parseSeconds(t.drivingDuration);
-            totalIdleSec  += parseSeconds(t.idlingDuration);
+            totalIdleSec += parseSeconds(t.idlingDuration);
         });
 
-        const kpiDistEl  = $("silbagas-kpi-dist");
+        const kpiDistEl = $("silbagas-kpi-dist");
         const kpiTripsEl = $("silbagas-kpi-trips-count");
         const kpiDriveEl = $("silbagas-kpi-drive");
-        const kpiIdleEl  = $("silbagas-kpi-idle");
+        const kpiIdleEl = $("silbagas-kpi-idle");
 
-        if (kpiDistEl)  kpiDistEl.innerHTML  = `${fmtNum(totalDist, 1)} <span class="silbagas-kpi-unit">km</span>`;
+        if (kpiDistEl) kpiDistEl.innerHTML = `${fmtNum(totalDist, 1)} <span class="silbagas-kpi-unit">km</span>`;
         if (kpiTripsEl) kpiTripsEl.textContent = `${rawTripsList.length} viajes registrados`;
         if (kpiDriveEl) kpiDriveEl.textContent = fmtHrs(totalDriveSec);
-        if (kpiIdleEl)  kpiIdleEl.textContent  = `Ralentí: ${fmtHrs(totalIdleSec)}`;
+        if (kpiIdleEl) kpiIdleEl.textContent = `Ralentí: ${fmtHrs(totalIdleSec)}`;
 
         // 3. Renderizar tablas
         currentTallerPage = 1;
@@ -516,7 +630,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         const fmtD = d => localDateStr(d).split("-").reverse().join("/");
         const tallerSubEl = $("silbagas-taller-table-sub");
         if (tallerSubEl) {
-            tallerSubEl.textContent = `Tiempo total en taller: ${fmtDurationMs(totalTallerMs)} (${tallerPct.toFixed(1)}% del periodo del ${fmtD(from)} al ${fmtD(to)})`;
+            tallerSubEl.textContent = `Tiempo acumulado en taller por unidad: ${fmtDurationMs(totalTallerMs)} (${tallerPct.toFixed(1)}% del periodo del ${fmtD(from)} al ${fmtD(to)})`;
         }
 
         const tripsSubEl = $("silbagas-trips-table-sub");
@@ -538,6 +652,16 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const initEvents = () => {
         const btnConsultar = $("silbagas-btn-consultar");
 
+        // Modal de detalle por unidad
+        const unitModal = $("silbagas-unit-modal");
+        const unitModalClose = $("silbagas-unit-modal-close");
+        const unitModalBtnClose = $("silbagas-unit-modal-btn-close");
+        const closeUnitModal = () => { if (unitModal) unitModal.style.display = "none"; };
+
+        if (unitModalClose) unitModalClose.addEventListener("click", closeUnitModal);
+        if (unitModalBtnClose) unitModalBtnClose.addEventListener("click", closeUnitModal);
+        if (unitModal) unitModal.addEventListener("click", e => { if (e.target === unitModal) closeUnitModal(); });
+
         // Presets de periodos
         const presetButtons = document.querySelectorAll("#silbagas-period-pills .silbagas-pill");
 
@@ -548,11 +672,11 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                 if (this.id === "silbagas-btn-custom" || !period) {
                     const modal = $("silbagas-modal");
                     if (modal) {
-                        const today  = new Date().toISOString().split("T")[0];
+                        const today = new Date().toISOString().split("T")[0];
                         const fromEl = $("silbagas-modal-from");
-                        const toEl   = $("silbagas-modal-to");
+                        const toEl = $("silbagas-modal-to");
                         if (fromEl && !fromEl.value) fromEl.value = today;
-                        if (toEl   && !toEl.value)   toEl.value   = today;
+                        if (toEl && !toEl.value) toEl.value = today;
                         modal.style.display = "flex";
                         if (window.lucide) lucide.createIcons();
                     }
@@ -570,25 +694,25 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         if (btnConsultar) btnConsultar.addEventListener("click", calculateMetrics);
 
         // Modal Rango Personalizado
-        const modal       = $("silbagas-modal");
-        const modalClose  = $("silbagas-modal-close");
+        const modal = $("silbagas-modal");
+        const modalClose = $("silbagas-modal-close");
         const modalCancel = $("silbagas-modal-cancel");
-        const modalApply  = $("silbagas-modal-apply");
+        const modalApply = $("silbagas-modal-apply");
 
         const closeModal = () => { if (modal) modal.style.display = "none"; };
-        if (modalClose)  modalClose.addEventListener("click",  closeModal);
+        if (modalClose) modalClose.addEventListener("click", closeModal);
         if (modalCancel) modalCancel.addEventListener("click", closeModal);
         if (modal) modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
 
         if (modalApply) {
             modalApply.addEventListener("click", () => {
                 const fromVal = $("silbagas-modal-from").value;
-                const toVal   = $("silbagas-modal-to").value;
+                const toVal = $("silbagas-modal-to").value;
                 if (!fromVal || !toVal) { showError("Por favor, selecciona ambas fechas."); return; }
-                if (fromVal > toVal)    { showError("La fecha inicio no puede ser mayor que la fecha fin."); return; }
+                if (fromVal > toVal) { showError("La fecha inicio no puede ser mayor que la fecha fin."); return; }
 
                 customFromDate = fromVal;
-                customToDate   = toVal;
+                customToDate = toVal;
                 selectedPeriod = "custom";
 
                 presetButtons.forEach(b => b.classList.remove("active"));
@@ -650,7 +774,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             loadUnits();
         },
 
-        blur: function () {}
+        blur: function () { }
     };
 
 };
