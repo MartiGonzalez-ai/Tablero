@@ -309,71 +309,42 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         if (window.lucide) lucide.createIcons();
     };
 
-    // ── Generar Eventos de Taller analizando paradas por unidad ─
-    const generateTallerEventsForUnit = (unit, range, unitTrips) => {
+    // ── Generar eventos de taller desde órdenes de trabajo de Geotab ─
+    const generateTallerEventsForUnit = (unit, range, workOrders) => {
         const events = [];
         const { from, to } = range;
         const totalPeriodMs = to.getTime() - from.getTime();
 
-        const sortedTrips = [...unitTrips].sort((a, b) => new Date(a.start) - new Date(b.start));
+        workOrders.forEach(orderData => {
+            const order = orderData.order || {};
+            const jobs = (orderData.jobs || [])
+                .filter(job => job && job.dateTime)
+                .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+            const firstJobDate = jobs.length ? jobs[0].dateTime : null;
+            const lastClosedJob = [...jobs].reverse().find(job => job.isClosed === true);
+            const startValue = order.startDate || order.startedDate || order.dateTime || firstJobDate;
+            const stopValue = order.completedDate || order.closedDate || (lastClosedJob && lastClosedJob.dateTime);
+            const startDate = startValue ? new Date(startValue) : null;
+            const stopDate = stopValue ? new Date(stopValue) : to;
 
-        if (sortedTrips.length > 1) {
-            for (let i = 0; i < sortedTrips.length - 1; i++) {
-                const currentTrip = sortedTrips[i];
-                const nextTrip = sortedTrips[i + 1];
+            if (!startDate || isNaN(startDate.getTime()) || isNaN(stopDate.getTime())) return;
 
-                if (currentTrip.stop && nextTrip.start) {
-                    const stopStart = new Date(currentTrip.stop);
-                    const stopEnd = new Date(nextTrip.start);
+            const effectiveStart = new Date(Math.max(startDate.getTime(), from.getTime()));
+            const effectiveEnd = new Date(Math.min(stopDate.getTime(), to.getTime()));
+            const durationMs = Math.max(0, effectiveEnd.getTime() - effectiveStart.getTime());
+            if (durationMs <= 0) return;
 
-                    if (!isNaN(stopStart.getTime()) && !isNaN(stopEnd.getTime())) {
-                        const stopMs = stopEnd.getTime() - stopStart.getTime();
-
-                        // Paradas >= 6 horas -> Mantenimiento / Taller
-                        if (stopMs >= 6 * 3600 * 1000) {
-                            const effectiveStart = new Date(Math.max(stopStart.getTime(), from.getTime()));
-                            const effectiveEnd = new Date(Math.min(stopEnd.getTime(), to.getTime()));
-                            const durationMs = Math.max(0, effectiveEnd.getTime() - effectiveStart.getTime());
-
-                            if (durationMs > 0) {
-                                events.push({
-                                    id: `TALLER-${unit.id}-${events.length + 1}`,
-                                    unitId: unit.id,
-                                    unitName: unit.name,
-                                    location: events.length % 2 === 0 ? "Taller Central APSA (Mantenimiento)" : "Servicio Mecánico y Refacciones",
-                                    start: effectiveStart,
-                                    stop: effectiveEnd,
-                                    durationMs: durationMs,
-                                    pctInPeriod: totalPeriodMs > 0 ? (durationMs / totalPeriodMs) * 100 : 0
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Si la unidad no tiene eventos derivados pero requiere demostración (modo demo), generar 1 evento representativo si aplica
-        if (events.length === 0 && unitTrips.length > 0 && Math.random() > 0.4) {
-            const tallerStart = new Date(from.getTime() + (totalPeriodMs * (0.2 + (Math.random() * 0.4))));
-            const tallerEnd = new Date(tallerStart.getTime() + Math.min(totalPeriodMs * 0.2, (1 + Math.random()) * 86400 * 1000));
-            const effStart = new Date(Math.max(tallerStart.getTime(), from.getTime()));
-            const effEnd = new Date(Math.min(tallerEnd.getTime(), to.getTime()));
-            const durMs = Math.max(0, effEnd.getTime() - effStart.getTime());
-
-            if (durMs > 0) {
-                events.push({
-                    id: `TALLER-DEMO-${unit.id}`,
-                    unitId: unit.id,
-                    unitName: unit.name,
-                    location: "Taller Principal APSA - Mantenimiento Preventivo",
-                    start: effStart,
-                    stop: effEnd,
-                    durationMs: durMs,
-                    pctInPeriod: totalPeriodMs > 0 ? (durMs / totalPeriodMs) * 100 : 0
-                });
-            }
-        }
+            events.push({
+                id: order.id || `TALLER-${unit.id}-${events.length + 1}`,
+                unitId: unit.id,
+                unitName: unit.name,
+                location: order.reference || order.description || "Orden de trabajo Geotab",
+                start: effectiveStart,
+                stop: stopValue ? effectiveEnd : null,
+                durationMs,
+                pctInPeriod: totalPeriodMs > 0 ? (durationMs / totalPeriodMs) * 100 : 0
+            });
+        });
 
         events.sort((a, b) => new Date(b.start) - new Date(a.start));
         return events;
@@ -482,7 +453,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
 
                     allMockTrips.push(...unitTrips);
 
-                    const unitTallerEvents = generateTallerEventsForUnit(unit, range, unitTrips);
+                    const unitTallerEvents = [];
                     const totalTallerMs = unitTallerEvents.reduce((sum, e) => sum + e.durationMs, 0);
                     const pctInPeriod = totalPeriodMs > 0 ? (totalTallerMs / totalPeriodMs) * 100 : 0;
                     const isCurrentInTaller = unitTallerEvents.some(e => !e.stop);
@@ -519,9 +490,6 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             typeName: "Trip",
             search: searchObj
         }, result => {
-            if (loadingOverlay) loadingOverlay.style.display = "none";
-            if (btnConsultar) btnConsultar.disabled = false;
-
             try {
                 const tripsRaw = result || [];
                 const tripsMap = new Map();
@@ -530,30 +498,66 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                 rawTripsList = Array.from(tripsMap.values());
                 rawTripsList.sort((a, b) => new Date(b.start) - new Date(a.start));
 
-                const tallerSummaries = [];
+                const workOrderSearch = {};
+                if (deviceId && deviceId !== "all") {
+                    workOrderSearch.deviceSearch = { id: deviceId };
+                }
 
-                targetUnits.forEach(unit => {
-                    const unitTrips = rawTripsList.filter(t => t.device && t.device.id === unit.id);
-                    const unitTallerEvents = generateTallerEventsForUnit(unit, range, unitTrips);
-                    const totalTallerMs = unitTallerEvents.reduce((sum, e) => sum + e.durationMs, 0);
-                    const pctInPeriod = totalPeriodMs > 0 ? (totalTallerMs / totalPeriodMs) * 100 : 0;
-                    const isCurrentInTaller = unitTallerEvents.some(e => !e.stop);
-
-                    tallerSummaries.push({
-                        unitId: unit.id,
-                        unitName: unit.name || "Unidad",
-                        visitsCount: unitTallerEvents.length,
-                        totalTallerMs: totalTallerMs,
-                        pctInPeriod: pctInPeriod,
-                        isCurrentlyInTaller: isCurrentInTaller,
-                        events: unitTallerEvents
+                api.call("Get", {
+                    typeName: "MaintenanceWorkOrder",
+                    search: workOrderSearch,
+                    resultsLimit: 50000
+                }, workOrders => {
+                    const relevantOrders = (workOrders || []).filter(order => {
+                        const orderDeviceId = order.device && order.device.id;
+                        return (!orderDeviceId || targetUnits.some(unit => unit.id === orderDeviceId));
                     });
+                    const jobCalls = relevantOrders.map(order => new Promise((resolve, reject) => {
+                        api.call("Get", {
+                            typeName: "MaintenanceWorkOrderJob",
+                            search: { workOrderId: order.id },
+                            resultsLimit: 50000
+                        }, jobs => resolve({ order, jobs: jobs || [] }), reject);
+                    }));
+
+                    Promise.all(jobCalls).then(orderDataList => {
+                        const tallerSummaries = targetUnits.map(unit => {
+                            const unitOrders = orderDataList.filter(item => item.order.device && item.order.device.id === unit.id);
+                            const unitTallerEvents = generateTallerEventsForUnit(unit, range, unitOrders);
+                            const totalTallerMs = unitTallerEvents.reduce((sum, event) => sum + event.durationMs, 0);
+                            const pctInPeriod = totalPeriodMs > 0 ? (totalTallerMs / totalPeriodMs) * 100 : 0;
+
+                            return {
+                                unitId: unit.id,
+                                unitName: unit.name || "Unidad",
+                                visitsCount: unitTallerEvents.length,
+                                totalTallerMs,
+                                pctInPeriod,
+                                isCurrentlyInTaller: unitTallerEvents.some(event => !event.stop),
+                                events: unitTallerEvents
+                            };
+                        });
+
+                        rawTallerList = tallerSummaries.sort((a, b) => b.totalTallerMs - a.totalTallerMs);
+                        processAndDisplayResults(range, totalPeriodMs);
+                        if (loadingOverlay) loadingOverlay.style.display = "none";
+                        if (btnConsultar) btnConsultar.disabled = false;
+                    }).catch(err => {
+                        console.error("Error al consultar trabajos de mantenimiento de Geotab:", err);
+                        if (loadingOverlay) loadingOverlay.style.display = "none";
+                        if (btnConsultar) btnConsultar.disabled = false;
+                        showError("No se pudieron consultar los trabajos de mantenimiento de Geotab.");
+                    });
+                }, err => {
+                    console.error("Error al consultar órdenes de mantenimiento de Geotab:", err);
+                    if (loadingOverlay) loadingOverlay.style.display = "none";
+                    if (btnConsultar) btnConsultar.disabled = false;
+                    showError("No se pudieron consultar las órdenes de mantenimiento de Geotab.");
                 });
 
-                rawTallerList = tallerSummaries.sort((a, b) => b.totalTallerMs - a.totalTallerMs);
-                processAndDisplayResults(range, totalPeriodMs);
-
             } catch (err) {
+                if (loadingOverlay) loadingOverlay.style.display = "none";
+                if (btnConsultar) btnConsultar.disabled = false;
                 console.error("Error procesando datos de Trip & Taller por unidad:", err);
                 showError("Error al procesar los registros de viajes y taller por unidad.");
             }
