@@ -37,6 +37,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     let rawTripsList = [];
     let unitTripSummaries = [];
     let expandedUnits = new Set();
+    let perfMetric = "dist";           // métrica de la gráfica "Desempeño por vehículo"
 
     let currentTallerPage = 1;
     const TALLER_PER_PAGE = 10;
@@ -609,6 +610,148 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         refreshIcons();
     };
 
+    // ════════════════════════════════════════════════════════════
+    // RENDER: GRÁFICAS DE RECORRIDOS
+    // ════════════════════════════════════════════════════════════
+    const CHART_MAX_ITEMS = 12;
+    const DONUT_COLORS = ["#0069bf", "#3a86d4", "#6fa6e0", "#9fc4ec", "#c9def5", "#8da4b9"];
+
+    // "006- TOYOTA HILUX" → "TOYOTA HILUX" para etiquetas compactas
+    const shortName = name => String(name || "").replace(/^\s*\d+\s*-\s*/, "") || name;
+
+    const PERF_METRICS = {
+        dist:  { sub: "Distancia acumulada del periodo",   value: u => u.total.dist,  fmt: v => `${fmtNum(v, 1)} km` },
+        trips: { sub: "Número de viajes del periodo",       value: u => u.total.trips, fmt: v => `${v.toLocaleString("es-MX")} viajes` },
+        drive: { sub: "Tiempo de conducción del periodo",   value: u => u.total.drive, fmt: v => fmtHrs(v) },
+        fuel:  { sub: "Litros consumidos en el periodo",    value: u => u.total.fuel,  fmt: v => `${fmtNum(v, 1)} L` }
+    };
+
+    const emptyChart = msg => `<p class="sg-chart-empty">${msg}</p>`;
+
+    // Barras horizontales ordenadas de mayor a menor
+    const hbarsHtml = (items, fmt) => {
+        const max = Math.max(...items.map(i => i.value)) || 1;
+        const shown = items.slice(0, CHART_MAX_ITEMS);
+        const rest = items.length - shown.length;
+        return shown.map(i => `
+            <div class="sg-hbar" title="${escapeHtml(i.name)}: ${escapeHtml(fmt(i.value))}">
+                <span class="sg-hbar__label">${escapeHtml(i.name)}</span>
+                <span class="sg-hbar__track"><span class="sg-hbar__fill" style="display:block;width:${(i.value / max * 100).toFixed(1)}%"></span></span>
+                <span class="sg-hbar__value">${fmt(i.value)}</span>
+            </div>`).join("") + (rest > 0 ? `<span class="sg-hbars__more">+${rest} vehículos más</span>` : "");
+    };
+
+    const renderPerfChart = () => {
+        const el = $("sg-chart-perf");
+        if (!el) return;
+        const metric = PERF_METRICS[perfMetric];
+        $("sg-chart-perf-sub").textContent = metric.sub;
+        document.querySelectorAll("#sg-chart-perf-metric .sg-segmented__item").forEach(btn => {
+            const active = btn.getAttribute("data-metric") === perfMetric;
+            btn.classList.toggle("sg-segmented__item--active", active);
+            btn.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+
+        const items = unitTripSummaries
+            .map(u => ({ name: u.unitName, value: metric.value(u) }))
+            .filter(i => i.value !== null && i.value > 0)
+            .sort((a, b) => b.value - a.value);
+        el.innerHTML = items.length ? hbarsHtml(items, metric.fmt) : emptyChart("Sin datos para esta métrica en el periodo.");
+    };
+
+    const renderShareChart = totalDist => {
+        const el = $("sg-chart-share");
+        if (!el) return;
+        $("sg-chart-share-sub").textContent = `Sobre el total de ${fmtNum(totalDist, 1)} km`;
+
+        let items = unitTripSummaries
+            .filter(u => u.total.dist > 0)
+            .map(u => ({ name: u.unitName, value: u.total.dist }))
+            .sort((a, b) => b.value - a.value);
+        if (!items.length || totalDist <= 0) { el.innerHTML = emptyChart("Sin distancia registrada en el periodo."); return; }
+
+        // Más de 6 vehículos: los 5 principales y el resto agrupado en "Otros"
+        if (items.length > DONUT_COLORS.length) {
+            const others = items.slice(DONUT_COLORS.length - 1).reduce((s, i) => s + i.value, 0);
+            items = [...items.slice(0, DONUT_COLORS.length - 1), { name: "Otros", value: others }];
+        }
+
+        const r = 54, c = 2 * Math.PI * r;
+        let offset = 0;
+        const arcs = items.map((i, idx) => {
+            const len = (i.value / totalDist) * c;
+            const gap = items.length > 1 && len > 3 ? 1.5 : 0;
+            const arc = `<circle cx="64" cy="64" r="${r}" stroke="${DONUT_COLORS[idx]}"
+                stroke-dasharray="${(len - gap).toFixed(2)} ${(c - len + gap).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}">
+                <title>${escapeHtml(i.name)}: ${fmtNum(i.value, 1)} km</title></circle>`;
+            offset += len;
+            return arc;
+        }).join("");
+
+        el.innerHTML = `
+            <div class="sg-donut">
+                <svg viewBox="0 0 128 128" role="img" aria-label="Participación en distancia por vehículo">${arcs}</svg>
+                <div class="sg-donut__center">
+                    <span class="sg-donut__value">${fmtNum(totalDist, 0)}</span>
+                    <span class="sg-donut__label">km totales</span>
+                </div>
+            </div>
+            <ul class="sg-legend">
+                ${items.map((i, idx) => `
+                    <li class="sg-legend__item" title="${escapeHtml(i.name)}">
+                        <span class="sg-legend__swatch" style="background:${DONUT_COLORS[idx]}"></span>
+                        <span class="sg-legend__name">${escapeHtml(shortName(i.name))}</span>
+                        <span class="sg-legend__value">${fmtNum(i.value / totalDist * 100, 1)}%</span>
+                    </li>`).join("")}
+            </ul>`;
+    };
+
+    const renderFuelChart = () => {
+        const el = $("sg-chart-fuel");
+        if (!el) return;
+        const items = unitTripSummaries
+            .filter(u => u.total.fuel > 0 && u.total.dist > 0)
+            .map(u => ({ name: u.unitName, value: u.total.dist / u.total.fuel }))
+            .sort((a, b) => b.value - a.value);
+        el.innerHTML = items.length
+            ? hbarsHtml(items, v => `${fmtNum(v, 1)} km/L`)
+            : emptyChart("Ningún vehículo tiene registros de combustible en el periodo.");
+    };
+
+    const renderSpeedChart = (totalDist, totalDriveSec) => {
+        const el = $("sg-chart-speed");
+        if (!el) return;
+        const items = unitTripSummaries
+            .filter(u => u.total.drive > 0)
+            .map(u => ({ name: u.unitName, value: u.total.dist / (u.total.drive / 3600) }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, CHART_MAX_ITEMS);
+        if (!items.length) { el.innerHTML = emptyChart("Sin tiempo de conducción en el periodo."); return; }
+
+        const fleetAvg = totalDriveSec > 0 ? totalDist / (totalDriveSec / 3600) : 0;
+        // Escala con margen para la etiqueta de valor sobre la barra más alta
+        const max = Math.max(fleetAvg, ...items.map(i => i.value)) * 1.2 || 1;
+        const pct = v => (v / max * 100).toFixed(1);
+
+        el.innerHTML = `
+            <div class="sg-vbars__plot">
+                ${items.map(i => `
+                    <div class="sg-vbar" title="${escapeHtml(i.name)}: ${fmtNum(i.value, 1)} km/h">
+                        <span class="sg-vbar__value">${fmtNum(i.value, 1)}</span>
+                        <span class="sg-vbar__fill" style="height:${pct(i.value)}%"></span>
+                        <span class="sg-vbar__label">${escapeHtml(shortName(i.name))}</span>
+                    </div>`).join("")}
+                <div class="sg-vbars__avg" style="bottom:${pct(fleetAvg)}%"><span>Promedio ${fmtNum(fleetAvg, 1)} km/h</span></div>
+            </div>`;
+    };
+
+    const renderTripCharts = (totalDist, totalDriveSec) => {
+        renderPerfChart();
+        renderShareChart(totalDist);
+        renderFuelChart();
+        renderSpeedChart(totalDist, totalDriveSec);
+    };
+
     const renderTallerTablePage = () => {
         const tbody = $("sg-tbody-taller");
         if (!tbody) return;
@@ -1005,6 +1148,8 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         $("sg-kpi-idle").textContent = fmtHrs(totalIdleSec);
         $("sg-kpi-idle-pct").textContent = `${fmtNum(engineSec ? (totalIdleSec / engineSec) * 100 : 0, 1)}% del tiempo de motor`;
 
+        renderTripCharts(totalDist, totalDriveSec);
+
         currentTripsPage = 1;
         renderTripsTablePage();
         $("sg-trips-table-sub").textContent = periodText(range);
@@ -1182,6 +1327,14 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             else expandedUnits.add(id);
             renderTripsTablePage();
         });
+        // Métrica de la gráfica de desempeño
+        $("sg-chart-perf-metric").addEventListener("click", e => {
+            const btn = e.target.closest(".sg-segmented__item");
+            if (!btn || btn.getAttribute("data-metric") === perfMetric) return;
+            perfMetric = btn.getAttribute("data-metric");
+            renderPerfChart();
+        });
+
         $("sg-trips-expand-all").addEventListener("click", () => {
             const allOpen = expandedUnits.size === unitTripSummaries.length;
             expandedUnits = allOpen ? new Set() : new Set(unitTripSummaries.map(u => u.unitId));
