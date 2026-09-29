@@ -31,9 +31,6 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const loadedKeys = { servicios: null, recorridos: null };
     let requestSeq = 0;
 
-    // Diagnóstico de Geotab con el horómetro del motor (valor en segundos)
-    const ENGINE_HOURS_DIAGNOSTIC = "DiagnosticEngineHoursAdjustmentId";
-
     // Paginación (Recorridos: una fila por vehículo, desplegable por día)
     let currentTripsPage = 1;
     const TRIPS_PER_PAGE = 15;
@@ -474,7 +471,22 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     // Horas de motor = última lectura − primera lectura (null si no hay lecturas)
     const engineDelta = agg => agg.engFirst === null ? null : Math.max(0, agg.engLast - agg.engFirst);
 
-    const buildUnitTripSummaries = (trips, readings, targetUnits) => {
+    // Lecturas del horómetro a partir de los viajes: Trip.engineHours es el acumulado
+    // (en segundos) al terminar el viaje; al inicio se estima restando la conducción
+    const readingsFromTrips = trips => {
+        const readings = [];
+        trips.forEach(t => {
+            const endSec = parseSeconds(t.engineHours);
+            if (!t.device || !t.device.id || !endSec || endSec <= 0) return;
+            const startSec = Math.max(0, endSec - parseSeconds(t.drivingDuration));
+            readings.push({ device: t.device, dateTime: t.start, data: startSec });
+            readings.push({ device: t.device, dateTime: t.stop || t.start, data: endSec });
+        });
+        return readings;
+    };
+
+    const buildUnitTripSummaries = (trips, targetUnits) => {
+        const readings = readingsFromTrips(trips);
         const byUnit = new Map();
         const getUnit = id => {
             if (!byUnit.has(id)) byUnit.set(id, { total: newTripAgg(), days: new Map() });
@@ -535,7 +547,8 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             <td class="sg-num">${fmtHrs(agg.workDrive)}</td>
             <td class="sg-num">${fmtHrs(agg.workStop)}</td>
             <td class="sg-num">${avgSpeed}</td>
-            <td class="sg-num">${fmtEngine(engineDelta(agg))}</td>`;
+            <td class="sg-num">${fmtEngine(engineDelta(agg))}</td>
+            <td class="sg-num sg-muted">${agg.engLast === null ? "—" : `${fmtNum(agg.engLast, 1)} h`}</td>`;
     };
 
     const renderTripsTablePage = () => {
@@ -549,7 +562,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         const pageData = unitTripSummaries.slice(start, start + TRIPS_PER_PAGE);
 
         if (!pageData.length) {
-            tbody.innerHTML = `<tr class="sg-table__empty"><td colspan="10">No hay viajes registrados en el periodo seleccionado.</td></tr>`;
+            tbody.innerHTML = `<tr class="sg-table__empty"><td colspan="11">No hay viajes registrados en el periodo seleccionado.</td></tr>`;
         } else {
             tbody.innerHTML = pageData.map(u => {
                 const expanded = expandedUnits.has(u.unitId);
@@ -797,11 +810,11 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const loadRecorridos = (range, targetUnits, onDone, onError) => {
         const { from, to } = range;
 
-        const finish = (trips, readings) => {
+        const finish = trips => {
             const map = new Map();
             trips.forEach(t => { if (t && t.id) map.set(t.id, t); });
             rawTripsList = Array.from(map.values()).sort((a, b) => new Date(b.start) - new Date(a.start));
-            unitTripSummaries = buildUnitTripSummaries(rawTripsList, readings, targetUnits);
+            unitTripSummaries = buildUnitTripSummaries(rawTripsList, targetUnits);
             expandedUnits = new Set();
             onDone();
         };
@@ -809,7 +822,6 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         if (!hasApi()) {
             setTimeout(() => {
                 const mock = [];
-                const mockReadings = [];
                 targetUnits.forEach((unit, idx) => {
                     let cursor = new Date(from.getTime() + idx * 3600 * 1000);
                     let engineSec = (1500 + idx * 230) * 3600;
@@ -818,10 +830,9 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                         const stopSec = Math.floor(Math.random() * 14400) + 3600;
                         const tripStop = new Date(cursor.getTime() + driveSec * 1000);
                         if (tripStop > to) break;
-                        mockReadings.push({ device: { id: unit.id }, dateTime: cursor.toISOString(), data: engineSec });
-                        engineSec += driveSec * 1.1;
-                        mockReadings.push({ device: { id: unit.id }, dateTime: tripStop.toISOString(), data: engineSec });
+                        engineSec += driveSec + Math.floor(driveSec * 0.1);
                         mock.push({
+                            engineHours: engineSec,
                             id: `t-${unit.id}-${100 + i}`,
                             device: { id: unit.id },
                             start: cursor.toISOString(),
@@ -837,36 +848,22 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                         cursor = new Date(tripStop.getTime() + stopSec * 1000);
                     }
                 });
-                finish(mock, mockReadings);
+                finish(mock);
             }, 400);
             return;
         }
 
         const base = { fromDate: from.toISOString(), toDate: to.toISOString() };
+        const fail = err => {
+            console.error("Error al consultar la tabla Trip:", err);
+            onError("Error de conexión con Geotab al consultar los viajes.");
+        };
 
         // Todos los vehículos: una sola consulta; si hay selección, una por vehículo en un multiCall
-        const getPerDevice = (typeName, search) => new Promise((resolve, reject) => {
-            const calls = selectedUnitIds.length
-                ? selectedUnitIds.map(id => ["Get", { typeName, search: { ...search, deviceSearch: { id } } }])
-                : [["Get", { typeName, search }]];
-            multiGet(calls, results => resolve([].concat(...results.map(r => r || []))), reject);
-        });
-
-        const tripsReq = getPerDevice("Trip", base);
-        // Si falla el horómetro (p. ej. sin permisos de StatusData) se muestran los viajes sin horas de motor
-        const readingsReq = getPerDevice("StatusData", { ...base, diagnosticSearch: { id: ENGINE_HOURS_DIAGNOSTIC } })
-            .catch(err => {
-                console.warn("No se pudieron consultar las lecturas de horas de motor:", err);
-                showError("No se pudieron obtener las horas de motor; se muestran solo los viajes.");
-                return [];
-            });
-
-        Promise.all([tripsReq, readingsReq])
-            .then(([trips, readings]) => finish(trips, readings))
-            .catch(err => {
-                console.error("Error al consultar la tabla Trip:", err);
-                onError("Error de conexión con Geotab al consultar los viajes.");
-            });
+        const calls = selectedUnitIds.length
+            ? selectedUnitIds.map(id => ["Get", { typeName: "Trip", search: { ...base, deviceSearch: { id } } }])
+            : [["Get", { typeName: "Trip", search: base }]];
+        multiGet(calls, results => finish([].concat(...results.map(r => r || []))), fail);
     };
 
     // ════════════════════════════════════════════════════════════
