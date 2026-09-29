@@ -22,6 +22,49 @@
                     <span class="sg-page-header__subline" id="sg-header-subline">Servicios de taller y recorridos de la flota</span>
                 </div>
                 <div class="sg-page-header__actions">
+                    <!-- Descargar: vista general / extendida / datos en Excel o PDF -->
+                    <div class="sg-filter sg-export" id="sg-export">
+                        <button type="button" class="sg-button sg-button--secondary sg-button--with-icon" id="sg-export-trigger" aria-haspopup="menu" aria-expanded="false">
+                            <i data-lucide="download" width="16" height="16"></i>
+                            <span id="sg-export-label">Descargar</span>
+                            <i data-lucide="chevron-down" width="16" height="16"></i>
+                        </button>
+                        <div class="sg-popup sg-export-popup" id="sg-export-popup" role="menu" aria-labelledby="sg-export-title" hidden>
+                            <div class="sg-popup__title" id="sg-export-title">Descargar</div>
+                            <ul class="sg-export-list">
+                                <li class="sg-export-item">
+                                    <div class="sg-export-item__text">
+                                        <span class="sg-export-item__name">Vista general</span>
+                                        <span class="sg-export-item__desc" data-export-desc="general"></span>
+                                    </div>
+                                    <div class="sg-export-item__actions">
+                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="general" data-export-format="xlsx" role="menuitem">Excel</button>
+                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="general" data-export-format="pdf" role="menuitem">PDF</button>
+                                    </div>
+                                </li>
+                                <li class="sg-export-item">
+                                    <div class="sg-export-item__text">
+                                        <span class="sg-export-item__name">Vista extendida</span>
+                                        <span class="sg-export-item__desc" data-export-desc="extended"></span>
+                                    </div>
+                                    <div class="sg-export-item__actions">
+                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="extended" data-export-format="xlsx" role="menuitem">Excel</button>
+                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="extended" data-export-format="pdf" role="menuitem">PDF</button>
+                                    </div>
+                                </li>
+                                <li class="sg-export-item">
+                                    <div class="sg-export-item__text">
+                                        <span class="sg-export-item__name">Datos</span>
+                                        <span class="sg-export-item__desc" data-export-desc="data"></span>
+                                    </div>
+                                    <div class="sg-export-item__actions">
+                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="data" data-export-format="xlsx" role="menuitem">Excel</button>
+                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="data" data-export-format="pdf" role="menuitem">PDF</button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                     <button type="button" class="sg-button sg-button--secondary sg-button--with-icon" id="sg-btn-refresh" title="Actualizar datos">
                         <i data-lucide="refresh-cw" width="16" height="16"></i>
                         <span>Actualizar</span>
@@ -282,11 +325,16 @@
                                 <h2 class="sg-chart-card__title">Desempeño por vehículo</h2>
                                 <span class="sg-chart-card__sub" id="sg-chart-perf-sub">Distancia acumulada del periodo</span>
                             </div>
-                            <div class="sg-segmented" id="sg-chart-perf-metric" role="group" aria-label="Métrica">
-                                <button type="button" class="sg-segmented__item sg-segmented__item--active" data-metric="dist" aria-pressed="true">Distancia</button>
-                                <button type="button" class="sg-segmented__item" data-metric="trips" aria-pressed="false">Viajes</button>
-                                <button type="button" class="sg-segmented__item" data-metric="drive" aria-pressed="false">Conducción</button>
-                                <button type="button" class="sg-segmented__item" data-metric="fuel" aria-pressed="false">Combustible</button>
+                            <div class="sg-chart-card__actions">
+                                <div class="sg-segmented sg-perf-metric" id="sg-chart-perf-metric" role="group" aria-label="Métrica">
+                                    <button type="button" class="sg-segmented__item sg-segmented__item--active" data-metric="dist" aria-pressed="true">Distancia</button>
+                                    <button type="button" class="sg-segmented__item" data-metric="trips" aria-pressed="false">Viajes</button>
+                                    <button type="button" class="sg-segmented__item" data-metric="drive" aria-pressed="false">Conducción</button>
+                                    <button type="button" class="sg-segmented__item" data-metric="fuel" aria-pressed="false">Combustible</button>
+                                </div>
+                                <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" data-chart-expand="perf" title="Ver en pantalla completa" aria-label="Ver Desempeño por vehículo en pantalla completa">
+                                    <i data-lucide="maximize-2" width="16" height="16"></i>
+                                </button>
                             </div>
                         </div>
                         <div class="sg-hbars" id="sg-chart-perf"></div>
@@ -298,6 +346,9 @@
                                 <h2 class="sg-chart-card__title">Participación en distancia</h2>
                                 <span class="sg-chart-card__sub" id="sg-chart-share-sub">Sobre el total</span>
                             </div>
+                            <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" data-chart-expand="share" title="Ver en pantalla completa" aria-label="Ver Participación en distancia en pantalla completa">
+                                <i data-lucide="maximize-2" width="16" height="16"></i>
+                            </button>
                         </div>
                         <div class="sg-donut-wrap" id="sg-chart-share"></div>
                     </div>
@@ -308,6 +359,9 @@
                                 <h2 class="sg-chart-card__title">Rendimiento de combustible</h2>
                                 <span class="sg-chart-card__sub">km por litro · vehículos con dato</span>
                             </div>
+                            <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" data-chart-expand="fuel" title="Ver en pantalla completa" aria-label="Ver Rendimiento de combustible en pantalla completa">
+                                <i data-lucide="maximize-2" width="16" height="16"></i>
+                            </button>
                         </div>
                         <div class="sg-hbars sg-hbars--center" id="sg-chart-fuel"></div>
                     </div>
@@ -318,6 +372,9 @@
                                 <h2 class="sg-chart-card__title">Velocidad promedio</h2>
                                 <span class="sg-chart-card__sub">km/h por vehículo · línea punteada = promedio de la flota</span>
                             </div>
+                            <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" data-chart-expand="speed" title="Ver en pantalla completa" aria-label="Ver Velocidad promedio en pantalla completa">
+                                <i data-lucide="maximize-2" width="16" height="16"></i>
+                            </button>
                         </div>
                         <div class="sg-vbars" id="sg-chart-speed"></div>
                     </div>
@@ -397,6 +454,30 @@
                 <div class="sg-modal__footer">
                     <button type="button" class="sg-button sg-button--secondary" id="sg-unit-modal-btn-close">Cerrar</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- ═══════════ MODAL: GRÁFICA EN PANTALLA COMPLETA ═══════════ -->
+        <div class="sg-modal-overlay" id="sg-chart-modal" hidden>
+            <div class="sg-modal sg-modal--fullscreen" role="dialog" aria-modal="true" aria-labelledby="sg-chart-modal-title">
+                <div class="sg-modal__header">
+                    <div>
+                        <h2 class="sg-modal__title" id="sg-chart-modal-title"></h2>
+                        <span class="sg-chart-card__sub" id="sg-chart-modal-sub"></span>
+                    </div>
+                    <div class="sg-chart-card__actions">
+                        <div class="sg-segmented sg-perf-metric" id="sg-chart-modal-metric" role="group" aria-label="Métrica" hidden>
+                            <button type="button" class="sg-segmented__item sg-segmented__item--active" data-metric="dist" aria-pressed="true">Distancia</button>
+                            <button type="button" class="sg-segmented__item" data-metric="trips" aria-pressed="false">Viajes</button>
+                            <button type="button" class="sg-segmented__item" data-metric="drive" aria-pressed="false">Conducción</button>
+                            <button type="button" class="sg-segmented__item" data-metric="fuel" aria-pressed="false">Combustible</button>
+                        </div>
+                        <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" id="sg-chart-modal-close" aria-label="Cerrar">
+                            <i data-lucide="x" width="16" height="16"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="sg-modal__content sg-chart-modal__body" id="sg-chart-modal-body"></div>
             </div>
         </div>
 
