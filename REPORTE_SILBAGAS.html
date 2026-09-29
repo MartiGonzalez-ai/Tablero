@@ -31,16 +31,16 @@
 
             <!-- Secciones (Zenith Tabs) -->
             <nav class="sg-tabs" id="sg-tabs" role="tablist">
-                <button type="button" class="sg-tab-item sg-tab-item--active" data-section="servicios" role="tab" aria-selected="true">
-                    <span class="sg-tab-item__content">
-                        <i data-lucide="wrench" width="16" height="16" class="sg-tab-item__icon"></i>
-                        <span>Servicios</span>
-                    </span>
-                </button>
-                <button type="button" class="sg-tab-item" data-section="recorridos" role="tab" aria-selected="false">
+                <button type="button" class="sg-tab-item sg-tab-item--active" data-section="recorridos" role="tab" aria-selected="true">
                     <span class="sg-tab-item__content">
                         <i data-lucide="route" width="16" height="16" class="sg-tab-item__icon"></i>
                         <span>Recorridos</span>
+                    </span>
+                </button>
+                <button type="button" class="sg-tab-item" data-section="servicios" role="tab" aria-selected="false">
+                    <span class="sg-tab-item__content">
+                        <i data-lucide="wrench" width="16" height="16" class="sg-tab-item__icon"></i>
+                        <span>Servicios</span>
                     </span>
                 </button>
             </nav>
@@ -65,24 +65,59 @@
                         </button>
                     </div>
 
-                    <div class="sg-popup sg-period-popup" id="sg-period-popup" role="dialog" aria-label="Filtro de periodo" hidden>
-                        <ul class="sg-option-list" id="sg-period-options" role="listbox">
+                    <div class="sg-popup sg-period-popup" id="sg-period-popup" role="dialog" aria-labelledby="sg-period-popup-title" hidden>
+                        <div class="sg-popup__title" id="sg-period-popup-title">Rango de fechas</div>
+                        <ul class="sg-radio-list" id="sg-period-options" role="radiogroup" aria-labelledby="sg-period-popup-title">
                             <!-- Poblado por REPORTE_SILBAGAS.js -->
                         </ul>
                         <div class="sg-period-custom" id="sg-period-custom" hidden>
                             <div class="sg-field">
-                                <label for="sg-custom-from" class="sg-field__label">Desde</label>
-                                <input type="date" id="sg-custom-from" class="sg-input">
+                                <label for="sg-custom-from" class="sg-field__label">Fecha de inicio</label>
+                                <div class="sg-datetime">
+                                    <input type="text" id="sg-custom-from" class="sg-input" placeholder="MM/DD/AA" autocomplete="off" inputmode="numeric">
+                                    <div class="sg-select-wrap">
+                                        <select id="sg-custom-from-time" class="sg-input sg-select" aria-label="Hora de inicio"></select>
+                                        <i data-lucide="chevron-down" width="16" height="16"></i>
+                                    </div>
+                                </div>
                             </div>
                             <div class="sg-field">
-                                <label for="sg-custom-to" class="sg-field__label">Hasta</label>
-                                <input type="date" id="sg-custom-to" class="sg-input">
+                                <label for="sg-custom-to" class="sg-field__label">Fecha de desactivación</label>
+                                <div class="sg-datetime">
+                                    <input type="text" id="sg-custom-to" class="sg-input" placeholder="MM/DD/AA" autocomplete="off" inputmode="numeric">
+                                    <div class="sg-select-wrap">
+                                        <select id="sg-custom-to-time" class="sg-input sg-select" aria-label="Hora de fin"></select>
+                                        <i data-lucide="chevron-down" width="16" height="16"></i>
+                                    </div>
+                                </div>
                             </div>
                             <p class="sg-field__error" id="sg-custom-error" hidden></p>
+
+                            <!-- Calendario (Zenith Calendar) -->
+                            <div class="sg-calendar">
+                                <div class="sg-calendar__nav">
+                                    <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" id="sg-cal-prev" aria-label="Mes anterior">
+                                        <i data-lucide="chevron-left" width="16" height="16"></i>
+                                    </button>
+                                    <div class="sg-calendar__month">
+                                        <span id="sg-cal-label">Sep 2026</span>
+                                        <i data-lucide="chevron-down" width="16" height="16"></i>
+                                        <select id="sg-cal-month" class="sg-calendar__month-select" aria-label="Seleccionar mes"></select>
+                                    </div>
+                                    <button type="button" class="sg-button sg-button--tertiary" id="sg-cal-today">Hoy</button>
+                                    <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" id="sg-cal-next" aria-label="Mes siguiente">
+                                        <i data-lucide="chevron-right" width="16" height="16"></i>
+                                    </button>
+                                </div>
+                                <div class="sg-calendar__weekdays" aria-hidden="true">
+                                    <span>D</span><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span>
+                                </div>
+                                <div class="sg-calendar__grid" id="sg-cal-grid" role="grid"></div>
+                            </div>
                         </div>
-                        <div class="sg-popup__footer" id="sg-period-footer" hidden>
-                            <button type="button" class="sg-button sg-button--tertiary" id="sg-period-cancel">Cancelar</button>
-                            <button type="button" class="sg-button sg-button--primary" id="sg-period-apply">Aplicar</button>
+                        <div class="sg-popup__footer sg-popup__footer--split">
+                            <button type="button" class="sg-button sg-button--tertiary sg-button--link" id="sg-period-clear">Borrar</button>
+                            <button type="button" class="sg-button sg-button--primary" id="sg-period-apply" hidden>Aplicar</button>
                         </div>
                     </div>
                 </div>
@@ -213,15 +248,15 @@
                             <span class="sg-summary-tile__value" id="sg-kpi-dist">0.0</span>
                             <span class="sg-summary-tile__unit">km</span>
                         </div>
-                        <div class="sg-summary-tile__sub" id="sg-kpi-dist-avg">Promedio 0.0 km por viaje</div>
+                        <div class="sg-summary-tile__sub" id="sg-kpi-dist-avg">0 viajes</div>
                     </li>
                     <li class="sg-summary-tile">
-                        <div class="sg-summary-tile__title">Viajes</div>
+                        <div class="sg-summary-tile__title">Horas de motor</div>
                         <div class="sg-summary-tile__content">
-                            <span class="sg-summary-tile__value" id="sg-kpi-trips">0</span>
-                            <span class="sg-summary-tile__unit">registrados</span>
+                            <span class="sg-summary-tile__value" id="sg-kpi-engine">0.0</span>
+                            <span class="sg-summary-tile__unit">h</span>
                         </div>
-                        <div class="sg-summary-tile__sub" id="sg-kpi-trips-units">0 unidades con actividad</div>
+                        <div class="sg-summary-tile__sub" id="sg-kpi-trips-units">0 vehículos con actividad</div>
                     </li>
                     <li class="sg-summary-tile">
                         <div class="sg-summary-tile__title">Tiempo de conducción</div>
@@ -241,16 +276,16 @@
 
                 <div class="sg-data-grid-card">
                     <div class="sg-data-grid-card__header">
-                        <h2 class="sg-data-grid-card__title">Viajes</h2>
+                        <h2 class="sg-data-grid-card__title">Recorridos por vehículo</h2>
                         <span class="sg-data-grid-card__sub" id="sg-trips-table-sub"></span>
+                        <button type="button" class="sg-button sg-button--tertiary sg-data-grid-card__action" id="sg-trips-expand-all">Expandir todo</button>
                     </div>
                     <div class="sg-data-grid">
-                        <table class="sg-table">
+                        <table class="sg-table sg-table--tree">
                             <thead>
                                 <tr>
-                                    <th>Vehículo</th>
-                                    <th>Inicio</th>
-                                    <th>Fin</th>
+                                    <th>Vehículo / Día</th>
+                                    <th class="sg-num">Viajes</th>
                                     <th class="sg-num">Distancia</th>
                                     <th class="sg-num">Conducción</th>
                                     <th class="sg-num">Ralentí</th>
@@ -329,4 +364,3 @@
     <script src="scripts/REPORTE_SILBAGAS.js"></script>
 </body>
 </html>
-
