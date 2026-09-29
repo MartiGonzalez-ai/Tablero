@@ -8,7 +8,7 @@
     <title>Reporte Silbagas</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/REPORTE_SILBAGAS.css">
 </head>
 <body>
@@ -17,7 +17,6 @@
         <!-- ═══════════ PAGE HEADER (Zenith PageHeader) ═══════════ -->
         <header class="sg-page-header">
             <div class="sg-page-header__main-line">
-                <img class="sg-page-header__logo" src="assets/Enertrak_horizontal_blanco.png" alt="Enertrak">
                 <div class="sg-page-header__title-group">
                     <h1 class="sg-page-header__page-name">Reporte Silbagas</h1>
                     <span class="sg-page-header__subline" id="sg-header-subline">Servicios de taller y recorridos de la flota</span>
@@ -275,6 +274,55 @@
                     </li>
                 </ul>
 
+                <!-- ═══════════ GRÁFICAS DE RECORRIDOS ═══════════ -->
+                <div class="sg-charts">
+                    <div class="sg-chart-card sg-chart-card--full">
+                        <div class="sg-chart-card__header">
+                            <div>
+                                <h2 class="sg-chart-card__title">Desempeño por vehículo</h2>
+                                <span class="sg-chart-card__sub" id="sg-chart-perf-sub">Distancia acumulada del periodo</span>
+                            </div>
+                            <div class="sg-segmented" id="sg-chart-perf-metric" role="group" aria-label="Métrica">
+                                <button type="button" class="sg-segmented__item sg-segmented__item--active" data-metric="dist" aria-pressed="true">Distancia</button>
+                                <button type="button" class="sg-segmented__item" data-metric="trips" aria-pressed="false">Viajes</button>
+                                <button type="button" class="sg-segmented__item" data-metric="drive" aria-pressed="false">Conducción</button>
+                                <button type="button" class="sg-segmented__item" data-metric="fuel" aria-pressed="false">Combustible</button>
+                            </div>
+                        </div>
+                        <div class="sg-hbars" id="sg-chart-perf"></div>
+                    </div>
+
+                    <div class="sg-chart-card">
+                        <div class="sg-chart-card__header">
+                            <div>
+                                <h2 class="sg-chart-card__title">Participación en distancia</h2>
+                                <span class="sg-chart-card__sub" id="sg-chart-share-sub">Sobre el total</span>
+                            </div>
+                        </div>
+                        <div class="sg-donut-wrap" id="sg-chart-share"></div>
+                    </div>
+
+                    <div class="sg-chart-card">
+                        <div class="sg-chart-card__header">
+                            <div>
+                                <h2 class="sg-chart-card__title">Rendimiento de combustible</h2>
+                                <span class="sg-chart-card__sub">km por litro · vehículos con dato</span>
+                            </div>
+                        </div>
+                        <div class="sg-hbars sg-hbars--center" id="sg-chart-fuel"></div>
+                    </div>
+
+                    <div class="sg-chart-card sg-chart-card--full">
+                        <div class="sg-chart-card__header">
+                            <div>
+                                <h2 class="sg-chart-card__title">Velocidad promedio</h2>
+                                <span class="sg-chart-card__sub">km/h por vehículo · línea punteada = promedio de la flota</span>
+                            </div>
+                        </div>
+                        <div class="sg-vbars" id="sg-chart-speed"></div>
+                    </div>
+                </div>
+
                 <div class="sg-data-grid-card">
                     <div class="sg-data-grid-card__header">
                         <h2 class="sg-data-grid-card__title">Recorridos por vehículo</h2>
@@ -367,4 +415,3 @@
     <script src="scripts/REPORTE_SILBAGAS.js"></script>
 </body>
 </html>
-
