@@ -661,13 +661,40 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const fleetTotals = () => unitTripSummaries.reduce(
         (t, u) => ({ dist: t.dist + u.total.dist, drive: t.drive + u.total.drive }), { dist: 0, drive: 0 });
 
+    // Datos de cada gráfica, ordenados de mayor a menor (los usan la pantalla y las descargas)
+    const perfItems = () => unitTripSummaries
+        .map(u => ({ name: u.unitName, value: PERF_METRICS[perfMetric].value(u) }))
+        .filter(i => i.value !== null && i.value > 0)
+        .sort((a, b) => b.value - a.value);
+    const shareItems = () => unitTripSummaries
+        .filter(u => u.total.dist > 0)
+        .map(u => ({ name: u.unitName, value: u.total.dist }))
+        .sort((a, b) => b.value - a.value);
+    const fuelItems = () => unitTripSummaries
+        .filter(u => u.total.fuel > 0 && u.total.dist > 0)
+        .map(u => ({ name: u.unitName, value: u.total.dist / u.total.fuel }))
+        .sort((a, b) => b.value - a.value);
+    const speedItems = () => unitTripSummaries
+        .filter(u => u.total.drive > 0)
+        .map(u => ({ name: u.unitName, value: u.total.dist / (u.total.drive / 3600) }))
+        .sort((a, b) => b.value - a.value);
+    const fleetAvgSpeed = () => { const { dist, drive } = fleetTotals(); return drive > 0 ? dist / (drive / 3600) : 0; };
+
+    // Más de 6 vehículos en la dona: los 5 principales y el resto agrupado en "Otros"
+    const groupShare = all => all.length > DONUT_COLORS.length
+        ? [...all.slice(0, DONUT_COLORS.length - 1), { name: "Otros", value: all.slice(DONUT_COLORS.length - 1).reduce((s, i) => s + i.value, 0) }]
+        : all;
+
+    const EMPTY_MSG = {
+        perf: "Sin datos para esta métrica en el periodo.",
+        share: "Sin distancia registrada en el periodo.",
+        fuel: "Ningún vehículo tiene registros de combustible en el periodo.",
+        speed: "Sin tiempo de conducción en el periodo."
+    };
+
     const perfHtml = full => {
-        const metric = PERF_METRICS[perfMetric];
-        const items = unitTripSummaries
-            .map(u => ({ name: u.unitName, value: metric.value(u) }))
-            .filter(i => i.value !== null && i.value > 0)
-            .sort((a, b) => b.value - a.value);
-        return items.length ? hbarsHtml(items, metric.fmt, "perf", full) : emptyChart("Sin datos para esta métrica en el periodo.");
+        const items = perfItems();
+        return items.length ? hbarsHtml(items, PERF_METRICS[perfMetric].fmt, "perf", full) : emptyChart(EMPTY_MSG.perf);
     };
 
     const renderPerfChart = () => {
@@ -685,19 +712,10 @@ const initSilbagasAddin = function (_api, _state, _callback) {
 
     const shareHtml = full => {
         const totalDist = fleetTotals().dist;
-        const all = unitTripSummaries
-            .filter(u => u.total.dist > 0)
-            .map(u => ({ name: u.unitName, value: u.total.dist }))
-            .sort((a, b) => b.value - a.value);
-        if (!all.length || totalDist <= 0) return emptyChart("Sin distancia registrada en el periodo.");
-
-        // Más de 6 vehículos: los 5 principales y el resto agrupado en "Otros"
-        let items = all;
-        const grouped = all.length > DONUT_COLORS.length;
-        if (grouped) {
-            const others = all.slice(DONUT_COLORS.length - 1).reduce((s, i) => s + i.value, 0);
-            items = [...all.slice(0, DONUT_COLORS.length - 1), { name: "Otros", value: others }];
-        }
+        const all = shareItems();
+        if (!all.length || totalDist <= 0) return emptyChart(EMPTY_MSG.share);
+        const items = groupShare(all);
+        const grouped = items.length < all.length;
 
         // En pantalla completa la leyenda lista todos los vehículos (los de "Otros" con su color)
         const legend = full
@@ -736,25 +754,15 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     };
 
     const fuelHtml = full => {
-        const items = unitTripSummaries
-            .filter(u => u.total.fuel > 0 && u.total.dist > 0)
-            .map(u => ({ name: u.unitName, value: u.total.dist / u.total.fuel }))
-            .sort((a, b) => b.value - a.value);
-        return items.length
-            ? hbarsHtml(items, v => `${fmtNum(v, 1)} km/L`, "fuel", full)
-            : emptyChart("Ningún vehículo tiene registros de combustible en el periodo.");
+        const items = fuelItems();
+        return items.length ? hbarsHtml(items, v => `${fmtNum(v, 1)} km/L`, "fuel", full) : emptyChart(EMPTY_MSG.fuel);
     };
 
     const speedHtml = full => {
-        const all = unitTripSummaries
-            .filter(u => u.total.drive > 0)
-            .map(u => ({ name: u.unitName, value: u.total.dist / (u.total.drive / 3600) }))
-            .sort((a, b) => b.value - a.value);
-        if (!all.length) return emptyChart("Sin tiempo de conducción en el periodo.");
+        const all = speedItems();
+        if (!all.length) return emptyChart(EMPTY_MSG.speed);
         const items = full ? all : all.slice(0, CHART_MAX_ITEMS);
-
-        const { dist, drive } = fleetTotals();
-        const fleetAvg = drive > 0 ? dist / (drive / 3600) : 0;
+        const fleetAvg = fleetAvgSpeed();
         // Escala con margen para la etiqueta de valor sobre la barra más alta
         const max = Math.max(fleetAvg, ...items.map(i => i.value)) * 1.2 || 1;
         const pct = v => (v / max * 100).toFixed(1);
@@ -1259,8 +1267,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const EXPORT_LIBS = {
         excel:   ["https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"],
         pdf:     ["https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
-                  "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"],
-        capture: ["https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"]
+                  "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"]
     };
     const scriptLoads = new Map();
     const loadScript = src => {
@@ -1437,22 +1444,267 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         };
     };
 
-    // ── Capturas de pantalla (indicadores y gráficas) ──
-    const captureEl = el => html2canvas(el, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        logging: false,
-        // Sin los botones de pantalla completa ni los enlaces "Ver todos"
-        ignoreElements: node => node.hasAttribute && node.hasAttribute("data-chart-expand")
-    }).then(canvas => ({ canvas, w: canvas.width / 2, h: canvas.height / 2 }));
+    // ── Gráficas e indicadores dibujados en canvas ──
+    // Dentro de MyGeotab no se puede capturar la página (html2canvas falla en su iframe),
+    // así que las imágenes se dibujan directamente desde los datos, con el mismo aspecto
+    const CV = {
+        font: "Roboto, Arial, sans-serif",
+        text: "#1f2833", muted: "#4e677e", border: "#c0ccd8", track: "#f2f5f7",
+        bar: "#4a90d9", barSoft: "#a9cbee", line: "#748faa"
+    };
+    const CARD_PAD = 18, CARD_HEAD = 60, CANVAS_SCALE = 2, EXPORT_W = 1100, CARD_GAP = 16;
 
-    // Excel: PNG (nítido); PDF: JPEG, para que el archivo no pese decenas de MB
+    const roundRect = (ctx, x, y, w, h, r) => {
+        r = Math.max(0, Math.min(r, w / 2, h / 2));
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    };
+    const setFont = (ctx, size, color, weight = 400) => { ctx.font = `${weight} ${size}px ${CV.font}`; ctx.fillStyle = color; };
+    // Recorta el texto con "…" si no cabe en el ancho
+    const fitText = (ctx, text, maxW) => {
+        let t = String(text == null ? "" : text);
+        if (ctx.measureText(t).width <= maxW) return t;
+        while (t.length > 1 && ctx.measureText(t + "…").width > maxW) t = t.slice(0, -1);
+        return t + "…";
+    };
+
+    const makeCanvas = (w, h, draw) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(w * CANVAS_SCALE);
+        canvas.height = Math.round(h * CANVAS_SCALE);
+        const ctx = canvas.getContext("2d");
+        ctx.scale(CANVAS_SCALE, CANVAS_SCALE);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        ctx.textBaseline = "middle";
+        draw(ctx);
+        return { canvas, w, h };
+    };
+
+    // Cada gráfica: alto de su contenido (según el ancho) y cómo dibujarlo
+    const emptySpec = msg => ({
+        height: () => 80,
+        draw: (ctx, x, y, w, h) => { setFont(ctx, 13, CV.muted); ctx.textAlign = "center"; ctx.fillText(msg, x + w / 2, y + h / 2); }
+    });
+
+    const HBAR_ROW = 26;
+    const hbarsSpec = (items, fmt) => {
+        const shown = items.slice(0, CHART_MAX_ITEMS);
+        const rest = items.length - shown.length;
+        return {
+            height: () => shown.length * HBAR_ROW + (rest > 0 ? 22 : 0),
+            draw: (ctx, x0, y0, w) => {
+                const max = Math.max(...shown.map(i => i.value)) || 1;
+                const labelW = Math.min(150, w * 0.3), valueW = 90, gap = 16;
+                const trackX = x0 + labelW + gap, trackW = w - labelW - valueW - 2 * gap;
+                shown.forEach((i, idx) => {
+                    const cy = y0 + idx * HBAR_ROW + HBAR_ROW / 2;
+                    setFont(ctx, 12, CV.text);
+                    ctx.textAlign = "left";
+                    ctx.fillText(fitText(ctx, i.name, labelW), x0, cy);
+                    roundRect(ctx, trackX, cy - 4, trackW, 8, 2);
+                    ctx.fillStyle = CV.track;
+                    ctx.fill();
+                    roundRect(ctx, trackX, cy - 4, Math.max(2, trackW * i.value / max), 8, 2);
+                    ctx.fillStyle = CV.bar;
+                    ctx.fill();
+                    setFont(ctx, 12, CV.text);
+                    ctx.textAlign = "right";
+                    ctx.fillText(fmt(i.value), x0 + w, cy);
+                });
+                if (rest > 0) {
+                    setFont(ctx, 12, CV.muted);
+                    ctx.textAlign = "left";
+                    ctx.fillText(`+${rest} vehículos más`, x0, y0 + shown.length * HBAR_ROW + 11);
+                }
+            }
+        };
+    };
+
+    const donutSpec = () => {
+        const all = shareItems();
+        const total = fleetTotals().dist;
+        if (!all.length || total <= 0) return emptySpec(EMPTY_MSG.share);
+        const items = groupShare(all);
+        const grouped = items.length < all.length;
+        const R = 64, ROW = 22;
+        const legendH = items.length * ROW + (grouped ? ROW : 0);
+        return {
+            height: () => Math.max(2 * R, legendH),
+            draw: (ctx, x0, y0, w, h) => {
+                const legendW = 210, gap = 32;
+                const bx = x0 + Math.max(0, (w - (2 * R + gap + legendW)) / 2);
+                const cx = bx + R, cy = y0 + h / 2;
+                let angle = -Math.PI / 2;
+                ctx.lineWidth = 20;
+                items.forEach((i, idx) => {
+                    const sweep = i.value / total * Math.PI * 2;
+                    const g = items.length > 1 && sweep > 0.05 ? 0.025 : 0;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, R - 10, angle, angle + sweep - g);
+                    ctx.strokeStyle = DONUT_COLORS[idx];
+                    ctx.stroke();
+                    angle += sweep;
+                });
+                ctx.textAlign = "center";
+                setFont(ctx, 18, CV.text);
+                ctx.fillText(fmtNum(total, 0), cx, cy - 7);
+                setFont(ctx, 11, CV.muted);
+                ctx.fillText("km totales", cx, cy + 12);
+
+                const lx = bx + 2 * R + gap;
+                let ly = cy - legendH / 2 + ROW / 2;
+                items.forEach((i, idx) => {
+                    ctx.fillStyle = DONUT_COLORS[idx];
+                    roundRect(ctx, lx, ly - 4, 8, 8, 2);
+                    ctx.fill();
+                    setFont(ctx, 12, CV.text);
+                    ctx.textAlign = "left";
+                    ctx.fillText(fitText(ctx, shortName(i.name), legendW - 70), lx + 18, ly);
+                    setFont(ctx, 12, CV.muted);
+                    ctx.textAlign = "right";
+                    ctx.fillText(`${fmtNum(i.value / total * 100, 1)}%`, lx + legendW, ly);
+                    ly += ROW;
+                });
+                if (grouped) {
+                    setFont(ctx, 12, CV.muted);
+                    ctx.textAlign = "left";
+                    ctx.fillText(`${all.length} vehículos en total`, lx, ly);
+                }
+            }
+        };
+    };
+
+    const vbarsSpec = () => {
+        const items = speedItems().slice(0, CHART_MAX_ITEMS);
+        if (!items.length) return emptySpec(EMPTY_MSG.speed);
+        const avg = fleetAvgSpeed();
+        const PLOT_H = 208;
+        return {
+            height: () => PLOT_H + 26,
+            draw: (ctx, x0, y0, w) => {
+                const baseY = y0 + PLOT_H;
+                const max = Math.max(avg, ...items.map(i => i.value)) * 1.2 || 1;
+                const slot = w / items.length;
+                items.forEach((i, idx) => {
+                    const bw = Math.min(slot * 0.6, 52);
+                    const bx = x0 + idx * slot + (slot - bw) / 2;
+                    const bh = PLOT_H * i.value / max;
+                    roundRect(ctx, bx, baseY - bh, bw, bh, 2);
+                    ctx.fillStyle = CV.barSoft;
+                    ctx.fill();
+                    ctx.textAlign = "center";
+                    setFont(ctx, 11, CV.text);
+                    ctx.fillText(fmtNum(i.value, 1), bx + bw / 2, baseY - bh - 10);
+                    setFont(ctx, 11, CV.muted);
+                    ctx.fillText(fitText(ctx, shortName(i.name), slot - 8), x0 + idx * slot + slot / 2, baseY + 16);
+                });
+                ctx.strokeStyle = CV.border;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x0, baseY + 0.5);
+                ctx.lineTo(x0 + w, baseY + 0.5);
+                ctx.stroke();
+
+                // Línea punteada del promedio de la flota
+                const ay = Math.round(baseY - PLOT_H * avg / max) + 0.5;
+                ctx.setLineDash([4, 3]);
+                ctx.strokeStyle = CV.line;
+                ctx.beginPath();
+                ctx.moveTo(x0, ay);
+                ctx.lineTo(x0 + w, ay);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                // Leyenda del promedio arriba a la derecha (no tapa los valores de las barras)
+                const label = `Promedio ${fmtNum(avg, 1)} km/h`;
+                setFont(ctx, 11, CV.muted);
+                ctx.textAlign = "right";
+                ctx.fillText(label, x0 + w, y0 + 6);
+                const sx = x0 + w - ctx.measureText(label).width - 30;
+                ctx.setLineDash([4, 3]);
+                ctx.beginPath();
+                ctx.moveTo(sx, y0 + 6.5);
+                ctx.lineTo(sx + 22, y0 + 6.5);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        };
+    };
+
+    const chartSpec = key => {
+        if (key === "perf") { const items = perfItems(); return items.length ? hbarsSpec(items, PERF_METRICS[perfMetric].fmt) : emptySpec(EMPTY_MSG.perf); }
+        if (key === "fuel") { const items = fuelItems(); return items.length ? hbarsSpec(items, v => `${fmtNum(v, 1)} km/L`) : emptySpec(EMPTY_MSG.fuel); }
+        if (key === "share") return donutSpec();
+        return vbarsSpec();
+    };
+
+    // Tarjetas de gráficas en el orden y tamaño de la pantalla; las que van en par comparten alto
+    const buildChartImages = () => {
+        const cards = Object.keys(CHARTS).map(key => {
+            const card = $(CHARTS[key].el).closest(".sg-chart-card");
+            const full = card.classList.contains("sg-chart-card--full");
+            const w = full ? EXPORT_W : (EXPORT_W - CARD_GAP) / 2;
+            const spec = chartSpec(key);
+            return {
+                full, w, spec,
+                title: card.querySelector(".sg-chart-card__title").textContent,
+                sub: card.querySelector(".sg-chart-card__sub").textContent,
+                h: CARD_HEAD + spec.height(w - 2 * CARD_PAD) + CARD_PAD
+            };
+        });
+        chartRows(cards).forEach(row => {
+            const h = Math.max(...row.map(c => c.h));
+            row.forEach(c => { c.h = h; });
+        });
+        return cards.map(c => ({
+            full: c.full,
+            ...makeCanvas(c.w, c.h, ctx => {
+                roundRect(ctx, 0.5, 0.5, c.w - 1, c.h - 1, 8);
+                ctx.strokeStyle = CV.border;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.textAlign = "left";
+                setFont(ctx, 15, CV.text, 500);
+                ctx.fillText(fitText(ctx, c.title, c.w - 2 * CARD_PAD), CARD_PAD, CARD_PAD + 10);
+                setFont(ctx, 12, CV.muted);
+                ctx.fillText(fitText(ctx, c.sub, c.w - 2 * CARD_PAD), CARD_PAD, CARD_PAD + 30);
+                // Contenido centrado en el alto disponible (como en pantalla)
+                const innerW = c.w - 2 * CARD_PAD;
+                const avail = c.h - CARD_HEAD - CARD_PAD;
+                const contentH = c.spec.height(innerW);
+                c.spec.draw(ctx, CARD_PAD, CARD_HEAD + (avail - contentH) / 2, innerW, contentH);
+            })
+        }));
+    };
+
+    // Tarjetas de indicadores (para el PDF)
+    const buildKpiImage = kpis => {
+        const H = 84;
+        const tw = (EXPORT_W - CARD_GAP * (kpis.length - 1)) / kpis.length;
+        return makeCanvas(EXPORT_W, H, ctx => kpis.forEach((k, i) => {
+            const x = i * (tw + CARD_GAP);
+            roundRect(ctx, x + 0.5, 0.5, tw - 1, H - 1, 8);
+            ctx.strokeStyle = CV.border;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.textAlign = "left";
+            setFont(ctx, 12, CV.muted);
+            ctx.fillText(fitText(ctx, k.title, tw - 28), x + 14, 20);
+            setFont(ctx, 22, CV.text);
+            ctx.fillText(fitText(ctx, k.value, tw - 28), x + 14, 46);
+            setFont(ctx, 11, CV.muted);
+            ctx.fillText(fitText(ctx, k.sub, tw - 28), x + 14, 70);
+        }));
+    };
+
+    // Excel: PNG (nítido); PDF: JPEG, para que el archivo pese poco
     const imgPng = img => img.canvas.toDataURL("image/png");
     const imgJpeg = img => img.canvas.toDataURL("image/jpeg", 0.92);
-
-    const captureCharts = section => Array.from(document.querySelectorAll(`#sg-section-${section} .sg-chart-card`))
-        .reduce((p, card) => p.then(list => captureEl(card).then(img => [...list, { ...img, full: card.classList.contains("sg-chart-card--full") }])),
-            Promise.resolve([]));
 
     // Acomoda las gráficas como en pantalla: las anchas solas, las demás de dos en dos
     const chartRows = charts => {
@@ -1743,18 +1995,16 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         const isPdf = format === "pdf";
         setExportBusy(true);
 
-        loadLibs([isPdf ? "pdf" : "excel", ...(visuals ? ["capture"] : [])])
+        loadLibs([isPdf ? "pdf" : "excel"])
             .then(() => {
-                if (!visuals) return [null, []];
-                // En Excel los indicadores van como celdas; en PDF, como captura de las tarjetas
-                const deck = document.querySelector(`#sg-section-${model.section} .sg-card-deck`);
-                return (isPdf && deck ? captureEl(deck) : Promise.resolve(null))
-                    .then(kpiImg => captureCharts(model.section).then(charts => [kpiImg, charts]));
+                // En Excel los indicadores van como celdas; en PDF, como imagen de las tarjetas
+                const kpiImg = isPdf && model.kpis.length ? buildKpiImage(model.kpis) : null;
+                const charts = visuals && model.section === "recorridos" ? buildChartImages() : [];
+                return isPdf ? exportPdf(model, kpiImg, charts) : exportExcel(model, charts);
             })
-            .then(([kpiImg, charts]) => isPdf ? exportPdf(model, kpiImg, charts) : exportExcel(model, charts))
             .catch(err => {
                 console.error("Error al generar la descarga:", err);
-                showError("No se pudo generar el archivo. Intenta de nuevo.");
+                showError(`No se pudo generar el archivo${err && err.message ? ` (${err.message})` : ""}. Intenta de nuevo.`);
             })
             .then(() => setExportBusy(false));
     };
