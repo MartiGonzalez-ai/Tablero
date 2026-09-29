@@ -29,6 +29,13 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const SECTIONS = ["recorridos", "servicios"];
     let activeSection = "recorridos";
     const loadedKeys = { servicios: null, recorridos: null };
+    // Nombre del reporte según la sección (encabezado, pestaña del navegador y descargas)
+    const REPORT_TITLES = { recorridos: "Reporte de Utilización", servicios: "Reporte de Mantenimientos" };
+    const updatePageTitle = () => {
+        const title = $("sg-page-title");
+        if (title) title.textContent = REPORT_TITLES[activeSection];
+        document.title = REPORT_TITLES[activeSection];
+    };
     let requestSeq = 0;
 
     // Paginación (Recorridos: una fila por vehículo, desplegable por día)
@@ -1258,6 +1265,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             tab.setAttribute("aria-selected", isActive ? "true" : "false");
         });
 
+        updatePageTitle();
         showActiveSection();
         // Solo se consulta si esta sección no está al día con los filtros actuales
         if (loadedKeys[section] !== getQueryKey()) calculateMetrics();
@@ -1436,13 +1444,13 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         return {
             section,
             viewLabel: EXPORT_VIEWS[view],
-            title: `Reporte Silbagas · ${SECTION_TITLES[section]}`,
+            title: REPORT_TITLES[section],
             filters: `Periodo: ${getPeriodLabel()} (${fmtDate(from)} – ${fmtDate(to)}) · Vehículos: ${$("sg-units-label").textContent}`,
             generated: `Generado el ${new Date().toLocaleString("es-MX", { dateStyle: "long", timeStyle: "short" })}`,
             kpis: view === "data" ? [] : readKpis(section),
             hasLevels: view === "extended",
             isData: view === "data",
-            fileBase: `Silbagas_${SECTION_TITLES[section].replace(/\s+/g, "-")}_${EXPORT_VIEWS[view].replace(/\s+/g, "-")}_${localDateStr(from)}_${localDateStr(to)}`,
+            fileBase: `${REPORT_TITLES[section].replace(/\s+/g, "_")}_${EXPORT_VIEWS[view].replace(/\s+/g, "-")}_${localDateStr(from)}_${localDateStr(to)}`,
             ...table
         };
     };
@@ -1746,7 +1754,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
 
     const exportExcel = (model, charts) => {
         const wb = new ExcelJS.Workbook();
-        wb.creator = "Reporte Silbagas";
+        wb.creator = model.title;
         const ws = wb.addWorksheet(model.viewLabel, {
             views: [{ showGridLines: false }],
             pageSetup: { orientation: "landscape", paperSize: 1, fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
@@ -2222,6 +2230,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                 eventsAttached = true;
             }
             updateFiltersUI();
+            updatePageTitle();
 
             if (cb) cb();
         },
