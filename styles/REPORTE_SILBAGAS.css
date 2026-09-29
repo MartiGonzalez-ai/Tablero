@@ -300,40 +300,212 @@ svg { flex-shrink: 0; }
 .sg-popup__footer--split { justify-content: space-between; }
 .sg-popup__footer-group { display: flex; gap: 0.5rem; }
 
-/* Lista de opciones (periodos) */
-.sg-option-list {
+
+.sg-period-popup { width: 18rem; }
+
+.sg-popup__title {
+    padding: 1rem 1rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1rem;
+    letter-spacing: 0.02rem;
+    color: var(--text-secondary);
+}
+
+/* Lista de radios (Zenith RadioGroup dentro del PeriodPicker) */
+.sg-radio-list {
     list-style: none;
     margin: 0;
-    padding: 0.25rem 0;
-    max-height: 27rem;
+    padding: 0 0 0.5rem;
+}
+
+.sg-radio {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.625rem 1rem;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+.sg-radio:hover { background: var(--backgrounds-hover); }
+.sg-radio:focus-visible { outline: 1px solid var(--borders-form-field--active); outline-offset: -1px; }
+
+.sg-radio__circle {
+    position: relative;
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.125rem;
+    border: 1px solid var(--borders-form-field--hover);
+    border-radius: 50%;
+    background: var(--backgrounds-main);
+}
+.sg-radio:hover .sg-radio__circle { border-color: var(--text-secondary); }
+
+.sg-radio--checked .sg-radio__circle,
+.sg-radio--checked:hover .sg-radio__circle { border: 2px solid var(--action-primary--default); }
+.sg-radio--checked .sg-radio__circle::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    background: var(--action-primary--default);
+}
+
+.sg-radio__text { display: flex; flex-direction: column; }
+.sg-radio__sub {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.02rem;
+    color: var(--text-secondary);
+}
+
+.sg-button--link { padding-left: 0.5rem; padding-right: 0.5rem; }
+
+.sg-period-popup {
+    max-height: calc(100vh - 11rem);
     overflow-y: auto;
 }
-
-.sg-option {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    min-height: 2rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    color: var(--text-primary);
-    cursor: pointer;
+.sg-period-popup .sg-popup__footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--backgrounds-main);
 }
-.sg-option:hover, .sg-option:focus-visible { background: var(--backgrounds-hover); outline: none; }
-.sg-option--selected { color: var(--text-hyperlink); }
-.sg-option__check { color: var(--action-primary--default); visibility: hidden; }
-.sg-option--selected .sg-option__check { visibility: visible; }
-.sg-option--divider { border-top: 1px solid var(--borders-general); }
-
-.sg-period-popup { width: 17rem; }
 
 .sg-period-custom {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    border-top: 1px solid var(--borders-general);
+    gap: 1rem;
+    padding: 0.25rem 1rem 0.75rem;
+}
+
+/* Fecha + hora */
+.sg-datetime { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.sg-datetime .sg-input { width: 100%; height: 2.25rem; }
+.sg-input.sg-input--error { border-color: var(--borders-form-field--error); }
+
+.sg-select-wrap { position: relative; }
+.sg-select-wrap svg {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-secondary);
+}
+.sg-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 1.75rem;
+    cursor: pointer;
+}
+
+/* ── Calendario (Zenith Calendar) ── */
+.sg-calendar { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.sg-calendar__nav {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.sg-calendar__month {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    height: 2rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    border-radius: var(--border-radius-default);
+}
+.sg-calendar__month:hover { background: var(--backgrounds-content-1); }
+.sg-calendar__month svg { color: var(--text-secondary); }
+
+/* Select nativo invisible encima del título para elegir mes/año */
+.sg-calendar__month-select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.sg-calendar__weekdays,
+.sg-calendar__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    justify-items: center;
+}
+
+.sg-calendar__weekdays span {
+    padding: 0.5rem 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.sg-calendar__grid { row-gap: 0.25rem; }
+
+.sg-cal-day {
+    position: relative;
+    width: 100%;
+    height: 2.25rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+}
+.sg-cal-day span {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+}
+.sg-cal-day:hover span { background: var(--backgrounds-hover); }
+.sg-cal-day:focus-visible { outline: none; }
+.sg-cal-day:focus-visible span { outline: 1px solid var(--borders-form-field--active); outline-offset: 1px; }
+
+.sg-cal-day--outside { color: var(--text-secondary); }
+.sg-cal-day--today span { color: var(--text-nav-highlight); font-weight: 500; }
+.sg-cal-day:disabled { color: var(--text-button-disabled); cursor: default; }
+.sg-cal-day:disabled span { background: transparent; }
+
+/* Rango seleccionado */
+.sg-cal-day--in-range::before,
+.sg-cal-day--range-start::before,
+.sg-cal-day--range-end::before {
+    content: "";
+    position: absolute;
+    top: 0.125rem;
+    bottom: 0.125rem;
+    left: 0;
+    right: 0;
+    background: var(--accents-general--main);
+}
+.sg-cal-day--range-start::before { left: 50%; }
+.sg-cal-day--range-end::before { right: 50%; }
+.sg-cal-day--range-start.sg-cal-day--range-end::before { display: none; }
+
+.sg-cal-day--range-start span,
+.sg-cal-day--range-end span,
+.sg-cal-day--range-start:hover span,
+.sg-cal-day--range-end:hover span {
+    background: var(--backgrounds-primary-brand);
+    color: var(--text-reverse-primary);
+    font-weight: 500;
 }
 
 /* ── Form fields ── */
@@ -583,6 +755,43 @@ svg { flex-shrink: 0; }
     color: var(--text-secondary);
     white-space: normal;
 }
+
+.sg-data-grid-card__action { margin-left: auto; }
+
+/* ── Filas agrupadas vehículo → días ── */
+.sg-tree-cell { display: flex; align-items: center; gap: 0.25rem; }
+
+.sg-expand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: none;
+    border-radius: var(--border-radius-default);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+.sg-expand:hover { background: var(--backgrounds-content-1); color: var(--text-primary); }
+.sg-expand:focus-visible { outline: 1px solid var(--borders-form-field--active); }
+.sg-expand svg { transition: transform 0.15s ease; }
+.sg-expand[aria-expanded="true"] svg { transform: rotate(90deg); }
+
+.sg-table--tree .sg-row--parent { cursor: pointer; }
+.sg-table--tree .sg-row--expanded td { background: var(--backgrounds-content-0); }
+
+.sg-table--tree .sg-row--child td {
+    height: 2.5rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    background: var(--backgrounds-content-0);
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+}
+.sg-table--tree .sg-row--child td:first-child { padding-left: 2.375rem; color: var(--text-primary); }
+.sg-table--tree .sg-row--child:hover td { background: var(--backgrounds-content-1); }
 
 .sg-table-pct { display: inline-flex; align-items: center; gap: 0.5rem; }
 .sg-table-pct .sg-progress__bar { width: 64px; flex: none; }
