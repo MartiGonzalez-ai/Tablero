@@ -26,15 +26,20 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     let pendingUnitIds = new Set();    // selección en edición dentro del dropdown
 
     // Sección activa y última consulta cargada por sección (null = sin cargar)
-    const SECTIONS = ["servicios", "recorridos"];
-    let activeSection = "servicios";
+    const SECTIONS = ["recorridos", "servicios"];
+    let activeSection = "recorridos";
     const loadedKeys = { servicios: null, recorridos: null };
     let requestSeq = 0;
 
-    // Paginación
+    // Diagnóstico de Geotab con el horómetro del motor (valor en segundos)
+    const ENGINE_HOURS_DIAGNOSTIC = "DiagnosticEngineHoursAdjustmentId";
+
+    // Paginación (Recorridos: una fila por vehículo, desplegable por día)
     let currentTripsPage = 1;
     const TRIPS_PER_PAGE = 15;
     let rawTripsList = [];
+    let unitTripSummaries = [];
+    let expandedUnits = new Set();
 
     let currentTallerPage = 1;
     const TALLER_PER_PAGE = 10;
@@ -121,28 +126,29 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const addMonths = (d, n) => { const r = new Date(d); r.setDate(1); r.setMonth(r.getMonth() + n); return r; };
     const startOfWeek = d => { const r = startOfDay(d); const day = r.getDay(); return addDays(r, day === 0 ? -6 : 1 - day); };
 
-    // Presets en el mismo orden que MyGeotab
+    // Presets idénticos al PeriodPicker de MyGeotab (showDates = subtítulo con el rango)
     const PERIOD_OPTIONS = [
         { id: "today",       label: "Hoy",              range: o => { const d = addDays(startOfDay(new Date()), o); return [d, endOfDay(d)]; } },
         { id: "yesterday",   label: "Ayer",             range: o => { const d = addDays(startOfDay(new Date()), o - 1); return [d, endOfDay(d)]; } },
-        { id: "thisWeek",    label: "Esta semana",      range: o => { const s = addDays(startOfWeek(new Date()), o * 7); return [s, endOfDay(addDays(s, 6))]; } },
+        { id: "thisWeek",    label: "Esta semana",      showDates: true, range: o => { const s = addDays(startOfWeek(new Date()), o * 7); return [s, endOfDay(addDays(s, 6))]; } },
         { id: "lastWeek",    label: "Semana pasada",    range: o => { const s = addDays(startOfWeek(new Date()), (o - 1) * 7); return [s, endOfDay(addDays(s, 6))]; } },
-        { id: "thisMonth",   label: "Este mes",         range: o => { const s = addMonths(startOfDay(new Date()), o); return [s, endOfDay(addDays(addMonths(s, 1), -1))]; } },
+        { id: "thisMonth",   label: "Este mes",         showDates: true, range: o => { const s = addMonths(startOfDay(new Date()), o); return [s, endOfDay(addDays(addMonths(s, 1), -1))]; } },
         { id: "lastMonth",   label: "Mes pasado",       range: o => { const s = addMonths(startOfDay(new Date()), o - 1); return [s, endOfDay(addDays(addMonths(s, 1), -1))]; } },
-        { id: "last7",       label: "Últimos 7 días",   range: o => { const e = addDays(new Date(), o * 7); return [addDays(startOfDay(e), -6), endOfDay(e)]; } },
-        { id: "last30",      label: "Últimos 30 días",  range: o => { const e = addDays(new Date(), o * 30); return [addDays(startOfDay(e), -29), endOfDay(e)]; } },
         { id: "last3Months", label: "Últimos 3 meses",  range: o => { const s = addMonths(startOfDay(new Date()), o * 3 - 2); return [s, endOfDay(addDays(addMonths(s, 3), -1))]; } },
-        { id: "last6Months", label: "Últimos 6 meses",  range: o => { const s = addMonths(startOfDay(new Date()), o * 6 - 5); return [s, endOfDay(addDays(addMonths(s, 6), -1))]; } },
-        { id: "thisYear",    label: "Este año",         range: o => { const y = new Date().getFullYear() + o; return [new Date(y, 0, 1), endOfDay(new Date(y, 11, 31))]; } },
         { id: "custom",      label: "Personalizado" }
     ];
 
+    // Formato corto del subtítulo, como MyGeotab: 09/01/26 – 09/30/26
+    const fmtShortDate = d =>
+        `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
+
     const getPeriodRange = (p = period) => {
         if (p.id === "custom") {
-            const days = Math.round((startOfDay(p.to) - startOfDay(p.from)) / 86400000) + 1;
-            return { from: addDays(startOfDay(p.from), p.offset * days), to: endOfDay(addDays(p.to, p.offset * days)) };
+            // Las flechas desplazan el rango personalizado por su duración en días
+            const days = Math.max(1, Math.round((p.to - p.from) / 86400000));
+            return { from: addDays(p.from, p.offset * days), to: addDays(p.to, p.offset * days) };
         }
-        const opt = PERIOD_OPTIONS.find(o => o.id === p.id) || PERIOD_OPTIONS[4];
+        const opt = PERIOD_OPTIONS.find(o => o.id === p.id) || PERIOD_OPTIONS.find(o => o.id === DEFAULT_PERIOD.id);
         const [from, to] = opt.range(p.offset);
         return { from, to };
     };
@@ -151,6 +157,11 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         const opt = PERIOD_OPTIONS.find(o => o.id === period.id);
         if (period.id !== "custom" && period.offset === 0 && opt) return opt.label;
         const { from, to } = getPeriodRange();
+        const fullDays = from.getHours() === 0 && from.getMinutes() === 0 && to.getHours() === 23 && to.getMinutes() === 59;
+        if (!fullDays) {
+            const t = d => `${fmtShortDate(d)} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+            return `${t(from)} – ${t(to)}`;
+        }
         return localDateStr(from) === localDateStr(to) ? fmtDate(from) : `${fmtDate(from)} – ${fmtDate(to)}`;
     };
 
@@ -228,37 +239,142 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         calculateMetrics();
     };
 
-    const renderPeriodOptions = () => {
+    const renderPeriodOptions = (checkedId = period.id) => {
         const list = $("sg-period-options");
         if (!list) return;
-        list.innerHTML = PERIOD_OPTIONS.map(opt => `
-            <li class="sg-option${opt.id === period.id ? " sg-option--selected" : ""}${opt.id === "custom" ? " sg-option--divider" : ""}"
-                role="option" tabindex="0" data-period="${opt.id}" aria-selected="${opt.id === period.id}">
-                <span>${opt.label}</span>
-                <i data-lucide="check" width="16" height="16" class="sg-option__check"></i>
-            </li>`).join("");
+        list.innerHTML = PERIOD_OPTIONS.map(opt => {
+            const checked = opt.id === checkedId;
+            let sub = "";
+            if (opt.showDates) {
+                const [from, to] = opt.range(0);
+                sub = `<span class="sg-radio__sub">${fmtShortDate(from)} – ${fmtShortDate(to)}</span>`;
+            }
+            return `
+                <li class="sg-radio${checked ? " sg-radio--checked" : ""}" role="radio" tabindex="${checked ? 0 : -1}"
+                    data-period="${opt.id}" aria-checked="${checked}">
+                    <span class="sg-radio__circle"></span>
+                    <span class="sg-radio__text"><span>${opt.label}</span>${sub}</span>
+                </li>`;
+        }).join("");
+    };
+
+    // ── Rango personalizado: fecha + hora y calendario (Zenith DateRange) ──
+    const MONTHS_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const sameDay = (a, b) => a && b && localDateStr(a) === localDateStr(b);
+    const fmtTime = d => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+    // Horas cada 30 min; la de fin incluye 23:59 como en MyGeotab
+    const TIME_OPTIONS = [];
+    for (let m = 0; m < 24 * 60; m += 30) TIME_OPTIONS.push(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`);
+    TIME_OPTIONS.push("23:59");
+
+    let calMonth = startOfDay(new Date());               // primer día del mes visible
+    let draft = { from: null, to: null };                  // días elegidos en el calendario
+
+    const parseShortDate = str => {
+        const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec((str || "").trim());
+        if (!m) return null;
+        const year = m[3].length === 2 ? 2000 + parseInt(m[3], 10) : parseInt(m[3], 10);
+        const d = new Date(year, parseInt(m[1], 10) - 1, parseInt(m[2], 10));
+        return d.getMonth() === parseInt(m[1], 10) - 1 ? d : null;
+    };
+
+    const fillTimeSelect = (select, value) => {
+        const opts = TIME_OPTIONS.includes(value) ? TIME_OPTIONS : [...TIME_OPTIONS, value].sort();
+        select.innerHTML = opts.map(t => `<option value="${t}"${t === value ? " selected" : ""}>${t}</option>`).join("");
+    };
+
+    const syncDateInputs = () => {
+        $("sg-custom-from").value = draft.from ? fmtShortDate(draft.from) : "";
+        $("sg-custom-to").value = draft.to ? fmtShortDate(draft.to) : (draft.from ? fmtShortDate(draft.from) : "");
+        $("sg-custom-from").classList.remove("sg-input--error");
+        $("sg-custom-to").classList.remove("sg-input--error");
+    };
+
+    const renderCalendar = () => {
+        const year = calMonth.getFullYear();
+        const month = calMonth.getMonth();
+        $("sg-cal-label").textContent = `${MONTHS_SHORT[month]} ${year}`;
+
+        // Selector de mes: últimos 36 meses hasta el actual
+        const now = new Date();
+        const monthSelect = $("sg-cal-month");
+        const items = [];
+        for (let i = 0; i < 36; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const val = `${d.getFullYear()}-${d.getMonth()}`;
+            items.push(`<option value="${val}"${d.getFullYear() === year && d.getMonth() === month ? " selected" : ""}>${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}</option>`);
+        }
+        monthSelect.innerHTML = items.join("");
+
+        const first = new Date(year, month, 1);
+        const gridStart = addDays(first, -first.getDay());   // semana inicia en domingo
+        const today = startOfDay(now);
+        const rangeEnd = draft.to || draft.from;
+
+        let html = "";
+        for (let i = 0; i < 42; i++) {
+            const d = addDays(gridStart, i);
+            if (i >= 35 && d.getMonth() !== month) break;      // no mostrar una 6ª fila vacía
+            const cls = ["sg-cal-day"];
+            if (d.getMonth() !== month) cls.push("sg-cal-day--outside");
+            if (sameDay(d, today)) cls.push("sg-cal-day--today");
+            if (draft.from && sameDay(d, draft.from)) cls.push("sg-cal-day--range-start");
+            if (rangeEnd && sameDay(d, rangeEnd)) cls.push("sg-cal-day--range-end");
+            if (draft.from && rangeEnd && d > draft.from && d < rangeEnd) cls.push("sg-cal-day--in-range");
+            html += `<button type="button" class="${cls.join(" ")}" data-date="${localDateStr(d)}" ${d > today ? "disabled" : ""}><span>${d.getDate()}</span></button>`;
+        }
+        $("sg-cal-grid").innerHTML = html;
+
+        $("sg-cal-next").disabled = year === now.getFullYear() && month === now.getMonth();
+    };
+
+    const onCalendarDayClick = dateStr => {
+        const d = new Date(dateStr + "T00:00:00");
+        // Primer clic = inicio; segundo clic = fin (si es anterior, reinicia el inicio)
+        if (!draft.from || draft.to || d < draft.from) draft = { from: d, to: null };
+        else draft = { from: draft.from, to: d };
+        $("sg-custom-error").hidden = true;
+        syncDateInputs();
+        renderCalendar();
+    };
+
+    const onDateInputChange = which => {
+        const input = $(`sg-custom-${which}`);
+        const d = parseShortDate(input.value);
+        if (!d) { input.classList.add("sg-input--error"); return; }
+        input.classList.remove("sg-input--error");
+        if (which === "from") draft = { from: d, to: draft.to && draft.to >= d ? draft.to : d };
+        else draft = { from: draft.from && draft.from <= d ? draft.from : d, to: d };
+        calMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+        syncDateInputs();
+        renderCalendar();
     };
 
     const showCustomRange = show => {
         const custom = $("sg-period-custom");
-        const footer = $("sg-period-footer");
         if (custom) custom.hidden = !show;
-        if (footer) footer.hidden = !show;
+        const applyBtn = $("sg-period-apply");
+        if (applyBtn) applyBtn.hidden = !show;
         const err = $("sg-custom-error");
         if (err) err.hidden = true;
-        if (show) {
-            const { from, to } = getPeriodRange();
-            $("sg-custom-from").value = localDateStr(from);
-            $("sg-custom-to").value = localDateStr(to);
-        }
+        if (!show) return;
+
+        // Precargar con el rango actual (personalizado) o con el día de hoy
+        const current = period.id === "custom" ? getPeriodRange() : { from: startOfDay(new Date()), to: endOfDay(new Date()) };
+        draft = { from: startOfDay(current.from), to: startOfDay(current.to) };
+        calMonth = new Date(draft.to.getFullYear(), draft.to.getMonth(), 1);
+        fillTimeSelect($("sg-custom-from-time"), fmtTime(current.from));
+        fillTimeSelect($("sg-custom-to-time"), fmtTime(current.to));
+        syncDateInputs();
+        renderCalendar();
+        refreshIcons();
     };
 
     const onPeriodOptionSelect = id => {
         if (id === "custom") {
+            renderPeriodOptions("custom");
             showCustomRange(true);
-            $("sg-period-options").querySelectorAll(".sg-option").forEach(li => {
-                li.classList.toggle("sg-option--selected", li.getAttribute("data-period") === "custom");
-            });
             return;
         }
         period = { id, offset: 0 };
@@ -336,44 +452,136 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         if (next) next.disabled = currentPage >= totalPages;
     };
 
+    // ── Agregados de viajes por vehículo y por día ──────────────
+    const newTripAgg = () => ({ trips: 0, dist: 0, drive: 0, idle: 0, stop: 0, workDrive: 0, workStop: 0, engFirst: null, engLast: null });
+
+    const addTripToAgg = (agg, t) => {
+        agg.trips++;
+        agg.dist += t.distance || 0;
+        agg.drive += parseSeconds(t.drivingDuration);
+        agg.idle += parseSeconds(t.idlingDuration);
+        agg.stop += parseSeconds(t.stopDuration);
+        agg.workDrive += parseSeconds(t.workDrivingDuration);
+        agg.workStop += parseSeconds(t.workStopDuration);
+    };
+
+    // Las lecturas llegan ordenadas por fecha: la primera fija engFirst y la última engLast
+    const addReadingToAgg = (agg, hours) => {
+        if (agg.engFirst === null) agg.engFirst = hours;
+        agg.engLast = hours;
+    };
+
+    // Horas de motor = última lectura − primera lectura (null si no hay lecturas)
+    const engineDelta = agg => agg.engFirst === null ? null : Math.max(0, agg.engLast - agg.engFirst);
+
+    const buildUnitTripSummaries = (trips, readings, targetUnits) => {
+        const byUnit = new Map();
+        const getUnit = id => {
+            if (!byUnit.has(id)) byUnit.set(id, { total: newTripAgg(), days: new Map() });
+            return byUnit.get(id);
+        };
+        const getDay = (u, key) => {
+            if (!u.days.has(key)) u.days.set(key, newTripAgg());
+            return u.days.get(key);
+        };
+
+        trips.forEach(t => {
+            const id = t.device && t.device.id;
+            if (!id || !t.start) return;
+            const u = getUnit(id);
+            addTripToAgg(u.total, t);
+            addTripToAgg(getDay(u, localDateStr(new Date(t.start))), t);
+        });
+
+        readings
+            .filter(r => r && r.device && r.device.id && r.dateTime && typeof r.data === "number")
+            .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+            .forEach(r => {
+                const u = getUnit(r.device.id);
+                const hours = r.data / 3600;
+                addReadingToAgg(u.total, hours);
+                addReadingToAgg(getDay(u, localDateStr(new Date(r.dateTime))), hours);
+            });
+
+        const targetIds = new Set(targetUnits.map(u => u.id));
+        return Array.from(byUnit.entries())
+            .filter(([id, u]) => targetIds.has(id) && (u.total.trips > 0 || engineDelta(u.total) > 0))
+            .map(([id, u]) => ({
+                unitId: id,
+                unitName: (unitsById.get(id) || {}).name || id,
+                total: u.total,
+                days: Array.from(u.days.entries())
+                    .map(([key, agg]) => ({ key, agg }))
+                    .sort((a, b) => b.key.localeCompare(a.key))
+            }))
+            .sort((a, b) => a.unitName.localeCompare(b.unitName));
+    };
+
+    const fmtEngine = h => h === null ? `<span class="sg-muted">—</span>` : `${fmtNum(h, 1)} h`;
+    const fmtDayLabel = key => {
+        const d = new Date(key + "T00:00:00");
+        const txt = d.toLocaleDateString("es-MX", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+        return txt.charAt(0).toUpperCase() + txt.slice(1);
+    };
+
+    const aggCells = agg => {
+        const avgSpeed = agg.drive > 0 ? `${fmtNum(agg.dist / (agg.drive / 3600), 1)} km/h` : "—";
+        return `
+            <td class="sg-num">${agg.trips}</td>
+            <td class="sg-num">${fmtNum(agg.dist, 1)} km</td>
+            <td class="sg-num">${fmtHrs(agg.drive)}</td>
+            <td class="sg-num">${fmtHrs(agg.idle)}</td>
+            <td class="sg-num">${fmtHrs(agg.stop)}</td>
+            <td class="sg-num">${fmtHrs(agg.workDrive)}</td>
+            <td class="sg-num">${fmtHrs(agg.workStop)}</td>
+            <td class="sg-num">${avgSpeed}</td>
+            <td class="sg-num">${fmtEngine(engineDelta(agg))}</td>`;
+    };
+
     const renderTripsTablePage = () => {
         const tbody = $("sg-tbody-trips");
         if (!tbody) return;
 
-        const totalItems = rawTripsList.length;
+        const totalItems = unitTripSummaries.length;
         const totalPages = Math.ceil(totalItems / TRIPS_PER_PAGE) || 1;
         if (currentTripsPage > totalPages) currentTripsPage = totalPages;
         const start = (currentTripsPage - 1) * TRIPS_PER_PAGE;
-        const pageData = rawTripsList.slice(start, start + TRIPS_PER_PAGE);
+        const pageData = unitTripSummaries.slice(start, start + TRIPS_PER_PAGE);
 
         if (!pageData.length) {
-            tbody.innerHTML = `<tr class="sg-table__empty"><td colspan="11">No hay viajes registrados en el periodo seleccionado.</td></tr>`;
+            tbody.innerHTML = `<tr class="sg-table__empty"><td colspan="10">No hay viajes registrados en el periodo seleccionado.</td></tr>`;
         } else {
-            tbody.innerHTML = pageData.map(trip => {
-                const deviceId = trip.device && trip.device.id;
-                const unitName = (unitsById.get(deviceId) || {}).name || (trip.device && trip.device.name) || deviceId || "—";
-                const avgSpeed = trip.averageSpeed != null ? `${fmtNum(trip.averageSpeed, 1)} km/h` : "—";
-                const engHours = trip.engineHours != null
-                    ? (typeof trip.engineHours === "number" ? `${fmtNum(trip.engineHours, 1)} h` : escapeHtml(trip.engineHours))
-                    : "—";
+            tbody.innerHTML = pageData.map(u => {
+                const expanded = expandedUnits.has(u.unitId);
+                const dayRows = expanded ? u.days.map(day => `
+                    <tr class="sg-row--child">
+                        <td>${fmtDayLabel(day.key)}</td>
+                        ${aggCells(day.agg)}
+                    </tr>`).join("") : "";
                 return `
-                    <tr>
-                        <td class="sg-strong">${escapeHtml(unitName)}</td>
-                        <td>${fmtDateTime(trip.start)}</td>
-                        <td>${trip.stop ? fmtDateTime(trip.stop) : `<span class="sg-pill sg-pill--info">En curso</span>`}</td>
-                        <td class="sg-num">${fmtNum(trip.distance || 0, 1)} km</td>
-                        <td class="sg-num">${fmtHrs(trip.drivingDuration)}</td>
-                        <td class="sg-num">${fmtHrs(trip.idlingDuration)}</td>
-                        <td class="sg-num">${fmtHrs(trip.stopDuration)}</td>
-                        <td class="sg-num">${fmtHrs(trip.workDrivingDuration)}</td>
-                        <td class="sg-num">${fmtHrs(trip.workStopDuration)}</td>
-                        <td class="sg-num">${avgSpeed}</td>
-                        <td class="sg-num">${engHours}</td>
-                    </tr>`;
+                    <tr class="sg-row--parent${expanded ? " sg-row--expanded" : ""}" data-unit-id="${escapeHtml(u.unitId)}">
+                        <td>
+                            <span class="sg-tree-cell">
+                                <button type="button" class="sg-expand" aria-expanded="${expanded}" aria-label="${expanded ? "Contraer" : "Ver"} días de ${escapeHtml(u.unitName)}">
+                                    <i data-lucide="chevron-right" width="16" height="16"></i>
+                                </button>
+                                <span class="sg-strong">${escapeHtml(u.unitName)}</span>
+                                <span class="sg-muted">· ${u.days.length} ${u.days.length === 1 ? "día" : "días"}</span>
+                            </span>
+                        </td>
+                        ${aggCells(u.total)}
+                    </tr>${dayRows}`;
             }).join("");
         }
 
-        renderPagination("trips", currentTripsPage, totalItems, TRIPS_PER_PAGE, "viajes");
+        const expandAll = $("sg-trips-expand-all");
+        if (expandAll) {
+            expandAll.hidden = !unitTripSummaries.length;
+            expandAll.textContent = expandedUnits.size && expandedUnits.size === unitTripSummaries.length ? "Contraer todo" : "Expandir todo";
+        }
+
+        renderPagination("trips", currentTripsPage, totalItems, TRIPS_PER_PAGE, "vehículos");
+        refreshIcons();
     };
 
     const renderTallerTablePage = () => {
@@ -589,23 +797,30 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const loadRecorridos = (range, targetUnits, onDone, onError) => {
         const { from, to } = range;
 
-        const finish = trips => {
+        const finish = (trips, readings) => {
             const map = new Map();
             trips.forEach(t => { if (t && t.id) map.set(t.id, t); });
             rawTripsList = Array.from(map.values()).sort((a, b) => new Date(b.start) - new Date(a.start));
+            unitTripSummaries = buildUnitTripSummaries(rawTripsList, readings, targetUnits);
+            expandedUnits = new Set();
             onDone();
         };
 
         if (!hasApi()) {
             setTimeout(() => {
                 const mock = [];
+                const mockReadings = [];
                 targetUnits.forEach((unit, idx) => {
                     let cursor = new Date(from.getTime() + idx * 3600 * 1000);
+                    let engineSec = (1500 + idx * 230) * 3600;
                     for (let i = 0; i < 8 + (idx % 4); i++) {
                         const driveSec = Math.floor(Math.random() * 7200) + 1800;
                         const stopSec = Math.floor(Math.random() * 14400) + 3600;
                         const tripStop = new Date(cursor.getTime() + driveSec * 1000);
                         if (tripStop > to) break;
+                        mockReadings.push({ device: { id: unit.id }, dateTime: cursor.toISOString(), data: engineSec });
+                        engineSec += driveSec * 1.1;
+                        mockReadings.push({ device: { id: unit.id }, dateTime: tripStop.toISOString(), data: engineSec });
                         mock.push({
                             id: `t-${unit.id}-${100 + i}`,
                             device: { id: unit.id },
@@ -617,30 +832,41 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                             stopDuration: stopSec,
                             workDrivingDuration: driveSec,
                             workStopDuration: stopSec,
-                            averageSpeed: Math.floor(45 + Math.random() * 30),
-                            engineHours: 1500 + i * 3.5
+                            averageSpeed: Math.floor(45 + Math.random() * 30)
                         });
                         cursor = new Date(tripStop.getTime() + stopSec * 1000);
                     }
                 });
-                finish(mock);
+                finish(mock, mockReadings);
             }, 400);
             return;
         }
 
         const base = { fromDate: from.toISOString(), toDate: to.toISOString() };
-        const fail = err => {
-            console.error("Error al consultar la tabla Trip:", err);
-            onError("Error de conexión con Geotab al consultar los viajes.");
-        };
 
-        if (!selectedUnitIds.length) {
-            api.call("Get", { typeName: "Trip", search: base }, r => finish(r || []), fail);
-        } else {
-            // Una consulta por vehículo seleccionado, enviadas juntas en un multiCall
-            const calls = selectedUnitIds.map(id => ["Get", { typeName: "Trip", search: { ...base, deviceSearch: { id } } }]);
-            multiGet(calls, results => finish([].concat(...results.map(r => r || []))), fail);
-        }
+        // Todos los vehículos: una sola consulta; si hay selección, una por vehículo en un multiCall
+        const getPerDevice = (typeName, search) => new Promise((resolve, reject) => {
+            const calls = selectedUnitIds.length
+                ? selectedUnitIds.map(id => ["Get", { typeName, search: { ...search, deviceSearch: { id } } }])
+                : [["Get", { typeName, search }]];
+            multiGet(calls, results => resolve([].concat(...results.map(r => r || []))), reject);
+        });
+
+        const tripsReq = getPerDevice("Trip", base);
+        // Si falla el horómetro (p. ej. sin permisos de StatusData) se muestran los viajes sin horas de motor
+        const readingsReq = getPerDevice("StatusData", { ...base, diagnosticSearch: { id: ENGINE_HOURS_DIAGNOSTIC } })
+            .catch(err => {
+                console.warn("No se pudieron consultar las lecturas de horas de motor:", err);
+                showError("No se pudieron obtener las horas de motor; se muestran solo los viajes.");
+                return [];
+            });
+
+        Promise.all([tripsReq, readingsReq])
+            .then(([trips, readings]) => finish(trips, readings))
+            .catch(err => {
+                console.error("Error al consultar la tabla Trip:", err);
+                onError("Error de conexión con Geotab al consultar los viajes.");
+            });
     };
 
     // ════════════════════════════════════════════════════════════
@@ -734,23 +960,23 @@ const initSilbagasAddin = function (_api, _state, _callback) {
 
     // ── KPIs y tabla de Recorridos ────────────────────────────────
     const renderRecorridos = range => {
-        let totalDist = 0, totalDriveSec = 0, totalIdleSec = 0;
-        const activeUnits = new Set();
+        let totalDist = 0, totalDriveSec = 0, totalIdleSec = 0, tripCount = 0, totalEngine = 0, hasEngine = false;
 
-        rawTripsList.forEach(t => {
-            totalDist += (t.distance || 0);
-            totalDriveSec += parseSeconds(t.drivingDuration);
-            totalIdleSec += parseSeconds(t.idlingDuration);
-            if (t.device && t.device.id) activeUnits.add(t.device.id);
+        unitTripSummaries.forEach(u => {
+            totalDist += u.total.dist;
+            totalDriveSec += u.total.drive;
+            totalIdleSec += u.total.idle;
+            tripCount += u.total.trips;
+            const eng = engineDelta(u.total);
+            if (eng !== null) { totalEngine += eng; hasEngine = true; }
         });
 
-        const tripCount = rawTripsList.length;
         const engineSec = totalDriveSec + totalIdleSec;
 
         $("sg-kpi-dist").textContent = fmtNum(totalDist, 1);
-        $("sg-kpi-dist-avg").textContent = `Promedio ${fmtNum(tripCount ? totalDist / tripCount : 0, 1)} km por viaje`;
-        $("sg-kpi-trips").textContent = tripCount.toLocaleString("es-MX");
-        $("sg-kpi-trips-units").textContent = `${activeUnits.size} vehículos con actividad`;
+        $("sg-kpi-dist-avg").textContent = `${tripCount.toLocaleString("es-MX")} viajes · promedio ${fmtNum(tripCount ? totalDist / tripCount : 0, 1)} km`;
+        $("sg-kpi-engine").textContent = hasEngine ? fmtNum(totalEngine, 1) : "—";
+        $("sg-kpi-trips-units").textContent = `${unitTripSummaries.length} vehículos con actividad`;
         $("sg-kpi-drive").textContent = fmtHrs(totalDriveSec);
         $("sg-kpi-idle").textContent = fmtHrs(totalIdleSec);
         $("sg-kpi-idle-pct").textContent = `${fmtNum(engineSec ? (totalIdleSec / engineSec) * 100 : 0, 1)}% del tiempo de motor`;
@@ -798,27 +1024,69 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         });
 
         $("sg-period-options").addEventListener("click", e => {
-            const li = e.target.closest(".sg-option");
+            const li = e.target.closest(".sg-radio");
             if (li) onPeriodOptionSelect(li.getAttribute("data-period"));
         });
         $("sg-period-options").addEventListener("keydown", e => {
-            const li = e.target.closest(".sg-option");
-            if (li && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onPeriodOptionSelect(li.getAttribute("data-period")); }
+            const li = e.target.closest(".sg-radio");
+            if (!li) return;
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPeriodOptionSelect(li.getAttribute("data-period")); }
+            else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                e.preventDefault();
+                const target = e.key === "ArrowDown" ? li.nextElementSibling : li.previousElementSibling;
+                if (target) target.focus();
+            }
+        });
+
+        // Borrar: regresa el periodo al valor por defecto
+        $("sg-period-clear").addEventListener("click", () => {
+            const wasDefault = isDefaultPeriod();
+            period = { ...DEFAULT_PERIOD };
+            closePopups();
+            if (!wasDefault) applyFilters();
         });
 
         $("sg-period-prev").addEventListener("click", () => { period = { ...period, offset: period.offset - 1 }; applyFilters(); });
         $("sg-period-next").addEventListener("click", () => { period = { ...period, offset: period.offset + 1 }; applyFilters(); });
 
-        $("sg-period-cancel").addEventListener("click", closePopups);
+        // ── Rango personalizado ──
+        $("sg-cal-grid").addEventListener("click", e => {
+            const btn = e.target.closest(".sg-cal-day");
+            if (btn && !btn.disabled) onCalendarDayClick(btn.getAttribute("data-date"));
+        });
+        $("sg-cal-prev").addEventListener("click", () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1); renderCalendar(); });
+        $("sg-cal-next").addEventListener("click", () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1); renderCalendar(); });
+        $("sg-cal-today").addEventListener("click", () => { const t = new Date(); calMonth = new Date(t.getFullYear(), t.getMonth(), 1); renderCalendar(); });
+        $("sg-cal-month").addEventListener("change", e => {
+            const [y, m] = e.target.value.split("-").map(Number);
+            calMonth = new Date(y, m, 1);
+            renderCalendar();
+        });
+        ["from", "to"].forEach(which => {
+            const input = $(`sg-custom-${which}`);
+            input.addEventListener("change", () => onDateInputChange(which));
+            input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); onDateInputChange(which); } });
+        });
+
         $("sg-period-apply").addEventListener("click", () => {
-            const fromVal = $("sg-custom-from").value;
-            const toVal = $("sg-custom-to").value;
             const err = $("sg-custom-error");
             const fail = msg => { err.textContent = msg; err.hidden = false; };
-            if (!fromVal) return fail("La fecha de inicio no puede estar vacía.");
-            if (!toVal) return fail("La fecha de fin no puede estar vacía.");
-            if (fromVal > toVal) return fail("La fecha de inicio no puede ser mayor que la fecha de fin.");
-            period = { id: "custom", offset: 0, from: new Date(fromVal + "T00:00:00"), to: new Date(toVal + "T00:00:00") };
+            const fromDay = parseShortDate($("sg-custom-from").value);
+            const toDay = parseShortDate($("sg-custom-to").value);
+            if (!fromDay) return fail("La fecha de inicio no puede estar vacía.");
+            if (!toDay) return fail("La fecha de desactivación no puede estar vacía.");
+
+            const withTime = (day, time) => {
+                const [h, m] = time.split(":").map(Number);
+                const d = new Date(day);
+                d.setHours(h, m, m === 59 ? 59 : 0, m === 59 ? 999 : 0);
+                return d;
+            };
+            const from = withTime(fromDay, $("sg-custom-from-time").value);
+            const to = withTime(toDay, $("sg-custom-to-time").value);
+            if (from >= to) return fail("La fecha de inicio debe ser anterior a la fecha de desactivación.");
+
+            period = { id: "custom", offset: 0, from, to };
             closePopups();
             applyFilters();
         });
@@ -853,7 +1121,8 @@ const initSilbagasAddin = function (_api, _state, _callback) {
 
         // Cerrar popups al hacer clic fuera o con Escape
         document.addEventListener("click", e => {
-            if (openPopupId && !e.target.closest(".sg-filter")) closePopups();
+            // e.target puede quedar desconectado si el popup se redibujó durante el clic
+            if (openPopupId && e.target.isConnected && !e.target.closest(".sg-filter")) closePopups();
         });
         document.addEventListener("keydown", e => {
             if (e.key !== "Escape") return;
@@ -877,7 +1146,22 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         });
         $("sg-btn-trips-prev").addEventListener("click", () => { if (currentTripsPage > 1) { currentTripsPage--; renderTripsTablePage(); } });
         $("sg-btn-trips-next").addEventListener("click", () => {
-            if (currentTripsPage < Math.ceil(rawTripsList.length / TRIPS_PER_PAGE)) { currentTripsPage++; renderTripsTablePage(); }
+            if (currentTripsPage < Math.ceil(unitTripSummaries.length / TRIPS_PER_PAGE)) { currentTripsPage++; renderTripsTablePage(); }
+        });
+
+        // Desplegar / contraer los días de un vehículo (clic en la fila o en la flecha)
+        $("sg-tbody-trips").addEventListener("click", e => {
+            const row = e.target.closest(".sg-row--parent");
+            if (!row) return;
+            const id = row.getAttribute("data-unit-id");
+            if (expandedUnits.has(id)) expandedUnits.delete(id);
+            else expandedUnits.add(id);
+            renderTripsTablePage();
+        });
+        $("sg-trips-expand-all").addEventListener("click", () => {
+            const allOpen = expandedUnits.size === unitTripSummaries.length;
+            expandedUnits = allOpen ? new Set() : new Set(unitTripSummaries.map(u => u.unitId));
+            renderTripsTablePage();
         });
 
         refreshIcons();
