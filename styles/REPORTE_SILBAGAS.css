@@ -303,6 +303,22 @@ svg { flex-shrink: 0; }
 
 .sg-period-popup { width: 18rem; }
 
+/* Menú de descarga (alineado a la derecha del encabezado) */
+.sg-export-popup { left: auto; right: 0; width: 25rem; max-width: calc(100vw - 2rem); }
+.sg-export-list { margin: 0; padding: 0 0 0.5rem; list-style: none; }
+.sg-export-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.625rem 1rem;
+    border-top: 1px solid var(--backgrounds-hover);
+}
+.sg-export-item__text { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+.sg-export-item__name { font-size: 0.875rem; color: var(--text-primary); }
+.sg-export-item__desc { font-size: 0.75rem; line-height: 1rem; color: var(--text-secondary); }
+.sg-export-item__actions { display: flex; gap: 0.375rem; flex: none; }
+
 .sg-popup__title {
     padding: 1rem 1rem 0.5rem;
     font-size: 0.75rem;
@@ -754,12 +770,24 @@ svg { flex-shrink: 0; }
 .sg-hbar__track { height: 8px; border-radius: 2px; background: var(--chart-track); overflow: hidden; }
 .sg-hbar__fill { height: 100%; border-radius: 2px; background: var(--chart-bar); transition: width 0.4s ease; }
 .sg-hbar__value { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.sg-hbars__more { font-size: 0.75rem; color: var(--text-secondary); }
+.sg-hbars__more {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 0.75rem;
+    color: var(--action-primary--default);
+    cursor: pointer;
+}
+.sg-hbars__more:hover { text-decoration: underline; }
+
+.sg-chart-card__actions { display: flex; align-items: center; gap: 0.5rem; }
 
 /* Dona */
 .sg-donut-wrap { display: flex; align-items: center; justify-content: center; gap: 2rem; flex: 1; flex-wrap: wrap; }
 .sg-donut { position: relative; width: 128px; height: 128px; flex: none; }
-.sg-donut svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
+.sg-donut svg { display: block; width: 100%; height: 100%; }
 .sg-donut circle { fill: none; stroke-width: 20; }
 .sg-donut__center {
     position: absolute;
@@ -1045,6 +1073,29 @@ svg { flex-shrink: 0; }
 .sg-modal__content { padding: 0 1.5rem; overflow: auto; }
 .sg-modal__content .sg-data-grid { max-height: 22rem; }
 
+/* Gráfica en pantalla completa: todos los vehículos */
+.sg-modal--fullscreen { max-width: none; height: calc(100vh - 2rem); }
+.sg-chart-modal__body {
+    --chart-bar:       #4a90d9;
+    --chart-bar-soft:  #a9cbee;
+    --chart-track:     #f2f5f7;
+    flex: 1;
+    min-height: 0;
+    padding-bottom: 1.5rem;
+}
+.sg-chart-modal__body .sg-hbar { grid-template-columns: minmax(8rem, 18rem) minmax(0, 1fr) minmax(5rem, auto); }
+.sg-chart-modal__body .sg-vbars { height: 100%; min-height: 18rem; }
+.sg-chart-modal__body .sg-donut-wrap { align-items: flex-start; justify-content: flex-start; gap: 3rem; }
+.sg-chart-modal__body .sg-donut { width: 200px; height: 200px; }
+.sg-chart-modal__body .sg-donut__value { font-size: 1.5rem; line-height: 2rem; }
+.sg-chart-modal__body .sg-legend {
+    display: grid;
+    flex: 1;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    column-gap: 2rem;
+}
+.sg-chart-modal__body .sg-legend__name { max-width: none; }
+
 .sg-modal__footer {
     display: flex;
     justify-content: flex-end;
@@ -1104,3 +1155,4 @@ svg { flex-shrink: 0; }
     .sg-page-header__actions .sg-button span { display: none; }
     .sg-popup { position: fixed; left: 1rem; right: 1rem; top: auto; width: auto; }
 }
+
