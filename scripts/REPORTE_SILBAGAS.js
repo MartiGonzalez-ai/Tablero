@@ -182,7 +182,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     let openPopupId = null;
 
     const closePopups = () => {
-        ["sg-period", "sg-units"].forEach(prefix => {
+        ["sg-period", "sg-units", "sg-export"].forEach(prefix => {
             const popup = $(`${prefix}-popup`);
             const trigger = $(`${prefix}-trigger`);
             if (popup) popup.hidden = true;
@@ -642,113 +642,127 @@ const initSilbagasAddin = function (_api, _state, _callback) {
 
     const emptyChart = msg => `<p class="sg-chart-empty">${msg}</p>`;
 
-    // Barras horizontales ordenadas de mayor a menor
-    const hbarsHtml = (items, fmt) => {
+    // "Ver todos" abre la gráfica en pantalla completa
+    const moreButton = (key, text) => `<button type="button" class="sg-hbars__more" data-chart-expand="${key}">${text}</button>`;
+
+    // Barras horizontales ordenadas de mayor a menor; full = todos los vehículos (pantalla completa)
+    const hbarsHtml = (items, fmt, key, full) => {
         const max = Math.max(...items.map(i => i.value)) || 1;
-        const shown = items.slice(0, CHART_MAX_ITEMS);
+        const shown = full ? items : items.slice(0, CHART_MAX_ITEMS);
         const rest = items.length - shown.length;
         return shown.map(i => `
             <div class="sg-hbar" title="${escapeHtml(i.name)}: ${escapeHtml(fmt(i.value))}">
                 <span class="sg-hbar__label">${escapeHtml(i.name)}</span>
                 <span class="sg-hbar__track"><span class="sg-hbar__fill" style="display:block;width:${(i.value / max * 100).toFixed(1)}%"></span></span>
                 <span class="sg-hbar__value">${fmt(i.value)}</span>
-            </div>`).join("") + (rest > 0 ? `<span class="sg-hbars__more">+${rest} vehículos más</span>` : "");
+            </div>`).join("") + (rest > 0 ? moreButton(key, `+${rest} vehículos más · Ver todos`) : "");
+    };
+
+    const fleetTotals = () => unitTripSummaries.reduce(
+        (t, u) => ({ dist: t.dist + u.total.dist, drive: t.drive + u.total.drive }), { dist: 0, drive: 0 });
+
+    const perfHtml = full => {
+        const metric = PERF_METRICS[perfMetric];
+        const items = unitTripSummaries
+            .map(u => ({ name: u.unitName, value: metric.value(u) }))
+            .filter(i => i.value !== null && i.value > 0)
+            .sort((a, b) => b.value - a.value);
+        return items.length ? hbarsHtml(items, metric.fmt, "perf", full) : emptyChart("Sin datos para esta métrica en el periodo.");
     };
 
     const renderPerfChart = () => {
         const el = $("sg-chart-perf");
         if (!el) return;
-        const metric = PERF_METRICS[perfMetric];
-        $("sg-chart-perf-sub").textContent = metric.sub;
-        document.querySelectorAll("#sg-chart-perf-metric .sg-segmented__item").forEach(btn => {
+        $("sg-chart-perf-sub").textContent = PERF_METRICS[perfMetric].sub;
+        document.querySelectorAll(".sg-perf-metric .sg-segmented__item").forEach(btn => {
             const active = btn.getAttribute("data-metric") === perfMetric;
             btn.classList.toggle("sg-segmented__item--active", active);
             btn.setAttribute("aria-pressed", active ? "true" : "false");
         });
-
-        const items = unitTripSummaries
-            .map(u => ({ name: u.unitName, value: metric.value(u) }))
-            .filter(i => i.value !== null && i.value > 0)
-            .sort((a, b) => b.value - a.value);
-        el.innerHTML = items.length ? hbarsHtml(items, metric.fmt) : emptyChart("Sin datos para esta métrica en el periodo.");
+        el.innerHTML = perfHtml(false);
+        renderChartModal();
     };
 
-    const renderShareChart = totalDist => {
-        const el = $("sg-chart-share");
-        if (!el) return;
-        $("sg-chart-share-sub").textContent = `Sobre el total de ${fmtNum(totalDist, 1)} km`;
-
-        let items = unitTripSummaries
+    const shareHtml = full => {
+        const totalDist = fleetTotals().dist;
+        const all = unitTripSummaries
             .filter(u => u.total.dist > 0)
             .map(u => ({ name: u.unitName, value: u.total.dist }))
             .sort((a, b) => b.value - a.value);
-        if (!items.length || totalDist <= 0) { el.innerHTML = emptyChart("Sin distancia registrada en el periodo."); return; }
+        if (!all.length || totalDist <= 0) return emptyChart("Sin distancia registrada en el periodo.");
 
         // Más de 6 vehículos: los 5 principales y el resto agrupado en "Otros"
-        if (items.length > DONUT_COLORS.length) {
-            const others = items.slice(DONUT_COLORS.length - 1).reduce((s, i) => s + i.value, 0);
-            items = [...items.slice(0, DONUT_COLORS.length - 1), { name: "Otros", value: others }];
+        let items = all;
+        const grouped = all.length > DONUT_COLORS.length;
+        if (grouped) {
+            const others = all.slice(DONUT_COLORS.length - 1).reduce((s, i) => s + i.value, 0);
+            items = [...all.slice(0, DONUT_COLORS.length - 1), { name: "Otros", value: others }];
         }
+
+        // En pantalla completa la leyenda lista todos los vehículos (los de "Otros" con su color)
+        const legend = full
+            ? all.map((i, idx) => ({ ...i, color: DONUT_COLORS[Math.min(idx, DONUT_COLORS.length - 1)] }))
+            : items.map((i, idx) => ({ ...i, color: DONUT_COLORS[idx] }));
 
         const r = 54, c = 2 * Math.PI * r;
         let offset = 0;
         const arcs = items.map((i, idx) => {
             const len = (i.value / totalDist) * c;
             const gap = items.length > 1 && len > 3 ? 1.5 : 0;
-            const arc = `<circle cx="64" cy="64" r="${r}" stroke="${DONUT_COLORS[idx]}"
+            const arc = `<circle cx="64" cy="64" r="${r}" fill="none" stroke-width="20" stroke="${DONUT_COLORS[idx]}"
                 stroke-dasharray="${(len - gap).toFixed(2)} ${(c - len + gap).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}">
                 <title>${escapeHtml(i.name)}: ${fmtNum(i.value, 1)} km</title></circle>`;
             offset += len;
             return arc;
         }).join("");
 
-        el.innerHTML = `
+        return `
             <div class="sg-donut">
-                <svg viewBox="0 0 128 128" role="img" aria-label="Participación en distancia por vehículo">${arcs}</svg>
+                <svg viewBox="0 0 128 128" role="img" aria-label="Participación en distancia por vehículo"><g transform="rotate(-90 64 64)">${arcs}</g></svg>
                 <div class="sg-donut__center">
                     <span class="sg-donut__value">${fmtNum(totalDist, 0)}</span>
                     <span class="sg-donut__label">km totales</span>
                 </div>
             </div>
             <ul class="sg-legend">
-                ${items.map((i, idx) => `
-                    <li class="sg-legend__item" title="${escapeHtml(i.name)}">
-                        <span class="sg-legend__swatch" style="background:${DONUT_COLORS[idx]}"></span>
-                        <span class="sg-legend__name">${escapeHtml(shortName(i.name))}</span>
-                        <span class="sg-legend__value">${fmtNum(i.value / totalDist * 100, 1)}%</span>
+                ${legend.map(i => `
+                    <li class="sg-legend__item" title="${escapeHtml(i.name)}: ${fmtNum(i.value, 1)} km">
+                        <span class="sg-legend__swatch" style="background:${i.color}"></span>
+                        <span class="sg-legend__name">${escapeHtml(full ? i.name : shortName(i.name))}</span>
+                        <span class="sg-legend__value">${full ? `${fmtNum(i.value, 1)} km · ` : ""}${fmtNum(i.value / totalDist * 100, 1)}%</span>
                     </li>`).join("")}
+                ${!full && grouped ? `<li>${moreButton("share", `Ver los ${all.length} vehículos`)}</li>` : ""}
             </ul>`;
     };
 
-    const renderFuelChart = () => {
-        const el = $("sg-chart-fuel");
-        if (!el) return;
+    const fuelHtml = full => {
         const items = unitTripSummaries
             .filter(u => u.total.fuel > 0 && u.total.dist > 0)
             .map(u => ({ name: u.unitName, value: u.total.dist / u.total.fuel }))
             .sort((a, b) => b.value - a.value);
-        el.innerHTML = items.length
-            ? hbarsHtml(items, v => `${fmtNum(v, 1)} km/L`)
+        return items.length
+            ? hbarsHtml(items, v => `${fmtNum(v, 1)} km/L`, "fuel", full)
             : emptyChart("Ningún vehículo tiene registros de combustible en el periodo.");
     };
 
-    const renderSpeedChart = (totalDist, totalDriveSec) => {
-        const el = $("sg-chart-speed");
-        if (!el) return;
-        const items = unitTripSummaries
+    const speedHtml = full => {
+        const all = unitTripSummaries
             .filter(u => u.total.drive > 0)
             .map(u => ({ name: u.unitName, value: u.total.dist / (u.total.drive / 3600) }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, CHART_MAX_ITEMS);
-        if (!items.length) { el.innerHTML = emptyChart("Sin tiempo de conducción en el periodo."); return; }
+            .sort((a, b) => b.value - a.value);
+        if (!all.length) return emptyChart("Sin tiempo de conducción en el periodo.");
+        const items = full ? all : all.slice(0, CHART_MAX_ITEMS);
 
-        const fleetAvg = totalDriveSec > 0 ? totalDist / (totalDriveSec / 3600) : 0;
+        const { dist, drive } = fleetTotals();
+        const fleetAvg = drive > 0 ? dist / (drive / 3600) : 0;
         // Escala con margen para la etiqueta de valor sobre la barra más alta
         const max = Math.max(fleetAvg, ...items.map(i => i.value)) * 1.2 || 1;
         const pct = v => (v / max * 100).toFixed(1);
+        // En pantalla completa cada barra tiene un ancho mínimo; si no caben, hay scroll horizontal
+        const plotStyle = full ? ` style="min-width:${items.length * 4.5}rem"` : "";
 
-        el.innerHTML = `
-            <div class="sg-vbars__plot">
+        return `
+            <div class="sg-vbars__plot"${plotStyle}>
                 ${items.map(i => `
                     <div class="sg-vbar" title="${escapeHtml(i.name)}: ${fmtNum(i.value, 1)} km/h">
                         <span class="sg-vbar__value">${fmtNum(i.value, 1)}</span>
@@ -759,11 +773,49 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             </div>`;
     };
 
-    const renderTripCharts = (totalDist, totalDriveSec) => {
+    // Gráficas: contenedor en la tarjeta, clase del contenedor y generador de contenido
+    const CHARTS = {
+        perf:  { el: "sg-chart-perf",  cls: "sg-hbars",      html: perfHtml },
+        share: { el: "sg-chart-share", cls: "sg-donut-wrap", html: shareHtml },
+        fuel:  { el: "sg-chart-fuel",  cls: "sg-hbars",      html: fuelHtml },
+        speed: { el: "sg-chart-speed", cls: "sg-vbars",      html: speedHtml }
+    };
+
+    // ── Gráfica en pantalla completa (todos los vehículos) ──────
+    let chartModalKey = null;
+
+    const renderChartModal = () => {
+        if (!chartModalKey) return;
+        const chart = CHARTS[chartModalKey];
+        const card = $(chart.el).closest(".sg-chart-card");
+        $("sg-chart-modal-title").textContent = card.querySelector(".sg-chart-card__title").textContent;
+        $("sg-chart-modal-sub").textContent = card.querySelector(".sg-chart-card__sub").textContent;
+        $("sg-chart-modal-metric").hidden = chartModalKey !== "perf";
+        $("sg-chart-modal-body").innerHTML = `<div class="${chart.cls}">${chart.html(true)}</div>`;
+    };
+
+    const openChartModal = key => {
+        if (!CHARTS[key]) return;
+        chartModalKey = key;
+        renderChartModal();
+        $("sg-chart-modal").hidden = false;
+        $("sg-chart-modal-body").scrollTop = 0;
+        refreshIcons();
+    };
+
+    const closeChartModal = () => {
+        chartModalKey = null;
+        $("sg-chart-modal").hidden = true;
+    };
+
+    const renderTripCharts = () => {
+        $("sg-chart-share-sub").textContent = `Sobre el total de ${fmtNum(fleetTotals().dist, 1)} km`;
         renderPerfChart();
-        renderShareChart(totalDist);
-        renderFuelChart();
-        renderSpeedChart(totalDist, totalDriveSec);
+        ["share", "fuel", "speed"].forEach(key => {
+            const el = $(CHARTS[key].el);
+            if (el) el.innerHTML = CHARTS[key].html(false);
+        });
+        renderChartModal();
     };
 
     const renderTallerTablePage = () => {
@@ -954,7 +1006,17 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             onDone();
         };
 
-        if (!hasApi()) { setTimeout(() => finish([]), 400); return; }
+        if (!hasApi()) {
+            // Vista previa: una orden cerrada por vehículo y una abierta en el primero
+            const day = n => new Date(range.from.getTime() + n * 86400000);
+            const mockOrders = [];
+            targetUnits.forEach((unit, idx) => {
+                mockOrders.push({ order: { id: `wo-${unit.id}`, device: { id: unit.id }, reference: `Servicio preventivo ${idx + 1}`, startDate: day(2 + idx * 3), completedDate: day(3 + idx * 3) }, jobs: [] });
+                if (idx === 0) mockOrders.push({ order: { id: `wo-${unit.id}-b`, device: { id: unit.id }, reference: "Reparación de frenos", startDate: day(12) }, jobs: [] });
+            });
+            setTimeout(() => finish(mockOrders), 400);
+            return;
+        }
 
         const search = {};
         if (selectedUnitIds.length === 1) search.deviceSearch = { id: selectedUnitIds[0] };
@@ -1167,7 +1229,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         $("sg-kpi-idle").textContent = fmtHrs(totalIdleSec);
         $("sg-kpi-idle-pct").textContent = `${fmtNum(engineSec ? (totalIdleSec / engineSec) * 100 : 0, 1)}% del tiempo de motor`;
 
-        renderTripCharts(totalDist, totalDriveSec);
+        renderTripCharts();
 
         currentTripsPage = 1;
         renderTripsTablePage();
@@ -1191,6 +1253,513 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     };
 
     // ════════════════════════════════════════════════════════════
+    // DESCARGAS: Vista general / Vista extendida / Datos · Excel o PDF
+    // ════════════════════════════════════════════════════════════
+    // Las librerías se cargan solo la primera vez que se descarga algo
+    const EXPORT_LIBS = {
+        excel:   ["https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"],
+        pdf:     ["https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+                  "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"],
+        capture: ["https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"]
+    };
+    const scriptLoads = new Map();
+    const loadScript = src => {
+        if (!scriptLoads.has(src)) scriptLoads.set(src, new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = () => { scriptLoads.delete(src); reject(new Error(`No se pudo cargar ${src}`)); };
+            document.head.appendChild(s);
+        }));
+        return scriptLoads.get(src);
+    };
+    // En orden: jspdf-autotable necesita que jsPDF ya esté cargado
+    const loadLibs = groups => [].concat(...groups.map(g => EXPORT_LIBS[g]))
+        .reduce((p, src) => p.then(() => loadScript(src)), Promise.resolve());
+
+    const EXPORT_VIEWS = { general: "Vista general", extended: "Vista extendida", data: "Datos" };
+    const SECTION_TITLES = { recorridos: "Recorridos", servicios: "Servicios de taller" };
+    const EXPORT_DESC = {
+        recorridos: {
+            general: "Indicadores, gráficas y tabla por vehículo, como se ve en pantalla",
+            extended: "Igual que la vista general, con los días de cada vehículo desplegados",
+            data: "Solo la tabla de datos por día de cada vehículo"
+        },
+        servicios: {
+            general: "Indicadores y tabla por vehículo, como se ve en pantalla",
+            extended: "Igual que la vista general, con las estancias de cada vehículo desplegadas",
+            data: "Solo la tabla de estancias en taller"
+        }
+    };
+
+    // Excel guarda fechas sin zona horaria: se escribe la hora local tal cual
+    const excelDate = v => {
+        const d = new Date(v);
+        return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()));
+    };
+
+    // Tipos de columna: formato numérico de Excel y texto para el PDF
+    const COL_TYPES = {
+        text:   { pdf: v => String(v) },
+        int:    { xl: "#,##0",              pdf: v => v.toLocaleString("es-MX") },
+        km:     { xl: '#,##0.0 "km"',       pdf: v => `${fmtNum(v, 1)} km` },
+        durS:   { xl: '[h]"h" mm"m"',       pdf: v => fmtHrs(v),         toXl: v => v / 86400 },
+        durMs:  { xl: '[h]"h" mm"m"',       pdf: v => fmtDurationMs(v),  toXl: v => v / 86400000 },
+        speed:  { xl: '0.0 "km/h"',         pdf: v => `${fmtNum(v, 1)} km/h` },
+        liters: { xl: '#,##0.0 "L"',        pdf: v => `${fmtNum(v, 1)} L` },
+        hours:  { xl: '#,##0.0 "h"',        pdf: v => `${fmtNum(v, 1)} h` },
+        pct:    { xl: '0.0"%"',             pdf: v => `${v.toFixed(1)}%` },
+        date:   { xl: "dd/mm/yyyy hh:mm",   pdf: v => fmtDateTime(v),    toXl: excelDate },
+        day:    { xl: "dd/mm/yyyy",         pdf: v => fmtDayLabel(v),    toXl: v => excelDate(new Date(v + "T00:00:00")) }
+    };
+    const LEFT_TYPES = new Set(["text", "date", "day"]);
+
+    // En los valores: undefined = celda vacía (no aplica), null = sin dato ("—")
+    const pdfCell = (col, v) => v === undefined ? "" : v === null ? "—" : COL_TYPES[col.type].pdf(v);
+
+    // ── Tablas a exportar ──
+    const TRIP_COLS = [
+        { header: "Viajes",             type: "int",    width: 9 },
+        { header: "Distancia",          type: "km",     width: 13 },
+        { header: "Conducción",         type: "durS",   width: 12 },
+        { header: "Ralentí",            type: "durS",   width: 11 },
+        { header: "Detenido",           type: "durS",   width: 12 },
+        { header: "Conducción laboral", type: "durS",   width: 12 },
+        { header: "Detenido laboral",   type: "durS",   width: 12 },
+        { header: "Vel. promedio",      type: "speed",  width: 12 },
+        { header: "Combustible",        type: "liters", width: 12 },
+        { header: "Horas de motor",     type: "hours",  width: 12 },
+        { header: "Horómetro",          type: "hours",  width: 12 }
+    ];
+    const aggValues = agg => [
+        agg.trips, agg.dist, agg.drive, agg.idle, agg.stop, agg.workDrive, agg.workStop,
+        agg.drive > 0 ? agg.dist / (agg.drive / 3600) : null, agg.fuel, engineDelta(agg), agg.engLast
+    ];
+
+    const buildRecorridosTable = view => {
+        if (view === "data") {
+            return {
+                tableTitle: "Datos por día",
+                columns: [{ header: "Vehículo", type: "text", width: 28 }, { header: "Fecha", type: "day", width: 13 }, ...TRIP_COLS],
+                rows: [].concat(...unitTripSummaries.map(u => u.days.slice().reverse()
+                    .map(d => ({ level: 0, values: [u.unitName, d.key, ...aggValues(d.agg)] }))))
+            };
+        }
+        const rows = [];
+        unitTripSummaries.forEach(u => {
+            rows.push({ level: 0, values: [u.unitName, ...aggValues(u.total)] });
+            if (view === "extended") u.days.forEach(d => rows.push({ level: 1, values: [fmtDayLabel(d.key), ...aggValues(d.agg)] }));
+        });
+        return {
+            tableTitle: "Recorridos por vehículo",
+            columns: [{ header: view === "extended" ? "Vehículo / Día" : "Vehículo", type: "text", width: 30 }, ...TRIP_COLS],
+            rows
+        };
+    };
+
+    const tallerStatus = s => s.isCurrentlyInTaller ? "En taller" : s.visitsCount > 0 ? "Concluido" : "Sin registros";
+    const stayStatus = e => e.stop ? "Finalizado" : "En taller";
+
+    const buildServiciosTable = view => {
+        if (view === "data") {
+            return {
+                tableTitle: "Estancias en taller",
+                columns: [
+                    { header: "Vehículo", type: "text", width: 28 }, { header: "Orden / Taller", type: "text", width: 30 },
+                    { header: "Entrada", type: "date", width: 17 }, { header: "Salida", type: "date", width: 17 },
+                    { header: "Duración", type: "durMs", width: 13 }, { header: "% del periodo", type: "pct", width: 13 },
+                    { header: "Estado", type: "text", width: 12 }
+                ],
+                rows: [].concat(...rawTallerList.map(s => (s.events || []).slice().reverse().map(e => ({
+                    level: 0,
+                    values: [s.unitName, e.location || "Orden de trabajo", e.start, e.stop, e.durationMs, e.pctInPeriod, stayStatus(e)]
+                }))))
+            };
+        }
+        if (view === "extended") {
+            const rows = [];
+            rawTallerList.forEach(s => {
+                rows.push({ level: 0, values: [s.unitName, s.visitsCount, undefined, undefined, s.totalTallerMs, s.pctInPeriod, tallerStatus(s)] });
+                (s.events || []).forEach((e, idx) => rows.push({
+                    level: 1,
+                    values: [`${idx + 1}. ${e.location || "Orden de trabajo"}`, undefined, e.start, e.stop, e.durationMs, e.pctInPeriod, stayStatus(e)]
+                }));
+            });
+            return {
+                tableTitle: "Tiempo en taller por unidad",
+                columns: [
+                    { header: "Vehículo / Orden", type: "text", width: 34 }, { header: "Ingresos", type: "int", width: 10 },
+                    { header: "Entrada", type: "date", width: 17 }, { header: "Salida", type: "date", width: 17 },
+                    { header: "Tiempo en taller", type: "durMs", width: 16 }, { header: "% del periodo", type: "pct", width: 13 },
+                    { header: "Estado", type: "text", width: 13 }
+                ],
+                rows
+            };
+        }
+        return {
+            tableTitle: "Tiempo en taller por unidad",
+            columns: [
+                { header: "Vehículo", type: "text", width: 30 }, { header: "Ingresos", type: "int", width: 10 },
+                { header: "Tiempo en taller", type: "durMs", width: 16 }, { header: "% del periodo", type: "pct", width: 13 },
+                { header: "Estado", type: "text", width: 14 }
+            ],
+            rows: rawTallerList.map(s => ({ level: 0, values: [s.unitName, s.visitsCount, s.totalTallerMs, s.pctInPeriod, tallerStatus(s)] }))
+        };
+    };
+
+    // Indicadores tal como se muestran en las tarjetas de la sección
+    const readKpis = section => Array.from(document.querySelectorAll(`#sg-section-${section} .sg-summary-tile`)).map(tile => {
+        const txt = sel => { const el = tile.querySelector(sel); return el ? el.textContent.trim() : ""; };
+        const unit = txt(".sg-summary-tile__unit");
+        const pct = txt(".sg-progress__text");
+        return {
+            title: txt(".sg-summary-tile__title"),
+            value: unit ? `${txt(".sg-summary-tile__value")} ${unit}` : txt(".sg-summary-tile__value"),
+            sub: txt(".sg-summary-tile__sub") || (pct ? `${pct} del periodo` : "")
+        };
+    });
+
+    const buildExportModel = view => {
+        const section = activeSection;
+        const { from, to } = getPeriodRange();
+        const table = section === "recorridos" ? buildRecorridosTable(view) : buildServiciosTable(view);
+        return {
+            section,
+            viewLabel: EXPORT_VIEWS[view],
+            title: `Reporte Silbagas · ${SECTION_TITLES[section]}`,
+            filters: `Periodo: ${getPeriodLabel()} (${fmtDate(from)} – ${fmtDate(to)}) · Vehículos: ${$("sg-units-label").textContent}`,
+            generated: `Generado el ${new Date().toLocaleString("es-MX", { dateStyle: "long", timeStyle: "short" })}`,
+            kpis: view === "data" ? [] : readKpis(section),
+            hasLevels: view === "extended",
+            isData: view === "data",
+            fileBase: `Silbagas_${SECTION_TITLES[section].replace(/\s+/g, "-")}_${EXPORT_VIEWS[view].replace(/\s+/g, "-")}_${localDateStr(from)}_${localDateStr(to)}`,
+            ...table
+        };
+    };
+
+    // ── Capturas de pantalla (indicadores y gráficas) ──
+    const captureEl = el => html2canvas(el, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        logging: false,
+        // Sin los botones de pantalla completa ni los enlaces "Ver todos"
+        ignoreElements: node => node.hasAttribute && node.hasAttribute("data-chart-expand")
+    }).then(canvas => ({ canvas, w: canvas.width / 2, h: canvas.height / 2 }));
+
+    // Excel: PNG (nítido); PDF: JPEG, para que el archivo no pese decenas de MB
+    const imgPng = img => img.canvas.toDataURL("image/png");
+    const imgJpeg = img => img.canvas.toDataURL("image/jpeg", 0.92);
+
+    const captureCharts = section => Array.from(document.querySelectorAll(`#sg-section-${section} .sg-chart-card`))
+        .reduce((p, card) => p.then(list => captureEl(card).then(img => [...list, { ...img, full: card.classList.contains("sg-chart-card--full") }])),
+            Promise.resolve([]));
+
+    // Acomoda las gráficas como en pantalla: las anchas solas, las demás de dos en dos
+    const chartRows = charts => {
+        const rows = [];
+        let pending = null;
+        charts.forEach(c => {
+            if (c.full) {
+                if (pending) { rows.push([pending]); pending = null; }
+                rows.push([c]);
+            } else if (pending) {
+                rows.push([pending, c]);
+                pending = null;
+            } else pending = c;
+        });
+        if (pending) rows.push([pending]);
+        return rows;
+    };
+
+    const downloadBlob = (blob, filename) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
+    // ── Excel ──
+    const XL = { text: "FF1F2833", muted: "FF4E677E", border: "FFC0CCD8", line: "FFE6EBF0", head: "FFF2F5F7", soft: "FFF9FAFB" };
+    const xlFill = argb => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
+
+    // Reparte n columnas entre k tarjetas de indicadores
+    const splitCols = (n, k) => Array.from({ length: k }, (_, i) => Math.floor(n / k) + (i < n % k ? 1 : 0));
+
+    const exportExcel = (model, charts) => {
+        const wb = new ExcelJS.Workbook();
+        wb.creator = "Reporte Silbagas";
+        const ws = wb.addWorksheet(model.viewLabel, {
+            views: [{ showGridLines: false }],
+            pageSetup: { orientation: "landscape", paperSize: 1, fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+            properties: { outlineProperties: { summaryBelow: false } }
+        });
+        const n = model.columns.length;
+        ws.columns = model.columns.map(c => ({ width: c.width }));
+        const thin = { style: "thin", color: { argb: XL.border } };
+        let rowNo = 1;
+
+        const textRow = (text, font, height) => {
+            const row = ws.getRow(rowNo++);
+            ws.mergeCells(row.number, 1, row.number, n);
+            row.getCell(1).value = text;
+            row.getCell(1).style = { font, alignment: { vertical: "middle" } };
+            if (height) row.height = height;
+        };
+        textRow(model.title, { size: 16, bold: true, color: { argb: XL.text } }, 26);
+        textRow(`${model.viewLabel} · ${model.filters}`, { size: 10, color: { argb: XL.muted } });
+        textRow(model.generated, { size: 9, color: { argb: XL.muted } });
+        rowNo++;
+
+        // Indicadores: una tarjeta por KPI (título, valor y detalle), como en pantalla
+        if (model.kpis.length) {
+            const spans = splitCols(n, model.kpis.length);
+            const lines = [
+                { key: "title", font: { size: 9, color: { argb: XL.muted } }, height: 18 },
+                { key: "value", font: { size: 16, color: { argb: XL.text } }, height: 26 },
+                { key: "sub",   font: { size: 9, color: { argb: XL.muted } }, height: 18 }
+            ];
+            lines.forEach((line, li) => {
+                const row = ws.getRow(rowNo++);
+                row.height = line.height;
+                let col = 1;
+                model.kpis.forEach((k, ki) => {
+                    const end = col + spans[ki] - 1;
+                    if (end > col) ws.mergeCells(row.number, col, row.number, end);
+                    for (let c = col; c <= end; c++) {
+                        const border = {};
+                        if (li === 0) border.top = thin;
+                        if (li === lines.length - 1) border.bottom = thin;
+                        if (c === col) border.left = thin;
+                        if (c === end) border.right = thin;
+                        row.getCell(c).style = { font: line.font, fill: xlFill(XL.soft), border, alignment: { vertical: "middle", indent: 1 } };
+                    }
+                    row.getCell(col).value = k[line.key];
+                    col = end + 1;
+                });
+            });
+            rowNo++;
+        }
+
+        // Gráficas como imágenes, acomodadas como en pantalla. Se anclan a columnas y filas
+        // (no a píxeles) para que nunca rebasen el ancho de la tabla
+        if (charts.length) {
+            const colPx = model.columns.map(c => c.width * 7 + 5);
+            const totalW = colPx.reduce((a, b) => a + b, 0);
+            const xToCol = x => {
+                let acc = 0;
+                for (let i = 0; i < colPx.length; i++) {
+                    if (x < acc + colPx[i]) return i + (x - acc) / colPx[i];
+                    acc += colPx[i];
+                }
+                return colPx.length;
+            };
+            const ROW_PX = 20, GAP = 12;
+            chartRows(charts).forEach(group => {
+                const w = group.length === 2 || !group[0].full ? (totalW - GAP) / 2 : totalW;
+                let maxRows = 0;
+                group.forEach((img, i) => {
+                    const rows = img.h * (w / img.w) / ROW_PX;
+                    maxRows = Math.max(maxRows, rows);
+                    const x = i * (w + GAP);
+                    const id = wb.addImage({ base64: imgPng(img), extension: "png" });
+                    ws.addImage(id, {
+                        tl: { col: xToCol(x), row: rowNo - 1 },
+                        br: { col: Math.min(n, xToCol(x + w)), row: rowNo - 1 + rows },
+                        editAs: "oneCell"
+                    });
+                });
+                rowNo += Math.ceil(maxRows + GAP / ROW_PX);
+            });
+            rowNo++;
+        }
+
+        // Tabla
+        if (!model.isData) textRow(model.tableTitle, { size: 12, bold: true, color: { argb: XL.text } }, 22);
+        const head = ws.getRow(rowNo++);
+        head.height = 30;
+        model.columns.forEach((c, i) => {
+            const cell = head.getCell(i + 1);
+            cell.value = c.header;
+            cell.style = {
+                font: { size: 9, bold: true, color: { argb: XL.muted } },
+                fill: xlFill(XL.head),
+                border: { top: thin, bottom: thin },
+                alignment: { vertical: "middle", wrapText: true, horizontal: LEFT_TYPES.has(c.type) ? "left" : "right" }
+            };
+        });
+
+        model.rows.forEach(r => {
+            const row = ws.getRow(rowNo++);
+            model.columns.forEach((c, i) => {
+                const t = COL_TYPES[c.type];
+                const v = r.values[i];
+                const cell = row.getCell(i + 1);
+                if (v === undefined) cell.value = null;
+                else if (v === null) cell.value = "—";
+                else cell.value = t.toXl ? t.toXl(v) : v;
+                const style = {
+                    font: { size: 10, bold: model.hasLevels && r.level === 0, color: { argb: r.level ? XL.muted : XL.text } },
+                    border: { bottom: { style: "thin", color: { argb: XL.line } } },
+                    alignment: { vertical: "middle", horizontal: LEFT_TYPES.has(c.type) ? "left" : "right", indent: i === 0 && r.level ? 2 : 0 }
+                };
+                if (t.xl && v !== null && v !== undefined) style.numFmt = t.xl;
+                if (r.level) style.fill = xlFill(XL.soft);
+                cell.style = style;
+            });
+            // Filas de detalle agrupadas (se pueden contraer con el botón "−" de Excel)
+            if (r.level) row.outlineLevel = 1;
+        });
+
+        // Al imprimir: solo el ancho de la tabla, ajustado a una hoja de ancho
+        ws.pageSetup.printArea = `A1:${ws.getColumn(n).letter}${rowNo - 1}`;
+
+        if (model.isData) {
+            ws.autoFilter = { from: { row: head.number, column: 1 }, to: { row: head.number, column: n } };
+            ws.views = [{ state: "frozen", ySplit: head.number, showGridLines: false }];
+        }
+
+        return wb.xlsx.writeBuffer().then(buf => downloadBlob(
+            new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+            `${model.fileBase}.xlsx`));
+    };
+
+    // ── PDF ──
+    const exportPdf = (model, kpiImg, charts) => {
+        const doc = new window.jspdf.jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
+        const W = doc.internal.pageSize.getWidth();
+        const H = doc.internal.pageSize.getHeight();
+        const M = 32, CW = W - 2 * M, GAP = 10, BOTTOM = H - M - 12;
+        let y = M;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(15);
+        doc.setTextColor(31, 40, 51);
+        doc.text(model.title, M, y + 12);
+        y += 24;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(78, 103, 126);
+        doc.text(`${model.viewLabel} · ${model.filters}`, M, y + 8);
+        y += 13;
+        doc.text(model.generated, M, y + 8);
+        y += 20;
+
+        const ensure = h => { if (y + h > BOTTOM) { doc.addPage(); y = M; } };
+
+        // Indicadores y gráficas: capturas de lo que se ve en pantalla
+        const imageRow = (group, w) => {
+            let h = Math.max(...group.map(img => img.h * (w / img.w)));
+            const scale = h > BOTTOM - M ? (BOTTOM - M) / h : 1;   // una imagen más alta que la hoja se reduce
+            ensure(h * scale);
+            group.forEach((img, i) => doc.addImage(imgJpeg(img), "JPEG", M + i * (w + GAP), y, w * scale, img.h * (w / img.w) * scale));
+            y += h * scale + GAP;
+        };
+        if (kpiImg) imageRow([kpiImg], CW);
+        chartRows(charts).forEach(group => imageRow(group, group.length === 2 || !group[0].full ? (CW - GAP) / 2 : CW));
+
+        if (!model.isData) {
+            ensure(60);
+            y += 4;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(31, 40, 51);
+            doc.text(model.tableTitle, M, y + 10);
+            y += 18;
+        }
+
+        const align = c => LEFT_TYPES.has(c.type) ? "left" : "right";
+        doc.autoTable({
+            theme: "plain",
+            startY: y,
+            margin: { left: M, right: M, bottom: M + 12 },
+            head: [model.columns.map(c => c.header)],
+            body: model.rows.map(r => model.columns.map((c, i) => pdfCell(c, r.values[i]))),
+            styles: {
+                font: "helvetica",
+                fontSize: model.columns.length > 10 ? 7 : 8.5,
+                cellPadding: 4,
+                textColor: [31, 40, 51],
+                lineColor: [230, 235, 240],
+                lineWidth: { bottom: 0.5 },
+                valign: "middle"
+            },
+            headStyles: { fillColor: [242, 245, 247], textColor: [78, 103, 126], fontStyle: "bold" },
+            didParseCell: data => {
+                data.cell.styles.halign = align(model.columns[data.column.index]);
+                if (data.section !== "body") return;
+                const r = model.rows[data.row.index];
+                if (model.hasLevels && r.level === 0) data.cell.styles.fontStyle = "bold";
+                if (r.level) {
+                    data.cell.styles.fillColor = [249, 250, 251];
+                    data.cell.styles.textColor = [78, 103, 126];
+                    if (data.column.index === 0) data.cell.styles.cellPadding = { top: 4, right: 4, bottom: 4, left: 16 };
+                }
+            }
+        });
+
+        const pages = doc.internal.getNumberOfPages();
+        for (let p = 1; p <= pages; p++) {
+            doc.setPage(p);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.setTextColor(141, 164, 185);
+            doc.text(`${model.title} · ${model.viewLabel}`, M, H - 16);
+            doc.text(`Página ${p} de ${pages}`, W - M, H - 16, { align: "right" });
+        }
+        doc.save(`${model.fileBase}.pdf`);
+    };
+
+    // ── Menú y ejecución ──
+    let exporting = false;
+
+    const renderExportMenu = () => {
+        $("sg-export-title").textContent = `Descargar · ${SECTION_TITLES[activeSection]}`;
+        document.querySelectorAll("[data-export-desc]").forEach(el => {
+            el.textContent = EXPORT_DESC[activeSection][el.getAttribute("data-export-desc")];
+        });
+    };
+
+    const setExportBusy = busy => {
+        exporting = busy;
+        $("sg-export-trigger").disabled = busy;
+        $("sg-export-label").textContent = busy ? "Generando…" : "Descargar";
+    };
+
+    const runExport = (view, format) => {
+        if (exporting) return;
+        closePopups();
+        const loading = $("sg-loading");
+        if (loadedKeys[activeSection] === null || (loading && !loading.hidden)) {
+            showError("Espera a que termine de cargar la información para descargar.");
+            return;
+        }
+
+        const model = buildExportModel(view);
+        const visuals = view !== "data";
+        const isPdf = format === "pdf";
+        setExportBusy(true);
+
+        loadLibs([isPdf ? "pdf" : "excel", ...(visuals ? ["capture"] : [])])
+            .then(() => {
+                if (!visuals) return [null, []];
+                // En Excel los indicadores van como celdas; en PDF, como captura de las tarjetas
+                const deck = document.querySelector(`#sg-section-${model.section} .sg-card-deck`);
+                return (isPdf && deck ? captureEl(deck) : Promise.resolve(null))
+                    .then(kpiImg => captureCharts(model.section).then(charts => [kpiImg, charts]));
+            })
+            .then(([kpiImg, charts]) => isPdf ? exportPdf(model, kpiImg, charts) : exportExcel(model, charts))
+            .catch(err => {
+                console.error("Error al generar la descarga:", err);
+                showError("No se pudo generar el archivo. Intenta de nuevo.");
+            })
+            .then(() => setExportBusy(false));
+    };
+
+    // ════════════════════════════════════════════════════════════
     // EVENTOS
     // ════════════════════════════════════════════════════════════
     const initEvents = () => {
@@ -1201,6 +1770,18 @@ const initSilbagasAddin = function (_api, _state, _callback) {
 
         // Actualizar
         $("sg-btn-refresh").addEventListener("click", calculateMetrics);
+
+        // Descargar (Excel / PDF) de la sección activa
+        $("sg-export-trigger").addEventListener("click", e => {
+            e.stopPropagation();
+            if (openPopupId === "sg-export") { closePopups(); return; }
+            renderExportMenu();
+            openPopup("sg-export");
+        });
+        $("sg-export-popup").addEventListener("click", e => {
+            const btn = e.target.closest("[data-export-view]");
+            if (btn) runExport(btn.getAttribute("data-export-view"), btn.getAttribute("data-export-format"));
+        });
 
         // ── Periodo ──
         $("sg-period-trigger").addEventListener("click", e => {
@@ -1315,6 +1896,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         document.addEventListener("keydown", e => {
             if (e.key !== "Escape") return;
             if (openPopupId) closePopups();
+            else if (chartModalKey) closeChartModal();
             else closeUnitModal();
         });
 
@@ -1346,13 +1928,21 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             else expandedUnits.add(id);
             renderTripsTablePage();
         });
-        // Métrica de la gráfica de desempeño
-        $("sg-chart-perf-metric").addEventListener("click", e => {
+        // Métrica de la gráfica de desempeño (en la tarjeta y en pantalla completa)
+        document.querySelectorAll(".sg-perf-metric").forEach(group => group.addEventListener("click", e => {
             const btn = e.target.closest(".sg-segmented__item");
             if (!btn || btn.getAttribute("data-metric") === perfMetric) return;
             perfMetric = btn.getAttribute("data-metric");
             renderPerfChart();
+        }));
+
+        // Gráficas en pantalla completa: botón de la tarjeta o enlace "Ver todos"
+        $("sg-section-recorridos").addEventListener("click", e => {
+            const btn = e.target.closest("[data-chart-expand]");
+            if (btn) openChartModal(btn.getAttribute("data-chart-expand"));
         });
+        $("sg-chart-modal-close").addEventListener("click", closeChartModal);
+        $("sg-chart-modal").addEventListener("click", e => { if (e.target.id === "sg-chart-modal") closeChartModal(); });
 
         $("sg-trips-expand-all").addEventListener("click", () => {
             const allOpen = expandedUnits.size === unitTripSummaries.length;
@@ -1388,7 +1978,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             loadAndQuery();
         },
 
-        blur: function () { closePopups(); }
+        blur: function () { closePopups(); closeChartModal(); }
     };
 
 };
