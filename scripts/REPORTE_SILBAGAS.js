@@ -450,7 +450,10 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     };
 
     // ── Agregados de viajes por vehículo y por día ──────────────
-    const newTripAgg = () => ({ trips: 0, dist: 0, drive: 0, idle: 0, stop: 0, workDrive: 0, workStop: 0, engFirst: null, engLast: null });
+    const newTripAgg = () => ({ trips: 0, dist: 0, drive: 0, idle: 0, stop: 0, workDrive: 0, workStop: 0, engFirst: null, engLast: null, fuel: null });
+
+    // Combustible (L): suma de los eventos FuelUsed; null = sin datos de combustible
+    const addFuelToAgg = (agg, liters) => { agg.fuel = (agg.fuel || 0) + liters; };
 
     const addTripToAgg = (agg, t) => {
         agg.trips++;
@@ -485,7 +488,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         return readings;
     };
 
-    const buildUnitTripSummaries = (trips, targetUnits) => {
+    const buildUnitTripSummaries = (trips, fuelRecords, targetUnits) => {
         const readings = readingsFromTrips(trips);
         const byUnit = new Map();
         const getUnit = id => {
@@ -514,6 +517,14 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                 addReadingToAgg(u.total, hours);
                 addReadingToAgg(getDay(u, localDateStr(new Date(r.dateTime))), hours);
             });
+
+        fuelRecords.forEach(f => {
+            const liters = Number(f && f.totalFuelUsed);
+            if (!f.device || !f.device.id || !f.dateTime || !isFinite(liters) || liters < 0) return;
+            const u = getUnit(f.device.id);
+            addFuelToAgg(u.total, liters);
+            addFuelToAgg(getDay(u, localDateStr(new Date(f.dateTime))), liters);
+        });
 
         const targetIds = new Set(targetUnits.map(u => u.id));
         return Array.from(byUnit.entries())
@@ -547,6 +558,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             <td class="sg-num">${fmtHrs(agg.workDrive)}</td>
             <td class="sg-num">${fmtHrs(agg.workStop)}</td>
             <td class="sg-num">${avgSpeed}</td>
+            <td class="sg-num">${agg.fuel === null ? `<span class="sg-muted">—</span>` : `${fmtNum(agg.fuel, 1)} L`}</td>
             <td class="sg-num">${fmtEngine(engineDelta(agg))}</td>
             <td class="sg-num sg-muted">${agg.engLast === null ? "—" : `${fmtNum(agg.engLast, 1)} h`}</td>`;
     };
@@ -562,7 +574,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         const pageData = unitTripSummaries.slice(start, start + TRIPS_PER_PAGE);
 
         if (!pageData.length) {
-            tbody.innerHTML = `<tr class="sg-table__empty"><td colspan="11">No hay viajes registrados en el periodo seleccionado.</td></tr>`;
+            tbody.innerHTML = `<tr class="sg-table__empty"><td colspan="12">No hay viajes registrados en el periodo seleccionado.</td></tr>`;
         } else {
             tbody.innerHTML = pageData.map(u => {
                 const expanded = expandedUnits.has(u.unitId);
@@ -810,11 +822,11 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const loadRecorridos = (range, targetUnits, onDone, onError) => {
         const { from, to } = range;
 
-        const finish = trips => {
+        const finish = (trips, fuelRecords) => {
             const map = new Map();
             trips.forEach(t => { if (t && t.id) map.set(t.id, t); });
             rawTripsList = Array.from(map.values()).sort((a, b) => new Date(b.start) - new Date(a.start));
-            unitTripSummaries = buildUnitTripSummaries(rawTripsList, targetUnits);
+            unitTripSummaries = buildUnitTripSummaries(rawTripsList, fuelRecords || [], targetUnits);
             expandedUnits = new Set();
             onDone();
         };
@@ -822,6 +834,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         if (!hasApi()) {
             setTimeout(() => {
                 const mock = [];
+                const mockFuel = [];
                 targetUnits.forEach((unit, idx) => {
                     let cursor = new Date(from.getTime() + idx * 3600 * 1000);
                     let engineSec = (1500 + idx * 230) * 3600;
@@ -831,6 +844,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                         const tripStop = new Date(cursor.getTime() + driveSec * 1000);
                         if (tripStop > to) break;
                         engineSec += driveSec + Math.floor(driveSec * 0.1);
+                        mockFuel.push({ device: { id: unit.id }, dateTime: tripStop.toISOString(), totalFuelUsed: driveSec * 0.0045 });
                         mock.push({
                             engineHours: engineSec,
                             id: `t-${unit.id}-${100 + i}`,
@@ -848,22 +862,33 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                         cursor = new Date(tripStop.getTime() + stopSec * 1000);
                     }
                 });
-                finish(mock);
+                finish(mock, mockFuel);
             }, 400);
             return;
         }
 
         const base = { fromDate: from.toISOString(), toDate: to.toISOString() };
-        const fail = err => {
-            console.error("Error al consultar la tabla Trip:", err);
-            onError("Error de conexión con Geotab al consultar los viajes.");
-        };
 
         // Todos los vehículos: una sola consulta; si hay selección, una por vehículo en un multiCall
-        const calls = selectedUnitIds.length
-            ? selectedUnitIds.map(id => ["Get", { typeName: "Trip", search: { ...base, deviceSearch: { id } } }])
-            : [["Get", { typeName: "Trip", search: base }]];
-        multiGet(calls, results => finish([].concat(...results.map(r => r || []))), fail);
+        const getPerDevice = typeName => new Promise((resolve, reject) => {
+            const calls = selectedUnitIds.length
+                ? selectedUnitIds.map(id => ["Get", { typeName, search: { ...base, deviceSearch: { id } } }])
+                : [["Get", { typeName, search: base }]];
+            multiGet(calls, results => resolve([].concat(...results.map(r => r || []))), reject);
+        });
+
+        // Si falla el combustible (p. ej. sin permisos) se muestran los viajes sin esa columna
+        const fuelReq = getPerDevice("FuelUsed").catch(err => {
+            console.warn("No se pudo consultar el consumo de combustible (FuelUsed):", err);
+            return [];
+        });
+
+        Promise.all([getPerDevice("Trip"), fuelReq])
+            .then(([trips, fuel]) => finish(trips, fuel))
+            .catch(err => {
+                console.error("Error al consultar la tabla Trip:", err);
+                onError("Error de conexión con Geotab al consultar los viajes.");
+            });
     };
 
     // ════════════════════════════════════════════════════════════
@@ -957,7 +982,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
 
     // ── KPIs y tabla de Recorridos ────────────────────────────────
     const renderRecorridos = range => {
-        let totalDist = 0, totalDriveSec = 0, totalIdleSec = 0, tripCount = 0, totalEngine = 0, hasEngine = false;
+        let totalDist = 0, totalDriveSec = 0, totalIdleSec = 0, tripCount = 0, totalEngine = 0, hasEngine = false, totalFuel = null;
 
         unitTripSummaries.forEach(u => {
             totalDist += u.total.dist;
@@ -966,12 +991,14 @@ const initSilbagasAddin = function (_api, _state, _callback) {
             tripCount += u.total.trips;
             const eng = engineDelta(u.total);
             if (eng !== null) { totalEngine += eng; hasEngine = true; }
+            if (u.total.fuel !== null) totalFuel = (totalFuel || 0) + u.total.fuel;
         });
 
         const engineSec = totalDriveSec + totalIdleSec;
+        const fuelText = totalFuel === null ? "" : ` · ${fmtNum(totalFuel, 1)} L de combustible`;
 
         $("sg-kpi-dist").textContent = fmtNum(totalDist, 1);
-        $("sg-kpi-dist-avg").textContent = `${tripCount.toLocaleString("es-MX")} viajes · promedio ${fmtNum(tripCount ? totalDist / tripCount : 0, 1)} km`;
+        $("sg-kpi-dist-avg").textContent = `${tripCount.toLocaleString("es-MX")} viajes${fuelText}`;
         $("sg-kpi-engine").textContent = hasEngine ? fmtNum(totalEngine, 1) : "—";
         $("sg-kpi-trips-units").textContent = `${unitTripSummaries.length} vehículos con actividad`;
         $("sg-kpi-drive").textContent = fmtHrs(totalDriveSec);
