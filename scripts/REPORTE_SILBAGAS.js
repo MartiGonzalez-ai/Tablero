@@ -453,7 +453,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     // ── Agregados de viajes por vehículo y por día ──────────────
     const newTripAgg = () => ({ trips: 0, dist: 0, drive: 0, idle: 0, stop: 0, workDrive: 0, workStop: 0, engFirst: null, engLast: null, fuel: null });
 
-    // Combustible (L): suma de los eventos FuelUsed; null = sin datos de combustible
+    // Combustible (L): incrementos del totalizador de combustible; null = sin datos de combustible
     const addFuelToAgg = (agg, liters) => { agg.fuel = (agg.fuel || 0) + liters; };
 
     const addTripToAgg = (agg, t) => {
@@ -489,7 +489,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         return readings;
     };
 
-    const buildUnitTripSummaries = (trips, fuelRecords, targetUnits) => {
+    const buildUnitTripSummaries = (trips, fuelReadings, targetUnits) => {
         const readings = readingsFromTrips(trips);
         const byUnit = new Map();
         const getUnit = id => {
@@ -519,12 +519,26 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                 addReadingToAgg(getDay(u, localDateStr(new Date(r.dateTime))), hours);
             });
 
-        fuelRecords.forEach(f => {
-            const liters = Number(f && f.totalFuelUsed);
-            if (!f.device || !f.device.id || !f.dateTime || !isFinite(liters) || liters < 0) return;
-            const u = getUnit(f.device.id);
-            addFuelToAgg(u.total, liters);
-            addFuelToAgg(getDay(u, localDateStr(new Date(f.dateTime))), liters);
+        // Combustible desde StatusData (DiagnosticDeviceTotalFuelId, litros acumulados), igual que
+        // rendimiento.js: se suman los incrementos positivos entre lecturas consecutivas y cada
+        // incremento se asigna al día de la lectura posterior
+        const fuelByDevice = new Map();
+        fuelReadings.forEach(r => {
+            if (!r || !r.device || !r.device.id || !r.dateTime || typeof r.data !== "number") return;
+            if (!fuelByDevice.has(r.device.id)) fuelByDevice.set(r.device.id, []);
+            fuelByDevice.get(r.device.id).push(r);
+        });
+        fuelByDevice.forEach((list, id) => {
+            if (list.length < 2) return;
+            list.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+            const u = getUnit(id);
+            addFuelToAgg(u.total, 0);
+            for (let i = 1; i < list.length; i++) {
+                const delta = list[i].data - list[i - 1].data;
+                if (delta <= 0) continue;
+                addFuelToAgg(u.total, delta);
+                addFuelToAgg(getDay(u, localDateStr(new Date(list[i].dateTime))), delta);
+            }
         });
 
         const targetIds = new Set(targetUnits.map(u => u.id));
@@ -965,11 +979,11 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const loadRecorridos = (range, targetUnits, onDone, onError) => {
         const { from, to } = range;
 
-        const finish = (trips, fuelRecords) => {
+        const finish = (trips, fuelReadings) => {
             const map = new Map();
             trips.forEach(t => { if (t && t.id) map.set(t.id, t); });
             rawTripsList = Array.from(map.values()).sort((a, b) => new Date(b.start) - new Date(a.start));
-            unitTripSummaries = buildUnitTripSummaries(rawTripsList, fuelRecords || [], targetUnits);
+            unitTripSummaries = buildUnitTripSummaries(rawTripsList, fuelReadings || [], targetUnits);
             expandedUnits = new Set();
             onDone();
         };
@@ -981,13 +995,16 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                 targetUnits.forEach((unit, idx) => {
                     let cursor = new Date(from.getTime() + idx * 3600 * 1000);
                     let engineSec = (1500 + idx * 230) * 3600;
+                    let totalFuel = 20000 + idx * 1500;
+                    mockFuel.push({ device: { id: unit.id }, dateTime: cursor.toISOString(), data: totalFuel });
                     for (let i = 0; i < 8 + (idx % 4); i++) {
                         const driveSec = Math.floor(Math.random() * 7200) + 1800;
                         const stopSec = Math.floor(Math.random() * 14400) + 3600;
                         const tripStop = new Date(cursor.getTime() + driveSec * 1000);
                         if (tripStop > to) break;
                         engineSec += driveSec + Math.floor(driveSec * 0.1);
-                        mockFuel.push({ device: { id: unit.id }, dateTime: tripStop.toISOString(), totalFuelUsed: driveSec * 0.0045 });
+                        totalFuel += driveSec * 0.0045;
+                        mockFuel.push({ device: { id: unit.id }, dateTime: tripStop.toISOString(), data: totalFuel });
                         mock.push({
                             engineHours: engineSec,
                             id: `t-${unit.id}-${100 + i}`,
@@ -1013,16 +1030,18 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         const base = { fromDate: from.toISOString(), toDate: to.toISOString() };
 
         // Todos los vehículos: una sola consulta; si hay selección, una por vehículo en un multiCall
-        const getPerDevice = typeName => new Promise((resolve, reject) => {
+        const getPerDevice = (typeName, extraSearch = {}) => new Promise((resolve, reject) => {
+            const search = { ...base, ...extraSearch };
             const calls = selectedUnitIds.length
-                ? selectedUnitIds.map(id => ["Get", { typeName, search: { ...base, deviceSearch: { id } } }])
-                : [["Get", { typeName, search: base }]];
+                ? selectedUnitIds.map(id => ["Get", { typeName, search: { ...search, deviceSearch: { id } }, resultsLimit: 100000 }])
+                : [["Get", { typeName, search, resultsLimit: 100000 }]];
             multiGet(calls, results => resolve([].concat(...results.map(r => r || []))), reject);
         });
 
-        // Si falla el combustible (p. ej. sin permisos) se muestran los viajes sin esa columna
-        const fuelReq = getPerDevice("FuelUsed").catch(err => {
-            console.warn("No se pudo consultar el consumo de combustible (FuelUsed):", err);
+        // Combustible: totalizador del dispositivo (misma fuente que rendimiento.js).
+        // Si falla (p. ej. sin permisos) se muestran los viajes sin esa columna
+        const fuelReq = getPerDevice("StatusData", { diagnosticSearch: { id: "DiagnosticDeviceTotalFuelId" } }).catch(err => {
+            console.warn("No se pudo consultar el combustible total (DiagnosticDeviceTotalFuelId):", err);
             return [];
         });
 
