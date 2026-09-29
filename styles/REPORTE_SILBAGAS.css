@@ -316,15 +316,15 @@ a{color:var(--navy)}a:hover{color:var(--lime-d)}
 .sg-legend__name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sg-legend__pct{font-family:var(--mono-font);color:var(--text-secondary);font-variant-numeric:tabular-nums}
 /* Barras verticales */
-.sg-vbars{position:relative;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));align-items:end;gap:1rem;height:14rem;margin-top:.5rem;border-bottom:1px solid var(--borders-secondary);background-image:linear-gradient(var(--borders-general) 1px,transparent 1px);background-size:100% 25%}
-.sg-vbar{height:100%;display:flex;align-items:flex-end;justify-content:center}
-.sg-vbar__col{position:relative;display:block;width:min(56px,70%);background:var(--navy);transition:height .4s ease}
-.sg-vbar--above .sg-vbar__col{background:var(--lime)}
-.sg-vbar__value{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);font-family:var(--mono-font);font-size:.6875rem;color:var(--navy);white-space:nowrap}
-.sg-vbars__avg{position:absolute;left:0;right:0;z-index:2;border-top:1px dashed var(--cyan);pointer-events:none}
-.sg-vbars__avg span{position:absolute;right:0;bottom:4px;padding:1px 6px;background:var(--navy);color:#fff;font-family:var(--mono-font);font-size:.625rem;white-space:nowrap}
-.sg-vbars__labels{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:1rem;margin-top:.625rem}
-.sg-vbars__labels span{font-family:var(--display-font);font-size:.5625rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-secondary);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sg-vbars{display:flex;flex-direction:column;margin-top:.5rem;padding-bottom:3rem;overflow-x:auto}
+.sg-vbars__plot{position:relative;display:flex;align-items:stretch;gap:1rem;height:18rem;border-bottom:1px solid var(--borders-secondary);background-image:linear-gradient(var(--borders-general) 1px,transparent 1px);background-size:100% 25%}
+.sg-vbar{position:relative;flex:1 1 0;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.sg-vbar__fill{display:block;width:min(64px,75%);background:var(--navy);transition:height .4s ease}
+.sg-vbar:first-child .sg-vbar__fill{background:var(--lime)}
+.sg-vbar__value{margin-bottom:.375rem;font-family:var(--mono-font);font-size:.9375rem;font-weight:600;color:var(--navy);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sg-vbar__label{position:absolute;top:calc(100% + .5rem);left:0;right:0;font-size:.8125rem;line-height:1.2;color:var(--text-primary);text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.sg-vbars__avg{position:absolute;left:0;right:0;z-index:2;border-top:2px dashed var(--cyan);pointer-events:none}
+.sg-vbars__avg span{position:absolute;right:0;bottom:4px;padding:2px 8px;background:var(--navy);color:#fff;font-family:var(--mono-font);font-size:.8125rem;white-space:nowrap}
 
 @keyframes sgSpin{to{transform:rotate(360deg)}}
 
@@ -348,7 +348,9 @@ a{color:var(--navy)}a:hover{color:var(--lime-d)}
 .sg-page-header__actions .sg-button span{display:none}
 .sg-hbar{grid-template-columns:minmax(0,1fr) 5.5rem;gap:.375rem .75rem}
 .sg-hbar__track{grid-column:1/-1;grid-row:2}
-.sg-vbars,.sg-vbars__labels{gap:.375rem}
+.sg-vbars__plot{gap:.375rem;height:14rem}
+.sg-vbar__value{font-size:.75rem}
+.sg-vbar__label{font-size:.6875rem}
 .sg-popup{position:fixed;left:1rem;right:1rem;top:auto;width:auto}
 }
 
@@ -385,5 +387,6 @@ a{color:var(--navy)}a:hover{color:var(--lime-d)}
 .sg-modal--fullscreen{max-width:none;width:calc(100vw - 2rem);height:calc(100vh - 2rem)}
 .sg-modal--fullscreen .sg-modal__header{border-bottom:1px solid var(--borders-general);padding-bottom:1.25rem}
 .sg-chart-modal__body{flex:1;display:flex;flex-direction:column;padding-top:1.5rem;padding-bottom:1.75rem}
-.sg-chart-modal__body .sg-vbars{flex:1;height:auto;min-height:18rem}
+.sg-chart-modal__body .sg-vbars{flex:1}
+.sg-chart-modal__body .sg-vbars__plot{flex:1;height:auto;min-height:20rem}
 @media (max-width:600px){.sg-export-popup{width:auto}.sg-export-item{flex-direction:column;align-items:flex-start}}
