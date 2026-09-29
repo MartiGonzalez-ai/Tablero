@@ -96,12 +96,15 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         return 0;
     };
 
+    // Enteros con separador de miles (1,234), igual que el resto de las cifras
+    const fmtInt = n => Math.round(n || 0).toLocaleString("es-MX");
+
     const fmtHrs = val => {
         const sec = parseSeconds(val);
         if (!sec || sec <= 0) return "0h 00m";
         const h = Math.floor(sec / 3600);
         const m = Math.floor((sec % 3600) / 60);
-        return `${h}h ${String(m).padStart(2, "0")}m`;
+        return `${fmtInt(h)}h ${String(m).padStart(2, "0")}m`;
     };
 
     // Milisegundos a días, horas y minutos (ej. 3d 14h 25m)
@@ -111,7 +114,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         const days = Math.floor(totalSec / 86400);
         const hours = Math.floor((totalSec % 86400) / 3600);
         const mins = Math.floor((totalSec % 3600) / 60);
-        if (days > 0) return `${days}d ${String(hours).padStart(2, "0")}h ${String(mins).padStart(2, "0")}m`;
+        if (days > 0) return `${fmtInt(days)}d ${String(hours).padStart(2, "0")}h ${String(mins).padStart(2, "0")}m`;
         return `${hours}h ${String(mins).padStart(2, "0")}m`;
     };
 
@@ -441,7 +444,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         const wrap = $(`sg-${prefix}-pagination`);
         if (wrap) wrap.hidden = totalItems === 0;
         const info = $(`sg-${prefix}-pagination-info`);
-        if (info) info.textContent = `${totalItems > 0 ? start + 1 : 0}–${end} de ${totalItems} ${noun}`;
+        if (info) info.textContent = `${fmtInt(totalItems > 0 ? start + 1 : 0)}–${fmtInt(end)} de ${fmtInt(totalItems)} ${noun}`;
         const ind = $(`sg-${prefix}-page-indicator`);
         if (ind) ind.textContent = `${currentPage} / ${totalPages}`;
         const prev = $(`sg-btn-${prefix}-prev`);
@@ -565,7 +568,7 @@ const initSilbagasAddin = function (_api, _state, _callback) {
     const aggCells = agg => {
         const avgSpeed = agg.drive > 0 ? `${fmtNum(agg.dist / (agg.drive / 3600), 1)} km/h` : "—";
         return `
-            <td class="sg-num">${agg.trips}</td>
+            <td class="sg-num">${fmtInt(agg.trips)}</td>
             <td class="sg-num">${fmtNum(agg.dist, 1)} km</td>
             <td class="sg-num">${fmtHrs(agg.drive)}</td>
             <td class="sg-num">${fmtHrs(agg.idle)}</td>
@@ -849,12 +852,12 @@ const initSilbagasAddin = function (_api, _state, _callback) {
                 return `
                     <tr>
                         <td class="sg-strong">${escapeHtml(s.unitName || "Unidad desconocida")}</td>
-                        <td class="sg-num">${visits}</td>
+                        <td class="sg-num">${fmtInt(visits)}</td>
                         <td class="sg-num">${fmtDurationMs(s.totalTallerMs)}</td>
                         <td class="sg-num">
                             <span class="sg-table-pct">
                                 <span class="sg-progress__bar"><span class="sg-progress__fill" style="display:block;width:${Math.min(100, pct).toFixed(1)}%"></span></span>
-                                <span>${pct.toFixed(1)}%</span>
+                                <span>${fmtNum(pct, 1)}%</span>
                             </span>
                         </td>
                         <td>${pill}</td>
@@ -1201,11 +1204,11 @@ const initSilbagasAddin = function (_api, _state, _callback) {
 
         $("sg-kpi-taller-time").textContent = fmtDurationMs(totalTallerMs);
         $("sg-kpi-taller-fill").style.width = `${Math.min(100, tallerPct).toFixed(1)}%`;
-        $("sg-kpi-taller-pct").textContent = `${tallerPct.toFixed(1)}%`;
-        $("sg-kpi-taller-count").textContent = totalVisits;
-        $("sg-kpi-taller-units").textContent = `${unitsWithTaller} de ${rawTallerList.length} vehículos`;
+        $("sg-kpi-taller-pct").textContent = `${fmtNum(tallerPct, 1)}%`;
+        $("sg-kpi-taller-count").textContent = fmtInt(totalVisits);
+        $("sg-kpi-taller-units").textContent = `${fmtInt(unitsWithTaller)} de ${fmtInt(rawTallerList.length)} vehículos`;
         $("sg-kpi-taller-avg").textContent = fmtDurationMs(avgMs);
-        $("sg-kpi-taller-now").textContent = unitsInTallerNow;
+        $("sg-kpi-taller-now").textContent = fmtInt(unitsInTallerNow);
 
         currentTallerPage = 1;
         renderTallerTablePage();
@@ -1312,10 +1315,10 @@ const initSilbagasAddin = function (_api, _state, _callback) {
         km:     { xl: '#,##0.0 "km"',       pdf: v => `${fmtNum(v, 1)} km` },
         durS:   { xl: '[h]"h" mm"m"',       pdf: v => fmtHrs(v),         toXl: v => v / 86400 },
         durMs:  { xl: '[h]"h" mm"m"',       pdf: v => fmtDurationMs(v),  toXl: v => v / 86400000 },
-        speed:  { xl: '0.0 "km/h"',         pdf: v => `${fmtNum(v, 1)} km/h` },
+        speed:  { xl: '#,##0.0 "km/h"',     pdf: v => `${fmtNum(v, 1)} km/h` },
         liters: { xl: '#,##0.0 "L"',        pdf: v => `${fmtNum(v, 1)} L` },
         hours:  { xl: '#,##0.0 "h"',        pdf: v => `${fmtNum(v, 1)} h` },
-        pct:    { xl: '0.0"%"',             pdf: v => `${v.toFixed(1)}%` },
+        pct:    { xl: '#,##0.0"%"',         pdf: v => `${fmtNum(v, 1)}%` },
         date:   { xl: "dd/mm/yyyy hh:mm",   pdf: v => fmtDateTime(v),    toXl: excelDate },
         day:    { xl: "dd/mm/yyyy",         pdf: v => fmtDayLabel(v),    toXl: v => excelDate(new Date(v + "T00:00:00")) }
     };
