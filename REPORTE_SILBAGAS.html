@@ -1,499 +1,392 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <meta name="description" content="Reporte de Utilización y Reporte de Mantenimientos de la flota">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Reporte de Utilización</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles/REPORTE_SILBAGAS.css">
-</head>
-<body>
-    <div id="app-silbagas">
+/* ===================================================================
+   REPORTE_SILBAGAS.CSS (v2) — Identidad visual Enertrak
+   Navy #033858 · Lime #00A94B · Cyan #2EC5E0
+   Russo One (display / etiquetas) · Unbounded (texto) · JetBrains Mono (datos)
+   =================================================================== */
+@font-face{font-family:'Unbounded';src:url('../fonts/Unbounded-VariableFont_wght.ttf') format('truetype');font-weight:200 900;font-display:swap}
+@font-face{font-family:'Russo One';src:url('../fonts/RussoOne-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
 
-        <!-- ═══════════ PAGE HEADER (Zenith PageHeader) ═══════════ -->
-        <header class="sg-page-header">
-            <div class="sg-page-header__main-line">
-                <img class="sg-page-header__logo" src="assets/Enertrak_horizontal_blanco.png" alt="Enertrak">
-                <div class="sg-page-header__title-group">
-                    <h1 class="sg-page-header__page-name" id="sg-page-title">Reporte de Utilización</h1>
-                    <span class="sg-page-header__subline" id="sg-header-subline">Servicios de taller y recorridos de la flota</span>
-                </div>
-                <div class="sg-page-header__actions">
-                    <!-- Descargar: vista general / extendida / datos en Excel o PDF -->
-                    <div class="sg-filter sg-export" id="sg-export">
-                        <button type="button" class="sg-button sg-button--secondary sg-button--with-icon" id="sg-export-trigger" aria-haspopup="menu" aria-expanded="false">
-                            <i data-lucide="download" width="16" height="16"></i>
-                            <span id="sg-export-label">Descargar</span>
-                            <i data-lucide="chevron-down" width="16" height="16"></i>
-                        </button>
-                        <div class="sg-popup sg-export-popup" id="sg-export-popup" role="menu" aria-labelledby="sg-export-title" hidden>
-                            <div class="sg-popup__title" id="sg-export-title">Descargar</div>
-                            <ul class="sg-export-list">
-                                <li class="sg-export-item">
-                                    <div class="sg-export-item__text">
-                                        <span class="sg-export-item__name">Vista general</span>
-                                        <span class="sg-export-item__desc" data-export-desc="general"></span>
-                                    </div>
-                                    <div class="sg-export-item__actions">
-                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="general" data-export-format="xlsx" role="menuitem">Excel</button>
-                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="general" data-export-format="pdf" role="menuitem">PDF</button>
-                                    </div>
-                                </li>
-                                <li class="sg-export-item">
-                                    <div class="sg-export-item__text">
-                                        <span class="sg-export-item__name">Vista extendida</span>
-                                        <span class="sg-export-item__desc" data-export-desc="extended"></span>
-                                    </div>
-                                    <div class="sg-export-item__actions">
-                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="extended" data-export-format="xlsx" role="menuitem">Excel</button>
-                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="extended" data-export-format="pdf" role="menuitem">PDF</button>
-                                    </div>
-                                </li>
-                                <li class="sg-export-item">
-                                    <div class="sg-export-item__text">
-                                        <span class="sg-export-item__name">Datos</span>
-                                        <span class="sg-export-item__desc" data-export-desc="data"></span>
-                                    </div>
-                                    <div class="sg-export-item__actions">
-                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="data" data-export-format="xlsx" role="menuitem">Excel</button>
-                                        <button type="button" class="sg-button sg-button--secondary" data-export-view="data" data-export-format="pdf" role="menuitem">PDF</button>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    <button type="button" class="sg-button sg-button--secondary sg-button--with-icon" id="sg-btn-refresh" title="Actualizar datos">
-                        <i data-lucide="refresh-cw" width="16" height="16"></i>
-                        <span>Actualizar</span>
-                    </button>
-                </div>
-            </div>
+:root{
+/* Marca */
+--navy:#033858;--navy-d:#022338;--navy-dd:#011827;--lime:#00A94B;--lime-d:#008F3F;--lime-dd:#00733A;--cyan:#2EC5E0;
+/* Texto */
+--text-primary:#0C2B3E;--text-secondary:#5C6B78;--text-placeholder:#A3B0BB;--text-hyperlink:#033858;--text-nav-highlight:#008F3F;--text-error-message:#B42318;--text-button-disabled:#B8C2CB;--text-reverse-primary:#FFFFFF;
+/* Fondos */
+--backgrounds-main:#FFFFFF;--backgrounds-content-0:#F4F6F8;--backgrounds-content-1:#ECF0F3;--backgrounds-content-2:#DDE3E8;--backgrounds-hover:#EEF2F5;--backgrounds-overlay:rgba(1,24,39,.55);--backgrounds-primary-brand:#033858;
+/* Bordes */
+--borders-general:#E4E8EC;--borders-secondary:#D1D7DD;--borders-form-field--hover:#A3B0BB;--borders-form-field--active:#00A94B;--borders-form-field--error:#B42318;--borders-form-field--reverse:#A3B0BB;
+/* Acciones */
+--action-primary--default:#00A94B;--action-primary--hover:#008F3F;--action-primary--active:#00733A;--action-secondary--default:#033858;--action-tertiary--hover:#ECF0F3;
+/* Acentos */
+--accents-warning--main:#FFF4E0;--accents-warning--detail:#7A4A00;--accents-error--main:#FDECEA;--accents-error--detail:#9B1C12;--accents-success--main:#E3F6EA;--accents-success--detail:#00662D;--accents-general--main:#E6F4EC;--accents-general--detail:#033858;
+/* Tipografía */
+--display-font:'Russo One',"Helvetica Neue",Arial,sans-serif;
+--main-font:'Unbounded',"Helvetica Neue",Arial,sans-serif;
+--mono-font:'JetBrains Mono',ui-monospace,Menlo,monospace;
+--border-width-default:1px;--border-radius-default:2px;
+--shadow-popup:0 12px 32px -12px rgba(2,35,56,.28),0 2px 6px rgba(2,35,56,.08);
+--shadow-modal:0 40px 80px -30px rgba(1,24,39,.55);
+}
 
-            <!-- Secciones (Zenith Tabs) -->
-            <nav class="sg-tabs" id="sg-tabs" role="tablist">
-                <button type="button" class="sg-tab-item sg-tab-item--active" data-section="recorridos" role="tab" aria-selected="true">
-                    <span class="sg-tab-item__content">
-                        <i data-lucide="route" width="16" height="16" class="sg-tab-item__icon"></i>
-                        <span>Recorridos</span>
-                    </span>
-                </button>
-                <button type="button" class="sg-tab-item" data-section="servicios" role="tab" aria-selected="false">
-                    <span class="sg-tab-item__content">
-                        <i data-lucide="wrench" width="16" height="16" class="sg-tab-item__icon"></i>
-                        <span>Servicios</span>
-                    </span>
-                </button>
-            </nav>
-        </header>
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;padding:0;background:var(--backgrounds-content-0);color:var(--text-primary);font-family:var(--main-font);font-weight:300;font-size:13px;line-height:1.4;-webkit-font-smoothing:antialiased}
+button,input,select{font-family:inherit}
+svg{flex-shrink:0}
+a{color:var(--navy)}a:hover{color:var(--lime-d)}
 
-        <!-- ═══════════ FILTERS TOOLBAR (Zenith FiltersBar) ═══════════ -->
-        <div class="sg-filters-toolbar" id="sg-filters-toolbar">
-            <div class="sg-filters-toolbar__filters">
+/* ═══════════ PAGE HEADER ═══════════ */
+.sg-page-header{position:relative;background:var(--navy-d);color:#fff;display:flex;flex-direction:column;overflow:hidden}
+.sg-page-header::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+.sg-page-header::after{content:"";position:absolute;right:-10%;top:-60%;width:60%;height:220%;background:radial-gradient(ellipse at center,rgba(0,169,75,.14) 0%,transparent 60%);pointer-events:none}
+.sg-page-header>*{position:relative;z-index:1}
+.sg-page-header__main-line{display:flex;align-items:center;gap:1.5rem;padding:1.5rem 1.75rem 1.25rem}
+.sg-page-header__logo{height:24px;width:auto;display:block;flex-shrink:0;padding-right:1.5rem;border-right:1px solid rgba(255,255,255,.18);box-sizing:content-box}
+.sg-page-header__title-group{min-width:0;flex:1}
+.sg-page-header__page-name{margin:0;font-family:var(--display-font);font-weight:400;font-size:1.625rem;line-height:1.1;letter-spacing:.01em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sg-page-header__subline{display:block;margin-top:.375rem;font-family:var(--mono-font);font-size:.6875rem;letter-spacing:.04em;color:rgba(255,255,255,.65)}
+.sg-page-header__actions{display:flex;gap:.5rem;flex-shrink:0}
+.sg-page-header .sg-button--secondary{background:transparent;color:#fff;border-color:rgba(255,255,255,.25)}
+.sg-page-header .sg-button--secondary:hover{background:transparent;border-color:var(--lime);color:var(--lime)}
+.sg-page-header .sg-button--secondary:disabled{background:transparent;color:rgba(255,255,255,.35);border-color:rgba(255,255,255,.12)}
 
-                <!-- Period Picker con stepper -->
-                <div class="sg-filter sg-period-picker" id="sg-period-picker">
-                    <div class="sg-stepper-group">
-                        <button type="button" class="sg-button sg-button--icon sg-stepper sg-stepper--left" id="sg-period-prev" title="Periodo anterior" aria-label="Periodo anterior">
-                            <i data-lucide="chevron-left" width="16" height="16"></i>
-                        </button>
-                        <button type="button" class="sg-filter-trigger sg-filter-trigger--stepper" id="sg-period-trigger" aria-haspopup="dialog" aria-expanded="false">
-                            <i data-lucide="calendar" width="16" height="16"></i>
-                            <span class="sg-filter-trigger__value" id="sg-period-label">Este mes</span>
-                        </button>
-                        <button type="button" class="sg-button sg-button--icon sg-stepper sg-stepper--right" id="sg-period-next" title="Periodo siguiente" aria-label="Periodo siguiente">
-                            <i data-lucide="chevron-right" width="16" height="16"></i>
-                        </button>
-                    </div>
+/* ═══════════ TABS ═══════════ */
+.sg-tabs{display:flex;align-items:flex-end;gap:.25rem;height:2.75rem;padding:0 1.75rem;border-top:1px solid rgba(255,255,255,.08);overflow-x:auto;scrollbar-width:none}
+.sg-tab-item{height:2.75rem;padding:0 1rem;border:none;border-bottom:3px solid transparent;background:transparent;color:rgba(255,255,255,.6);font-family:var(--display-font);font-size:.6875rem;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s}
+.sg-tab-item:hover,.sg-tab-item:focus-visible{color:#fff}
+.sg-tab-item:focus-visible{outline:1px solid var(--lime);outline-offset:-4px}
+.sg-tab-item--active{color:#fff;border-bottom-color:var(--lime)}
+.sg-tab-item__content{display:flex;align-items:center;gap:.5rem}
+.sg-tab-item__icon{color:currentColor}
+.sg-tab-item--active .sg-tab-item__icon{color:var(--lime)}
 
-                    <div class="sg-popup sg-period-popup" id="sg-period-popup" role="dialog" aria-labelledby="sg-period-popup-title" hidden>
-                        <div class="sg-popup__title" id="sg-period-popup-title">Rango de fechas</div>
-                        <ul class="sg-radio-list" id="sg-period-options" role="radiogroup" aria-labelledby="sg-period-popup-title">
-                            <!-- Poblado por REPORTE_SILBAGAS.js -->
-                        </ul>
-                        <div class="sg-period-custom" id="sg-period-custom" hidden>
-                            <div class="sg-field">
-                                <label for="sg-custom-from" class="sg-field__label">Fecha de inicio</label>
-                                <div class="sg-datetime">
-                                    <input type="text" id="sg-custom-from" class="sg-input" placeholder="MM/DD/AA" autocomplete="off" inputmode="numeric">
-                                    <div class="sg-select-wrap">
-                                        <select id="sg-custom-from-time" class="sg-input sg-select" aria-label="Hora de inicio"></select>
-                                        <i data-lucide="chevron-down" width="16" height="16"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="sg-field">
-                                <label for="sg-custom-to" class="sg-field__label">Fecha de desactivación</label>
-                                <div class="sg-datetime">
-                                    <input type="text" id="sg-custom-to" class="sg-input" placeholder="MM/DD/AA" autocomplete="off" inputmode="numeric">
-                                    <div class="sg-select-wrap">
-                                        <select id="sg-custom-to-time" class="sg-input sg-select" aria-label="Hora de fin"></select>
-                                        <i data-lucide="chevron-down" width="16" height="16"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <p class="sg-field__error" id="sg-custom-error" hidden></p>
+/* ═══════════ BUTTONS ═══════════ */
+.sg-button{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:2.25rem;padding:.5rem .875rem;border:1px solid var(--borders-secondary);border-radius:var(--border-radius-default);background:var(--backgrounds-main);color:var(--text-primary);font-family:var(--display-font);font-size:.6875rem;letter-spacing:.14em;text-transform:uppercase;line-height:1;cursor:pointer;white-space:nowrap;transition:background-color .15s,border-color .15s,color .15s}
+.sg-button:hover{background:var(--backgrounds-main);border-color:var(--navy);color:var(--navy)}
+.sg-button:active{background:var(--backgrounds-content-1)}
+.sg-button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.sg-button:disabled{color:var(--text-button-disabled);border-color:var(--borders-general);background:var(--backgrounds-main);cursor:default;pointer-events:none}
+.sg-button--primary{color:var(--navy-d);background:var(--lime);border-color:var(--lime)}
+.sg-button--primary:hover{background:var(--lime-d);border-color:var(--lime-d);color:var(--navy-dd)}
+.sg-button--primary:active{background:var(--lime-dd);border-color:var(--lime-dd)}
+.sg-button--primary:disabled{color:#fff;background:var(--backgrounds-content-2);border-color:var(--backgrounds-content-2)}
+.sg-button--tertiary{color:var(--navy);background:transparent;border-color:transparent}
+.sg-button--tertiary:hover{background:var(--accents-general--main);border-color:transparent;color:var(--lime-dd)}
+.sg-button--tertiary:active{background:var(--backgrounds-content-1)}
+.sg-button--tertiary:disabled,.sg-button--tertiary-black:disabled{background:transparent;border-color:transparent}
+.sg-button--tertiary-black{color:var(--text-primary);background:transparent;border-color:transparent}
+.sg-button--tertiary-black:hover{background:var(--backgrounds-content-1);border-color:transparent;color:var(--text-primary)}
+.sg-button--icon{padding:.5rem;min-width:2.25rem;line-height:0}
+.sg-button--link{padding-left:.5rem;padding-right:.5rem}
+.sg-counter{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--lime);color:var(--navy-d);font-family:var(--mono-font);font-size:.6875rem;font-weight:500;line-height:18px;letter-spacing:0;text-align:center}
 
-                            <!-- Calendario (Zenith Calendar) -->
-                            <div class="sg-calendar">
-                                <div class="sg-calendar__nav">
-                                    <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" id="sg-cal-prev" aria-label="Mes anterior">
-                                        <i data-lucide="chevron-left" width="16" height="16"></i>
-                                    </button>
-                                    <div class="sg-calendar__month">
-                                        <span id="sg-cal-label">Sep 2026</span>
-                                        <i data-lucide="chevron-down" width="16" height="16"></i>
-                                        <select id="sg-cal-month" class="sg-calendar__month-select" aria-label="Seleccionar mes"></select>
-                                    </div>
-                                    <button type="button" class="sg-button sg-button--tertiary" id="sg-cal-today">Hoy</button>
-                                    <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" id="sg-cal-next" aria-label="Mes siguiente">
-                                        <i data-lucide="chevron-right" width="16" height="16"></i>
-                                    </button>
-                                </div>
-                                <div class="sg-calendar__weekdays" aria-hidden="true">
-                                    <span>D</span><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span>
-                                </div>
-                                <div class="sg-calendar__grid" id="sg-cal-grid" role="grid"></div>
-                            </div>
-                        </div>
-                        <div class="sg-popup__footer sg-popup__footer--split">
-                            <button type="button" class="sg-button sg-button--tertiary sg-button--link" id="sg-period-clear">Borrar</button>
-                            <button type="button" class="sg-button sg-button--primary" id="sg-period-apply" hidden>Aplicar</button>
-                        </div>
-                    </div>
-                </div>
+/* ═══════════ FILTERS TOOLBAR ═══════════ */
+.sg-filters-toolbar{position:relative;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:4rem;padding:.75rem 1.75rem;background:var(--backgrounds-main);border-bottom:1px solid var(--borders-general);flex-wrap:wrap}
+.sg-filters-toolbar__filters{display:flex;align-items:center;gap:.625rem;flex-wrap:wrap}
+.sg-filters-toolbar__actions{display:flex;align-items:center;gap:.5rem}
+.sg-filter{position:relative}
+.sg-filter-trigger{display:inline-flex;align-items:center;gap:.5rem;height:2.25rem;padding:0 .875rem;border:1px solid var(--borders-secondary);border-radius:var(--border-radius-default);background:var(--backgrounds-main);color:var(--text-primary);font-size:.75rem;cursor:pointer;white-space:nowrap;max-width:22rem;transition:border-color .15s,background .15s}
+.sg-filter-trigger svg{color:var(--text-secondary)}
+.sg-filter-trigger:hover{border-color:var(--navy)}
+.sg-filter-trigger:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.sg-filter-trigger[aria-expanded="true"]{border-color:var(--lime);background:var(--accents-general--main)}
+.sg-filter-trigger__label{font-family:var(--display-font);font-size:.625rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-secondary)}
+.sg-filter-trigger__value{color:var(--navy);font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.sg-filter-trigger__caret{color:var(--text-secondary)}
+.sg-stepper-group{display:inline-flex;align-items:stretch}
+.sg-stepper-group>*{margin-inline-start:-1px}
+.sg-stepper-group>*:first-child{margin-inline-start:0}
+.sg-stepper-group>*:hover,.sg-stepper-group>*:focus-visible,.sg-stepper-group>[aria-expanded="true"]{position:relative;z-index:1}
+.sg-stepper{border-color:var(--borders-secondary)}
+.sg-stepper--left{border-radius:var(--border-radius-default) 0 0 var(--border-radius-default)}
+.sg-stepper--right{border-radius:0 var(--border-radius-default) var(--border-radius-default) 0}
+.sg-filter-trigger--stepper{border-radius:0;min-width:12rem;justify-content:center}
 
-                <!-- Dropdown de vehículos con checkbox -->
-                <div class="sg-filter sg-dropdown" id="sg-units-filter">
-                    <button type="button" class="sg-filter-trigger" id="sg-units-trigger" aria-haspopup="listbox" aria-expanded="false">
-                        <i data-lucide="truck" width="16" height="16"></i>
-                        <span class="sg-filter-trigger__label">Vehículos:</span>
-                        <span class="sg-filter-trigger__value" id="sg-units-label">Todos</span>
-                        <i data-lucide="chevron-down" width="16" height="16" class="sg-filter-trigger__caret"></i>
-                    </button>
+/* ── Popups ── */
+.sg-popup{position:absolute;top:calc(100% + 6px);left:0;z-index:50;min-width:16rem;background:var(--backgrounds-main);border:1px solid var(--borders-secondary);border-top:2px solid var(--lime);border-radius:var(--border-radius-default);box-shadow:var(--shadow-popup);display:flex;flex-direction:column}
+.sg-popup__footer{display:flex;justify-content:flex-end;gap:.5rem;padding:.75rem;border-top:1px solid var(--borders-general);background:var(--backgrounds-main)}
+.sg-popup__footer--split{justify-content:space-between}
+.sg-popup__footer-group{display:flex;gap:.5rem}
+.sg-popup__title{padding:1rem 1rem .5rem;font-family:var(--display-font);font-size:.625rem;letter-spacing:.22em;text-transform:uppercase;color:var(--lime-d)}
+.sg-period-popup{width:19rem;max-height:calc(100vh - 12rem);overflow-y:auto}
+.sg-period-popup .sg-popup__footer{position:sticky;bottom:0}
 
-                    <div class="sg-popup sg-units-popup" id="sg-units-popup" role="dialog" aria-label="Filtro de vehículos" hidden>
-                        <div class="sg-search">
-                            <i data-lucide="search" width="16" height="16"></i>
-                            <input type="search" id="sg-units-search" class="sg-search__input" placeholder="Buscar vehículo" autocomplete="off">
-                        </div>
-                        <label class="sg-checkbox sg-checkbox--all">
-                            <input type="checkbox" id="sg-units-all" class="sg-checkbox__input">
-                            <span class="sg-checkbox__box"></span>
-                            <span class="sg-checkbox__label">Seleccionar todos</span>
-                        </label>
-                        <ul class="sg-check-list" id="sg-units-list">
-                            <!-- Poblado por REPORTE_SILBAGAS.js -->
-                        </ul>
-                        <div class="sg-popup__footer sg-popup__footer--split">
-                            <button type="button" class="sg-button sg-button--tertiary" id="sg-units-clear">Borrar</button>
-                            <div class="sg-popup__footer-group">
-                                <button type="button" class="sg-button sg-button--secondary" id="sg-units-cancel">Cancelar</button>
-                                <button type="button" class="sg-button sg-button--primary" id="sg-units-apply">Aplicar</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+/* Radios */
+.sg-radio-list{list-style:none;margin:0;padding:0 0 .5rem}
+.sg-radio{display:flex;align-items:flex-start;gap:.75rem;padding:.625rem 1rem;cursor:pointer;color:var(--text-primary);font-size:.8125rem;line-height:1.25rem}
+.sg-radio:hover{background:var(--backgrounds-hover)}
+.sg-radio:focus-visible{outline:2px solid var(--lime);outline-offset:-2px}
+.sg-radio__circle{position:relative;flex:none;width:1rem;height:1rem;margin-top:.125rem;border:1px solid var(--borders-form-field--hover);border-radius:50%;background:var(--backgrounds-main)}
+.sg-radio:hover .sg-radio__circle{border-color:var(--navy)}
+.sg-radio--checked .sg-radio__circle,.sg-radio--checked:hover .sg-radio__circle{border:2px solid var(--lime)}
+.sg-radio--checked .sg-radio__circle::after{content:"";position:absolute;inset:2px;border-radius:50%;background:var(--lime)}
+.sg-radio--checked{font-weight:500;color:var(--navy)}
+.sg-radio__text{display:flex;flex-direction:column}
+.sg-radio__sub{font-family:var(--mono-font);font-size:.6875rem;font-weight:400;line-height:1rem;color:var(--text-secondary)}
 
-            <div class="sg-filters-toolbar__actions">
-                <button type="button" class="sg-button sg-button--tertiary" id="sg-filters-reset" hidden>
-                    Restablecer <span class="sg-counter" id="sg-filters-count">0</span>
-                </button>
-            </div>
-        </div>
+.sg-period-custom{display:flex;flex-direction:column;gap:1rem;padding:.25rem 1rem .75rem}
+.sg-datetime{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.sg-datetime .sg-input{width:100%;height:2.25rem}
+.sg-input.sg-input--error{border-color:var(--borders-form-field--error)}
+.sg-select-wrap{position:relative}
+.sg-select-wrap svg{position:absolute;right:.5rem;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text-secondary)}
+.sg-select{appearance:none;-webkit-appearance:none;padding-right:1.75rem;cursor:pointer}
 
-        <!-- ═══════════ MAIN CONTENT ═══════════ -->
-        <main class="sg-main" id="sg-main">
+/* ── Calendario ── */
+.sg-calendar{display:flex;flex-direction:column;gap:.25rem}
+.sg-calendar__nav{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:.25rem}
+.sg-calendar__month{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:.375rem;height:2.25rem;font-family:var(--display-font);font-size:.875rem;letter-spacing:.04em;color:var(--navy);border-radius:var(--border-radius-default)}
+.sg-calendar__month:hover{background:var(--backgrounds-content-1)}
+.sg-calendar__month svg{color:var(--text-secondary)}
+.sg-calendar__month-select{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer}
+.sg-calendar__weekdays,.sg-calendar__grid{display:grid;grid-template-columns:repeat(7,1fr);justify-items:center}
+.sg-calendar__weekdays span{padding:.5rem 0;font-family:var(--display-font);font-size:.625rem;letter-spacing:.12em;color:var(--text-secondary)}
+.sg-calendar__grid{row-gap:.25rem}
+.sg-cal-day{position:relative;width:100%;height:2.25rem;padding:0;border:none;background:transparent;color:var(--text-primary);font-family:var(--mono-font);font-size:.8125rem;cursor:pointer}
+.sg-cal-day span{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;width:2rem;height:2rem;border-radius:50%}
+.sg-cal-day:hover span{background:var(--backgrounds-hover)}
+.sg-cal-day:focus-visible{outline:none}
+.sg-cal-day:focus-visible span{outline:2px solid var(--lime);outline-offset:1px}
+.sg-cal-day--outside{color:var(--text-placeholder)}
+.sg-cal-day--today span{color:var(--lime-d);font-weight:500;box-shadow:inset 0 0 0 1px var(--lime)}
+.sg-cal-day:disabled{color:var(--text-button-disabled);cursor:default}
+.sg-cal-day:disabled span{background:transparent}
+.sg-cal-day--in-range::before,.sg-cal-day--range-start::before,.sg-cal-day--range-end::before{content:"";position:absolute;top:.125rem;bottom:.125rem;left:0;right:0;background:var(--accents-general--main)}
+.sg-cal-day--range-start::before{left:50%}
+.sg-cal-day--range-end::before{right:50%}
+.sg-cal-day--range-start.sg-cal-day--range-end::before{display:none}
+.sg-cal-day--range-start span,.sg-cal-day--range-end span,.sg-cal-day--range-start:hover span,.sg-cal-day--range-end:hover span{background:var(--navy);color:#fff;font-weight:500;box-shadow:none}
 
-            <div class="sg-empty-state" id="sg-empty-state">
-                <i data-lucide="bar-chart-3" width="32" height="32"></i>
-                <p>Cargando información de la flota…</p>
-            </div>
+/* ── Campos ── */
+.sg-field{display:flex;flex-direction:column;gap:.375rem}
+.sg-field__label{font-family:var(--display-font);font-size:.625rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-secondary)}
+.sg-field__error{margin:0;font-size:.75rem;color:var(--text-error-message)}
+.sg-input{height:2.25rem;padding:0 .625rem;border:1px solid var(--borders-secondary);border-radius:var(--border-radius-default);background:var(--backgrounds-main);color:var(--text-primary);font-family:var(--mono-font);font-size:.8125rem}
+.sg-input:hover{border-color:var(--borders-form-field--hover)}
+.sg-input:focus{outline:none;border-color:var(--lime);box-shadow:0 0 0 3px rgba(0,169,75,.15)}
+.sg-search{display:flex;align-items:center;gap:.5rem;margin:.75rem .75rem .5rem;padding:0 .625rem;height:2.25rem;border:1px solid var(--borders-secondary);border-radius:var(--border-radius-default);color:var(--text-secondary)}
+.sg-search:focus-within{border-color:var(--lime);box-shadow:0 0 0 3px rgba(0,169,75,.15)}
+.sg-search__input{flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--text-primary);font-size:.8125rem}
+.sg-search__input::placeholder{color:var(--text-placeholder)}
 
-            <!-- ═══════════ SECCIÓN: SERVICIOS ═══════════ -->
-            <section class="sg-section" id="sg-section-servicios" hidden>
-                <ul class="sg-card-deck">
-                    <li class="sg-summary-tile">
-                        <div class="sg-summary-tile__title">Tiempo total en taller</div>
-                        <div class="sg-summary-tile__content">
-                            <span class="sg-summary-tile__value" id="sg-kpi-taller-time">0h 00m</span>
-                        </div>
-                        <div class="sg-progress" title="Porcentaje del periodo">
-                            <div class="sg-progress__bar"><div class="sg-progress__fill" id="sg-kpi-taller-fill"></div></div>
-                            <span class="sg-progress__text" id="sg-kpi-taller-pct">0.0%</span>
-                        </div>
-                    </li>
-                    <li class="sg-summary-tile">
-                        <div class="sg-summary-tile__title">Ingresos a taller</div>
-                        <div class="sg-summary-tile__content">
-                            <span class="sg-summary-tile__value" id="sg-kpi-taller-count">0</span>
-                            <span class="sg-summary-tile__unit">visitas</span>
-                        </div>
-                        <div class="sg-summary-tile__sub" id="sg-kpi-taller-units">0 de 0 unidades</div>
-                    </li>
-                    <li class="sg-summary-tile">
-                        <div class="sg-summary-tile__title">Promedio por estancia</div>
-                        <div class="sg-summary-tile__content">
-                            <span class="sg-summary-tile__value" id="sg-kpi-taller-avg">0h 00m</span>
-                        </div>
-                        <div class="sg-summary-tile__sub">Por ingreso a taller</div>
-                    </li>
-                    <li class="sg-summary-tile">
-                        <div class="sg-summary-tile__title">En taller actualmente</div>
-                        <div class="sg-summary-tile__content">
-                            <span class="sg-summary-tile__value" id="sg-kpi-taller-now">0</span>
-                            <span class="sg-summary-tile__unit">unidades</span>
-                        </div>
-                        <div class="sg-summary-tile__sub">Órdenes sin cerrar</div>
-                    </li>
-                </ul>
+/* ── Checkbox ── */
+.sg-checkbox{display:flex;align-items:center;gap:.625rem;min-height:2.25rem;padding:.5rem 1rem;font-size:.8125rem;color:var(--text-primary);cursor:pointer;user-select:none}
+.sg-checkbox:hover{background:var(--backgrounds-hover)}
+.sg-checkbox--all{border-bottom:1px solid var(--borders-general);font-weight:500}
+.sg-checkbox__input{position:absolute;opacity:0;width:0;height:0}
+.sg-checkbox__box{position:relative;width:1rem;height:1rem;min-width:1rem;border:1px solid var(--borders-form-field--hover);border-radius:2px;background:var(--backgrounds-main)}
+.sg-checkbox__input:checked+.sg-checkbox__box,.sg-checkbox__input:indeterminate+.sg-checkbox__box{background:var(--lime);border-color:var(--lime)}
+.sg-checkbox__input:checked+.sg-checkbox__box::after{content:"";position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid var(--navy-d);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.sg-checkbox__input:indeterminate+.sg-checkbox__box::after{content:"";position:absolute;left:3px;top:6px;width:8px;height:2px;background:var(--navy-d)}
+.sg-checkbox__input:focus-visible+.sg-checkbox__box{outline:2px solid var(--lime);outline-offset:2px}
+.sg-checkbox__label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sg-check-list{list-style:none;margin:0;padding:.25rem 0;max-height:18rem;overflow-y:auto}
+.sg-check-list__empty{padding:1rem;color:var(--text-secondary);font-size:.8125rem;text-align:center}
+.sg-units-popup{width:20rem}
 
-                <div class="sg-data-grid-card">
-                    <div class="sg-data-grid-card__header">
-                        <h2 class="sg-data-grid-card__title">Tiempo en taller por unidad</h2>
-                        <span class="sg-data-grid-card__sub" id="sg-taller-table-sub"></span>
-                    </div>
-                    <div class="sg-data-grid">
-                        <table class="sg-table">
-                            <thead>
-                                <tr>
-                                    <th>Vehículo</th>
-                                    <th class="sg-num">Ingresos</th>
-                                    <th class="sg-num">Tiempo en taller</th>
-                                    <th class="sg-num">% del periodo</th>
-                                    <th>Estado</th>
-                                    <th class="sg-actions-col"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="sg-tbody-taller"></tbody>
-                        </table>
-                    </div>
-                    <div class="sg-pagination" id="sg-taller-pagination">
-                        <span class="sg-pagination__info" id="sg-taller-pagination-info"></span>
-                        <div class="sg-pagination__controls">
-                            <button type="button" class="sg-button sg-button--icon" id="sg-btn-taller-prev" aria-label="Página anterior"><i data-lucide="chevron-left" width="16" height="16"></i></button>
-                            <span class="sg-pagination__page" id="sg-taller-page-indicator">1 / 1</span>
-                            <button type="button" class="sg-button sg-button--icon" id="sg-btn-taller-next" aria-label="Página siguiente"><i data-lucide="chevron-right" width="16" height="16"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </section>
+/* ═══════════ MAIN ═══════════ */
+.sg-main{position:relative;min-height:60vh;padding:1.75rem}
+.sg-section{display:flex;flex-direction:column;gap:1.75rem}
+.sg-empty-state{display:flex;flex-direction:column;align-items:center;gap:.875rem;padding:5rem 1rem;color:var(--text-secondary);text-align:center;font-size:.8125rem}
+.sg-empty-state svg{color:var(--lime)}
+.sg-empty-state p{margin:0}
 
-            <!-- ═══════════ SECCIÓN: RECORRIDOS ═══════════ -->
-            <section class="sg-section" id="sg-section-recorridos" hidden>
-                <ul class="sg-card-deck">
-                    <li class="sg-summary-tile">
-                        <div class="sg-summary-tile__title">Distancia total</div>
-                        <div class="sg-summary-tile__content">
-                            <span class="sg-summary-tile__value" id="sg-kpi-dist">0.0</span>
-                            <span class="sg-summary-tile__unit">km</span>
-                        </div>
-                        <div class="sg-summary-tile__sub" id="sg-kpi-dist-avg">0 viajes</div>
-                    </li>
-                    <li class="sg-summary-tile">
-                        <div class="sg-summary-tile__title">Horas de motor</div>
-                        <div class="sg-summary-tile__content">
-                            <span class="sg-summary-tile__value" id="sg-kpi-engine">0.0</span>
-                            <span class="sg-summary-tile__unit">h</span>
-                        </div>
-                        <div class="sg-summary-tile__sub" id="sg-kpi-trips-units">0 vehículos con actividad</div>
-                    </li>
-                    <li class="sg-summary-tile">
-                        <div class="sg-summary-tile__title">Tiempo de conducción</div>
-                        <div class="sg-summary-tile__content">
-                            <span class="sg-summary-tile__value" id="sg-kpi-drive">0h 00m</span>
-                        </div>
-                        <div class="sg-summary-tile__sub">Suma de todos los viajes</div>
-                    </li>
-                    <li class="sg-summary-tile">
-                        <div class="sg-summary-tile__title">Tiempo en ralentí</div>
-                        <div class="sg-summary-tile__content">
-                            <span class="sg-summary-tile__value" id="sg-kpi-idle">0h 00m</span>
-                        </div>
-                        <div class="sg-summary-tile__sub" id="sg-kpi-idle-pct">0.0% del tiempo de motor</div>
-                    </li>
-                </ul>
+/* ── KPI tiles ── */
+.sg-card-deck{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:0;padding:0;list-style:none;background:var(--backgrounds-main);border:1px solid var(--borders-general)}
+.sg-summary-tile{position:relative;display:flex;flex-direction:column;min-height:7.5rem;padding:1.25rem 1.375rem;border-right:1px solid var(--borders-general);background:var(--backgrounds-main)}
+.sg-summary-tile:last-child{border-right:0}
+.sg-summary-tile::before{content:"";position:absolute;top:-1px;left:1.375rem;width:28px;height:3px;background:var(--lime)}
+.sg-summary-tile__title{margin-bottom:.875rem;font-family:var(--display-font);font-size:.625rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sg-summary-tile__content{display:flex;align-items:baseline;gap:.5rem;min-height:2.25rem}
+.sg-summary-tile__value{font-family:var(--display-font);font-size:2rem;line-height:1;letter-spacing:-.01em;color:var(--navy);font-variant-numeric:tabular-nums}
+.sg-summary-tile__unit{font-family:var(--display-font);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--lime-d)}
+.sg-summary-tile__sub{margin-top:auto;padding-top:.625rem;font-family:var(--mono-font);font-size:.6875rem;color:var(--text-secondary)}
 
-                <!-- ═══════════ GRÁFICAS DE RECORRIDOS ═══════════ -->
-                <div class="sg-charts">
-                    <div class="sg-chart-card sg-chart-card--full">
-                        <div class="sg-chart-card__header">
-                            <div>
-                                <h2 class="sg-chart-card__title">Desempeño por vehículo</h2>
-                                <span class="sg-chart-card__sub" id="sg-chart-perf-sub">Distancia acumulada del periodo</span>
-                            </div>
-                            <div class="sg-chart-card__actions">
-                                <div class="sg-segmented sg-perf-metric" id="sg-chart-perf-metric" role="group" aria-label="Métrica">
-                                    <button type="button" class="sg-segmented__item sg-segmented__item--active" data-metric="dist" aria-pressed="true">Distancia</button>
-                                    <button type="button" class="sg-segmented__item" data-metric="trips" aria-pressed="false">Viajes</button>
-                                    <button type="button" class="sg-segmented__item" data-metric="drive" aria-pressed="false">Conducción</button>
-                                    <button type="button" class="sg-segmented__item" data-metric="fuel" aria-pressed="false">Combustible</button>
-                                </div>
-                                <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" data-chart-expand="perf" title="Ver en pantalla completa" aria-label="Ver Desempeño por vehículo en pantalla completa">
-                                    <i data-lucide="maximize-2" width="16" height="16"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="sg-hbars" id="sg-chart-perf"></div>
-                    </div>
+/* ── Progress ── */
+.sg-progress{display:flex;align-items:center;gap:.625rem;margin-top:auto;padding-top:.625rem}
+.sg-progress__bar{flex:1;height:4px;background:var(--backgrounds-content-2);overflow:hidden}
+.sg-progress__fill{height:100%;width:0;background:var(--lime);transition:width .4s ease}
+.sg-progress__text{font-family:var(--mono-font);font-size:.6875rem;color:var(--text-secondary);font-variant-numeric:tabular-nums}
 
-                    <div class="sg-chart-card">
-                        <div class="sg-chart-card__header">
-                            <div>
-                                <h2 class="sg-chart-card__title">Participación en distancia</h2>
-                                <span class="sg-chart-card__sub" id="sg-chart-share-sub">Sobre el total</span>
-                            </div>
-                            <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" data-chart-expand="share" title="Ver en pantalla completa" aria-label="Ver Participación en distancia en pantalla completa">
-                                <i data-lucide="maximize-2" width="16" height="16"></i>
-                            </button>
-                        </div>
-                        <div class="sg-donut-wrap" id="sg-chart-share"></div>
-                    </div>
+/* ── Tabla ── */
+.sg-data-grid-card{display:flex;flex-direction:column;gap:.75rem}
+.sg-data-grid-card__header{display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap}
+.sg-data-grid-card__title{margin:0;font-family:var(--display-font);font-weight:400;font-size:1.125rem;line-height:1.3;color:var(--navy)}
+.sg-data-grid-card__sub{font-family:var(--mono-font);font-size:.6875rem;color:var(--text-secondary)}
+.sg-data-grid-card__action{margin-left:auto}
+.sg-data-grid{overflow:auto;border:1px solid var(--borders-general);background:var(--backgrounds-main)}
+.sg-table{width:100%;border-collapse:collapse;font-size:.8125rem;line-height:1.2;color:var(--text-primary)}
+.sg-table thead th{position:sticky;top:0;z-index:1;height:2.75rem;padding:0 .875rem;background:var(--navy);border-bottom:0;color:rgba(255,255,255,.85);font-family:var(--display-font);font-size:.5625rem;font-weight:400;letter-spacing:.18em;text-transform:uppercase;text-align:left;white-space:nowrap}
+.sg-table tbody td{height:3rem;padding:.75rem .875rem;border-bottom:1px solid var(--borders-general);white-space:nowrap;vertical-align:middle}
+.sg-table tbody tr:last-child td{border-bottom:none}
+.sg-table tbody tr:hover td{background:var(--backgrounds-content-0)}
+.sg-table .sg-num{text-align:right;font-family:var(--mono-font);font-size:.75rem;font-variant-numeric:tabular-nums}
+.sg-table thead .sg-num{font-family:var(--display-font);font-size:.5625rem}
+.sg-table .sg-muted{color:var(--text-secondary)}
+.sg-table .sg-mono{font-family:var(--mono-font);font-size:.75rem;color:var(--text-secondary)}
+.sg-table .sg-strong{font-weight:500;color:var(--navy)}
+.sg-table .sg-actions-col{width:1%;text-align:right}
+.sg-table__empty td{height:8rem;text-align:center;color:var(--text-secondary);white-space:normal}
 
-                    <div class="sg-chart-card">
-                        <div class="sg-chart-card__header">
-                            <div>
-                                <h2 class="sg-chart-card__title">Rendimiento de combustible</h2>
-                                <span class="sg-chart-card__sub">km por litro · vehículos con dato</span>
-                            </div>
-                            <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" data-chart-expand="fuel" title="Ver en pantalla completa" aria-label="Ver Rendimiento de combustible en pantalla completa">
-                                <i data-lucide="maximize-2" width="16" height="16"></i>
-                            </button>
-                        </div>
-                        <div class="sg-hbars sg-hbars--center" id="sg-chart-fuel"></div>
-                    </div>
+/* Árbol vehículo → días */
+.sg-tree-cell{display:flex;align-items:center;gap:.375rem}
+.sg-tree-cell .sg-muted{font-family:var(--mono-font);font-size:.6875rem}
+.sg-expand{display:inline-flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;padding:0;border:1px solid var(--borders-general);border-radius:2px;background:var(--backgrounds-main);color:var(--text-secondary);cursor:pointer}
+.sg-expand:hover{border-color:var(--lime);color:var(--lime-d)}
+.sg-expand:focus-visible{outline:2px solid var(--lime)}
+.sg-expand svg{transition:transform .15s ease}
+.sg-expand[aria-expanded="true"]{background:var(--lime);border-color:var(--lime);color:var(--navy-d)}
+.sg-expand[aria-expanded="true"] svg{transform:rotate(90deg)}
+.sg-table--tree .sg-row--parent{cursor:pointer}
+.sg-table--tree .sg-row--expanded td{background:var(--accents-general--main)}
+.sg-table--tree .sg-row--child td{height:2.5rem;padding-top:.5rem;padding-bottom:.5rem;background:var(--backgrounds-content-0);color:var(--text-secondary)}
+.sg-table--tree .sg-row--child td:first-child{padding-left:2.625rem;color:var(--text-primary);font-size:.75rem;box-shadow:inset 3px 0 0 var(--lime)}
+.sg-table--tree .sg-row--child:hover td{background:var(--backgrounds-content-1)}
+.sg-table-pct{display:inline-flex;align-items:center;gap:.625rem}
+.sg-table-pct .sg-progress__bar{width:64px;flex:none}
 
-                    <div class="sg-chart-card sg-chart-card--full">
-                        <div class="sg-chart-card__header">
-                            <div>
-                                <h2 class="sg-chart-card__title">Velocidad promedio</h2>
-                                <span class="sg-chart-card__sub">km/h por vehículo · línea punteada = promedio de la flota</span>
-                            </div>
-                            <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" data-chart-expand="speed" title="Ver en pantalla completa" aria-label="Ver Velocidad promedio en pantalla completa">
-                                <i data-lucide="maximize-2" width="16" height="16"></i>
-                            </button>
-                        </div>
-                        <div class="sg-vbars" id="sg-chart-speed"></div>
-                    </div>
-                </div>
+/* ── Pills ── */
+.sg-pill{display:inline-flex;align-items:center;gap:.375rem;height:1.375rem;padding:0 .625rem;border-radius:100px;font-family:var(--display-font);font-size:.5625rem;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap}
+.sg-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.sg-pill--success{background:var(--accents-success--main);color:var(--accents-success--detail)}
+.sg-pill--warning{background:var(--accents-warning--main);color:var(--accents-warning--detail)}
+.sg-pill--default{background:var(--backgrounds-content-1);color:var(--text-secondary)}
+.sg-pill--info{background:#E0F6FA;color:var(--navy)}
 
-                <div class="sg-data-grid-card">
-                    <div class="sg-data-grid-card__header">
-                        <h2 class="sg-data-grid-card__title">Recorridos por vehículo</h2>
-                        <span class="sg-data-grid-card__sub" id="sg-trips-table-sub"></span>
-                        <button type="button" class="sg-button sg-button--tertiary sg-data-grid-card__action" id="sg-trips-expand-all">Expandir todo</button>
-                    </div>
-                    <div class="sg-data-grid">
-                        <table class="sg-table sg-table--tree">
-                            <thead>
-                                <tr>
-                                    <th>Vehículo / Día</th>
-                                    <th class="sg-num">Viajes</th>
-                                    <th class="sg-num">Distancia</th>
-                                    <th class="sg-num">Conducción</th>
-                                    <th class="sg-num">Ralentí</th>
-                                    <th class="sg-num">Detenido</th>
-                                    <th class="sg-num">Conducción laboral</th>
-                                    <th class="sg-num">Detenido laboral</th>
-                                    <th class="sg-num">Vel. promedio</th>
-                                    <th class="sg-num" title="Litros consumidos según los registros de combustible de Geotab">Combustible</th>
-                                    <th class="sg-num" title="Última lectura del horómetro menos la primera del periodo">Horas de motor</th>
-                                    <th class="sg-num" title="Lectura acumulada del horómetro al final del periodo">Horómetro</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sg-tbody-trips"></tbody>
-                        </table>
-                    </div>
-                    <div class="sg-pagination" id="sg-trips-pagination">
-                        <span class="sg-pagination__info" id="sg-trips-pagination-info"></span>
-                        <div class="sg-pagination__controls">
-                            <button type="button" class="sg-button sg-button--icon" id="sg-btn-trips-prev" aria-label="Página anterior"><i data-lucide="chevron-left" width="16" height="16"></i></button>
-                            <span class="sg-pagination__page" id="sg-trips-page-indicator">1 / 1</span>
-                            <button type="button" class="sg-button sg-button--icon" id="sg-btn-trips-next" aria-label="Página siguiente"><i data-lucide="chevron-right" width="16" height="16"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </section>
+/* ── Paginación ── */
+.sg-pagination{display:flex;justify-content:space-between;align-items:center;gap:1rem;font-family:var(--mono-font);font-size:.6875rem;color:var(--text-secondary)}
+.sg-pagination__controls{display:flex;align-items:center;gap:.25rem}
+.sg-pagination__page{min-width:3.5rem;text-align:center;color:var(--navy);font-weight:500}
 
-            <!-- LOADING (dentro del contenido, como en MyGeotab) -->
-            <div class="sg-loading" id="sg-loading" hidden>
-                <div class="sg-spinner" aria-hidden="true"></div>
-                <p id="sg-loading-text">Cargando…</p>
-            </div>
-        </main>
+/* ── Loading ── */
+.sg-loading{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:1rem;padding-top:8rem;background:rgba(244,246,248,.82);color:var(--text-secondary);font-family:var(--display-font);font-size:.625rem;letter-spacing:.22em;text-transform:uppercase}
+.sg-loading p{margin:0}
+.sg-spinner{width:36px;height:36px;border:3px solid var(--backgrounds-content-2);border-top-color:var(--lime);border-radius:50%;animation:sgSpin .8s linear infinite}
 
-        <!-- ═══════════ MODAL: ESTANCIAS POR UNIDAD ═══════════ -->
-        <div class="sg-modal-overlay" id="sg-unit-modal" hidden>
-            <div class="sg-modal" role="dialog" aria-modal="true" aria-labelledby="sg-unit-modal-title">
-                <div class="sg-modal__header">
-                    <h2 class="sg-modal__title" id="sg-unit-modal-title">Estancias en taller</h2>
-                    <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" id="sg-unit-modal-close" aria-label="Cerrar">
-                        <i data-lucide="x" width="16" height="16"></i>
-                    </button>
-                </div>
-                <div class="sg-modal__content">
-                    <div class="sg-data-grid">
-                        <table class="sg-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Orden / Taller</th>
-                                    <th>Entrada</th>
-                                    <th>Salida</th>
-                                    <th class="sg-num">Duración</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sg-tbody-unit-detail"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="sg-modal__footer">
-                    <button type="button" class="sg-button sg-button--secondary" id="sg-unit-modal-btn-close">Cerrar</button>
-                </div>
-            </div>
-        </div>
+/* ═══════════ MODAL ═══════════ */
+.sg-modal-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem;background:var(--backgrounds-overlay);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.sg-modal{display:flex;flex-direction:column;width:100%;max-width:52rem;max-height:calc(100vh - 2rem);background:var(--backgrounds-main);border-top:3px solid var(--lime);box-shadow:var(--shadow-modal)}
+.sg-modal__header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.5rem 1.75rem 1rem}
+.sg-modal__title{margin:0;font-family:var(--display-font);font-weight:400;font-size:1.25rem;line-height:1.3;color:var(--navy)}
+.sg-modal__content{padding:0 1.75rem;overflow:auto}
+.sg-modal__content .sg-data-grid{max-height:22rem}
+.sg-modal__footer{display:flex;justify-content:flex-end;gap:.5rem;padding:1.25rem 1.75rem 1.5rem}
 
-        <!-- ═══════════ MODAL: GRÁFICA EN PANTALLA COMPLETA ═══════════ -->
-        <div class="sg-modal-overlay" id="sg-chart-modal" hidden>
-            <div class="sg-modal sg-modal--fullscreen" role="dialog" aria-modal="true" aria-labelledby="sg-chart-modal-title">
-                <div class="sg-modal__header">
-                    <div>
-                        <h2 class="sg-modal__title" id="sg-chart-modal-title"></h2>
-                        <span class="sg-chart-card__sub" id="sg-chart-modal-sub"></span>
-                    </div>
-                    <div class="sg-chart-card__actions">
-                        <div class="sg-segmented sg-perf-metric" id="sg-chart-modal-metric" role="group" aria-label="Métrica" hidden>
-                            <button type="button" class="sg-segmented__item sg-segmented__item--active" data-metric="dist" aria-pressed="true">Distancia</button>
-                            <button type="button" class="sg-segmented__item" data-metric="trips" aria-pressed="false">Viajes</button>
-                            <button type="button" class="sg-segmented__item" data-metric="drive" aria-pressed="false">Conducción</button>
-                            <button type="button" class="sg-segmented__item" data-metric="fuel" aria-pressed="false">Combustible</button>
-                        </div>
-                        <button type="button" class="sg-button sg-button--icon sg-button--tertiary-black" id="sg-chart-modal-close" aria-label="Cerrar">
-                            <i data-lucide="x" width="16" height="16"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="sg-modal__content sg-chart-modal__body" id="sg-chart-modal-body"></div>
-            </div>
-        </div>
+/* ═══════════ ALERT ═══════════ */
+.sg-alert{position:fixed;right:1.5rem;bottom:1.5rem;z-index:300;display:flex;align-items:center;gap:.625rem;max-width:26rem;padding:.875rem .75rem .875rem 1rem;border:1px solid rgba(180,35,24,.25);border-radius:var(--border-radius-default);background:var(--accents-error--main);color:var(--accents-error--detail);font-size:.8125rem;box-shadow:var(--shadow-popup)}
+.sg-alert__close{margin-left:auto;padding:.25rem;border:none;background:transparent;color:inherit;cursor:pointer;line-height:0;border-radius:2px}
+.sg-alert__close:hover{background:rgba(180,35,24,.08)}
 
-        <!-- ALERTA (Zenith Alert / error) -->
-        <div class="sg-alert" id="sg-alert" role="alert" hidden>
-            <i data-lucide="alert-circle" width="16" height="16"></i>
-            <span id="sg-alert-msg">Error de conexión.</span>
-            <button type="button" class="sg-alert__close" id="sg-alert-close" aria-label="Cerrar">
-                <i data-lucide="x" width="14" height="14"></i>
-            </button>
-        </div>
-    </div>
+/* ═══════════ GRÁFICAS ═══════════ */
+.sg-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem}
+.sg-chart{position:relative;display:flex;flex-direction:column;gap:1.25rem;min-width:0;padding:1.375rem 1.5rem 1.5rem;background:var(--backgrounds-main);border:1px solid var(--borders-general)}
+.sg-chart::before{content:"";position:absolute;top:-1px;left:1.5rem;width:28px;height:3px;background:var(--lime)}
+.sg-chart--wide{grid-column:1/-1}
+.sg-chart__header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.sg-chart__title{margin:0;font-family:var(--display-font);font-weight:400;font-size:1rem;line-height:1.3;color:var(--navy)}
+.sg-chart__sub{margin:.25rem 0 0;font-family:var(--mono-font);font-size:.6875rem;color:var(--text-secondary)}
+.sg-chart__empty{margin:0;padding:2rem 0;text-align:center;color:var(--text-secondary);font-size:.8125rem}
+.sg-segmented{display:inline-flex;border:1px solid var(--borders-secondary);border-radius:var(--border-radius-default)}
+.sg-segment{height:2rem;padding:0 .875rem;border:0;border-left:1px solid var(--borders-secondary);background:var(--backgrounds-main);color:var(--text-secondary);font-family:var(--display-font);font-size:.5625rem;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:background .15s,color .15s}
+.sg-segment:first-child{border-left:0}
+.sg-segment:hover{color:var(--navy);background:var(--backgrounds-content-0)}
+.sg-segment:focus-visible{outline:2px solid var(--lime);outline-offset:1px}
+.sg-segment--active,.sg-segment--active:hover{background:var(--navy);color:#fff}
+/* Barras horizontales */
+.sg-hbars{display:flex;flex-direction:column;gap:.875rem}
+.sg-hbars--centered{flex:1;justify-content:center}
+.sg-hbar{display:grid;grid-template-columns:minmax(6rem,11rem) minmax(0,1fr) 6.5rem;align-items:center;gap:1rem}
+.sg-hbar__label{font-size:.75rem;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sg-hbar__track{height:10px;background:var(--backgrounds-content-1)}
+.sg-hbar__fill{display:block;height:100%;background:var(--navy);transition:width .4s ease}
+.sg-hbar:first-child .sg-hbar__fill{background:var(--lime)}
+.sg-hbar__fill--accent{background:var(--cyan)}
+.sg-hbar:first-child .sg-hbar__fill--accent{background:var(--lime)}
+.sg-hbar__value{font-family:var(--mono-font);font-size:.75rem;color:var(--navy);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* Dona */
+.sg-share{flex:1;display:flex;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap}
+.sg-donut{position:relative;width:170px;height:170px;flex:none}
+.sg-donut__svg{width:100%;height:100%;display:block}
+.sg-donut__center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.sg-donut__value{font-family:var(--display-font);font-size:1.625rem;line-height:1;color:var(--navy)}
+.sg-donut__unit{margin-top:.375rem;font-family:var(--display-font);font-size:.5625rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-secondary)}
+.sg-legend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem;min-width:12rem}
+.sg-legend__item{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:center;gap:.625rem;font-size:.75rem}
+.sg-legend__swatch{width:10px;height:10px}
+.sg-legend__name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sg-legend__pct{font-family:var(--mono-font);color:var(--text-secondary);font-variant-numeric:tabular-nums}
+/* Barras verticales */
+.sg-vbars{display:flex;flex-direction:column;margin-top:.5rem;padding-bottom:3rem;overflow-x:auto}
+.sg-vbars__plot{position:relative;display:flex;align-items:stretch;gap:1rem;height:18rem;border-bottom:1px solid var(--borders-secondary);background-image:linear-gradient(var(--borders-general) 1px,transparent 1px);background-size:100% 25%}
+.sg-vbar{position:relative;flex:1 1 0;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.sg-vbar__fill{display:block;width:min(64px,75%);background:var(--navy);transition:height .4s ease}
+.sg-vbar:first-child .sg-vbar__fill{background:var(--lime)}
+.sg-vbar__value{margin-bottom:.375rem;font-family:var(--mono-font);font-size:.9375rem;font-weight:600;color:var(--navy);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sg-vbar__label{position:absolute;top:calc(100% + .5rem);left:0;right:0;font-size:.8125rem;line-height:1.2;color:var(--text-primary);text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.sg-vbars__avg{position:absolute;left:0;right:0;z-index:2;border-top:2px dashed var(--cyan);pointer-events:none}
+.sg-vbars__avg span{position:absolute;right:0;bottom:4px;padding:2px 8px;background:var(--navy);color:#fff;font-family:var(--mono-font);font-size:.8125rem;white-space:nowrap}
 
-    <!-- Scripts -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="scripts/REPORTE_SILBAGAS.js"></script>
-</body>
-</html>
+@keyframes sgSpin{to{transform:rotate(360deg)}}
+
+/* ── Responsive ── */
+@media (max-width:1024px){
+.sg-card-deck{grid-template-columns:repeat(2,minmax(0,1fr))}
+.sg-summary-tile:nth-child(2n){border-right:0}
+.sg-summary-tile:nth-child(-n+2){border-bottom:1px solid var(--borders-general)}
+.sg-charts{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+.sg-page-header__main-line,.sg-tabs,.sg-filters-toolbar{padding-left:1rem;padding-right:1rem}
+.sg-page-header__main-line{flex-wrap:wrap;gap:1rem}
+.sg-page-header__logo{border-right:0;padding-right:0;height:20px}
+.sg-page-header__title-group{flex-basis:100%;order:3}
+.sg-page-header__actions{margin-left:auto}
+.sg-main{padding:1rem}
+.sg-card-deck{grid-template-columns:1fr}
+.sg-summary-tile{border-right:0;border-bottom:1px solid var(--borders-general)}
+.sg-summary-tile:last-child{border-bottom:0}
+.sg-page-header__actions .sg-button span{display:none}
+.sg-hbar{grid-template-columns:minmax(0,1fr) 5.5rem;gap:.375rem .75rem}
+.sg-hbar__track{grid-column:1/-1;grid-row:2}
+.sg-vbars__plot{gap:.375rem;height:14rem}
+.sg-vbar__value{font-size:.75rem}
+.sg-vbar__label{font-size:.6875rem}
+.sg-popup{position:fixed;left:1rem;right:1rem;top:auto;width:auto}
+}
+
+/* ═══════════ v2 · Descargar, tarjetas de gráfica, pantalla completa ═══════════ */
+.sg-popup{color:var(--text-primary)}
+.sg-page-header .sg-popup .sg-button--secondary{background:var(--backgrounds-main);color:var(--text-primary);border-color:var(--borders-secondary)}
+.sg-page-header .sg-popup .sg-button--secondary:hover{background:var(--backgrounds-main);border-color:var(--navy);color:var(--navy)}
+.sg-export-popup{left:auto;right:0;width:23rem}
+.sg-export-list{list-style:none;margin:0;padding:0 0 .25rem}
+.sg-export-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.875rem 1rem;border-top:1px solid var(--borders-general)}
+.sg-export-item:hover{background:var(--backgrounds-content-0)}
+.sg-export-item__text{display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.sg-export-item__name{font-family:var(--display-font);font-size:.8125rem;letter-spacing:.02em;color:var(--navy)}
+.sg-export-item__desc{font-family:var(--mono-font);font-size:.6875rem;line-height:1.35;color:var(--text-secondary);text-wrap:pretty}
+.sg-export-item__actions{display:flex;gap:.375rem;flex-shrink:0}
+.sg-export-item__actions .sg-button{min-height:2rem;padding:.375rem .625rem;font-size:.5625rem}
+.sg-export-item__actions .sg-button:hover{border-color:var(--lime)!important;color:var(--lime-d)!important}
+/* Tarjetas de gráfica */
+.sg-chart-card{position:relative;display:flex;flex-direction:column;gap:1.25rem;min-width:0;padding:1.375rem 1.5rem 1.5rem;background:var(--backgrounds-main);border:1px solid var(--borders-general)}
+.sg-chart-card::before{content:"";position:absolute;top:-1px;left:1.5rem;width:28px;height:3px;background:var(--lime)}
+.sg-chart-card--full{grid-column:1/-1}
+.sg-chart-card__header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.sg-chart-card__title{margin:0;font-family:var(--display-font);font-weight:400;font-size:1rem;line-height:1.3;color:var(--navy)}
+.sg-chart-card__sub{display:block;margin-top:.25rem;font-family:var(--mono-font);font-size:.6875rem;color:var(--text-secondary)}
+.sg-chart-card__actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.sg-segmented__item{height:2rem;padding:0 .875rem;border:0;border-left:1px solid var(--borders-secondary);background:var(--backgrounds-main);color:var(--text-secondary);font-family:var(--display-font);font-size:.5625rem;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:background .15s,color .15s}
+.sg-segmented__item:first-child{border-left:0}
+.sg-segmented__item:hover{color:var(--navy);background:var(--backgrounds-content-0)}
+.sg-segmented__item:focus-visible{outline:2px solid var(--lime);outline-offset:1px}
+.sg-segmented__item--active,.sg-segmented__item--active:hover{background:var(--navy);color:#fff}
+.sg-donut-wrap{flex:1;display:flex;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap}
+.sg-hbars--center{flex:1;justify-content:center}
+/* Modal pantalla completa */
+.sg-modal--fullscreen{max-width:none;width:calc(100vw - 2rem);height:calc(100vh - 2rem)}
+.sg-modal--fullscreen .sg-modal__header{border-bottom:1px solid var(--borders-general);padding-bottom:1.25rem}
+.sg-chart-modal__body{flex:1;display:flex;flex-direction:column;padding-top:1.5rem;padding-bottom:1.75rem}
+.sg-chart-modal__body .sg-vbars{flex:1}
+.sg-chart-modal__body .sg-vbars__plot{flex:1;height:auto;min-height:20rem}
+@media (max-width:600px){.sg-export-popup{width:auto}.sg-export-item{flex-direction:column;align-items:flex-start}}
