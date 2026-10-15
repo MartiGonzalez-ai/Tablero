@@ -83,7 +83,7 @@
                 <td>
                     <header class="header">
                         <div class="company-info">
-                            <img src="img/logo.png" alt="Enertrak Logo" class="company-logo"
+                            <img src="images/logo.png" alt="Enertrak Logo" class="company-logo"
                                 onerror="this.style.display='none'">
                         </div>
                         <div class="contact-info">
@@ -123,293 +123,143 @@
 
                         <div class="modern-table-container">
                             <!-- APARTADO DE PENDIENTES -->
-                            <div id="pending-section">
-                                <div class="table-header-title">
-                                    <h2>PENDIENTES <span>|</span> Equipos por Instalar</h2>
-                                    <span class="print-date"></span>
-                                </div>
-                                <table class="modern-table">
-                                    <thead>
-                                        <tr>
-                                            <th></th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <path
-                                                            d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z">
-                                                        </path>
-                                                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                                                    </svg>ECO</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <path
-                                                            d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-                                                        <circle cx="7" cy="17" r="2" />
-                                                        <path d="M9 17h6" />
-                                                        <circle cx="17" cy="17" r="2" />
-                                                    </svg>VEHÍCULO</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <rect x="2" y="5" width="20" height="14" rx="2" />
-                                                        <path d="M16 10h2" />
-                                                        <path d="M16 14h2" />
-                                                        <circle cx="8" cy="11" r="2" />
-                                                        <path d="M5 15a3 3 0 0 1 6 0" />
-                                                    </svg>PLACAS</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <path d="M3 5v14M8 5v14M11 5v14M13 5v14M16 5v14M21 5v14" />
-                                                    </svg>VIN</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <rect x="4" y="4" width="16" height="16" rx="2" />
-                                                        <rect x="9" y="9" width="6" height="6" />
-                                                        <path
-                                                            d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2" />
-                                                    </svg>EQUIPO / SERIE</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                                                    </svg>ESTADO</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                                                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                                                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                                                    </svg>FECHA</div>
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr class="main-row">
-                                            <td class="status-bar status-pendiente" rowspan="2"></td>
-                                            <td class="text-bold">DGP-054</td>
-                                            <td><span class="text-bold">Hino 300</span><span
-                                                    class="text-small">2014</span></td>
-                                            <td>YR2475S</td>
-                                            <td>JHFUU10H7BK003229</td>
-                                            <td><span class="text-bold">GO9</span><span
-                                                    class="text-small">G95V8CPATPC4</span></td>
-                                            <td><span class="badge badge-pendiente">PENDIENTE</span></td>
-                                            <td class="text-bold">14/04/2026</td>
-                                        </tr>
-                                        <tr class="comment-row">
-                                            <td colspan="7">
-                                                <div class="comment-container">
-                                                    <span>Comentario: <strong>Espera de instalación de nuevo
-                                                            equipo</strong></span>
-                                                    <span class="separator-pipe">|</span>
-                                                    <span>Serie anterior: <span class="mono-text">—</span></span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <div class="table-header-title">
+                                <h2>PENDIENTES | EQUIPOS POR INSTALAR</h2>
+                                <span class="print-date"></span>
+                            </div>
+                            <div class="unit-list">
+                                <article class="unit-card is-pendiente">
+                                    <header class="unit-head">
+                                        <div class="unit-id">
+                                            <span class="unit-eco">DGP-054</span>
+                                            <span class="unit-vehicle">Hino 300 · 2014</span>
+                                        </div>
+                                        <dl class="unit-meta">
+                                            <div><dt>Placas</dt><dd>YR2475S</dd></div>
+                                            <div><dt>VIN</dt><dd class="mono">JHFUU10H7BK003229</dd></div>
+                                            <div><dt>Base / Sucursal</dt><dd>Mérida</dd></div>
+                                        </dl>
+                                        <span class="badge badge-pendiente">PENDIENTE</span>
+                                    </header>
+                                    <div class="unit-equipment">
+                                        <section class="equip-panel equip-in">
+                                            <h4>Equipo por instalar</h4>
+                                            <dl>
+                                                <div><dt>Equipo</dt><dd>GO9</dd></div>
+                                                <div><dt>Serie</dt><dd class="mono">G95V8CPATPC4</dd></div>
+                                                <div><dt>Fecha</dt><dd>14/04/2026</dd></div>
+                                            </dl>
+                                        </section>
+                                        <section class="equip-panel equip-out is-empty">
+                                            <h4>Equipo desinstalado</h4>
+                                            <p class="equip-empty">Sin equipo desinstalado</p>
+                                        </section>
+                                    </div>
+                                    <footer class="unit-comment">Comentario: <strong>Espera de instalación de nuevo equipo</strong></footer>
+                                </article>
                             </div>
 
                             <!-- SECCIÓN PRINCIPAL POR GRUPOS -->
-                            <div id="main-groups-container">
-                                <div class="table-header-title">
-                                    <h2>PIPAS <span>|</span> Estado de Equipos por Unidad</h2>
-                                    <span class="print-date"></span>
-                                </div>
-                                <table class="modern-table">
-                                    <thead>
-                                        <tr>
-                                            <th></th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <path
-                                                            d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z">
-                                                        </path>
-                                                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                                                    </svg>ECO</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <path
-                                                            d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-                                                        <circle cx="7" cy="17" r="2" />
-                                                        <path d="M9 17h6" />
-                                                        <circle cx="17" cy="17" r="2" />
-                                                    </svg>VEHÍCULO</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <rect x="2" y="5" width="20" height="14" rx="2" />
-                                                        <path d="M16 10h2" />
-                                                        <path d="M16 14h2" />
-                                                        <circle cx="8" cy="11" r="2" />
-                                                        <path d="M5 15a3 3 0 0 1 6 0" />
-                                                    </svg>PLACAS</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <path d="M3 5v14M8 5v14M11 5v14M13 5v14M16 5v14M21 5v14" />
-                                                    </svg>VIN</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <rect x="4" y="4" width="16" height="16" rx="2" />
-                                                        <rect x="9" y="9" width="6" height="6" />
-                                                        <path
-                                                            d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2" />
-                                                    </svg>EQUIPO / SERIE</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                                                    </svg>ESTADO</div>
-                                            </th>
-                                            <th>
-                                                <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                                                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                                                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                                                    </svg>FECHA</div>
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <!-- VEHÍCULO 2 DESINSTALADO -->
-                                    <tbody>
-                                        <tr class="main-row">
-                                            <td class="status-bar status-desinstalado" rowspan="2"></td>
-                                            <td class="text-bold">DGP-052</td>
-                                            <td><span class="text-bold">Hino 300</span><span
-                                                    class="text-small">2012</span></td>
-                                            <td>YR2476D</td>
-                                            <td>JHFUU10H7BK003283</td>
-                                            <td><span class="text-bold">GO9</span><span
-                                                    class="text-small">G95V8CPATPC2</span></td>
-                                            <td><span class="badge badge-desinstalado">DESINSTALADO</span></td>
-                                            <td class="text-bold">14/04/2026</td>
-                                        </tr>
-                                        <tr class="comment-row">
-                                            <td colspan="7">
-                                                <div class="comment-container">
-                                                    <span>Comentario: <strong>Equipo retirado - pendiente
-                                                            reasignación</strong></span>
-                                                    <span class="separator-pipe">|</span>
-                                                    <span>Serie desinstalada: <span
-                                                            class="mono-text">WY4302I00953</span></span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                    <!-- VEHÍCULO 3 REUBICADO -->
-                                    <tbody>
-                                        <tr class="main-row">
-                                            <td class="status-bar status-reubicado" rowspan="2"></td>
-                                            <td class="text-bold">DGP-053</td>
-                                            <td><span class="text-bold">Hino 300</span><span
-                                                    class="text-small">2013</span></td>
-                                            <td>YR2475A</td>
-                                            <td>JHFUU10H7BK003248</td>
-                                            <td><span class="text-bold">GO9</span><span
-                                                    class="text-small">G95V8CPATPC3</span></td>
-                                            <td><span class="badge badge-reubicado">REUBICADO</span></td>
-                                            <td class="text-bold">14/04/2026</td>
-                                        </tr>
-                                        <tr class="comment-row">
-                                            <td colspan="7">
-                                                <div class="comment-container">
-                                                    <span>Comentario: <strong>Transferido a otra unidad</strong></span>
-                                                    <span class="separator-pipe">|</span>
-                                                    <span>Serie anterior: <span
-                                                            class="mono-text">WY4302I00953</span></span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                    <!-- EJEMPLO: VEHÍCULO 1 INSTALADO -->
-                                    <tbody>
-                                        <tr class="main-row">
-                                            <td class="status-bar status-instalado" rowspan="2"></td>
-                                            <td class="text-bold">DGP-051</td>
-                                            <td><span class="text-bold">Hino 300</span><span
-                                                    class="text-small">2011</span></td>
-                                            <td>YR2475D</td>
-                                            <td>JHFUU10H7BK003983</td>
-                                            <td><span class="text-bold">GO9</span><span
-                                                    class="text-small">G95V8CPATPC1</span></td>
-                                            <td><span class="badge badge-instalado">INSTALADO</span></td>
-                                            <td class="text-bold">14/04/2026</td>
-                                        </tr>
-                                        <tr class="comment-row">
-                                            <td colspan="7">
-                                                <div class="comment-container">
-                                                    <span>Comentario: <strong>Sin observaciones</strong></span>
-                                                    <span class="separator-pipe">|</span>
-                                                    <span>Serie anterior: <span class="mono-text">—</span></span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                    <!-- VEHÍCULO 5 INSTALADO -->
-                                    <tbody>
-                                        <tr class="main-row">
-                                            <td class="status-bar status-instalado" rowspan="2"></td>
-                                            <td class="text-bold">DGP-055</td>
-                                            <td><span class="text-bold">Hino 300</span><span
-                                                    class="text-small">2016</span></td>
-                                            <td>YR2375D</td>
-                                            <td>JHFUU10H7BK003230</td>
-                                            <td><span class="text-bold">GO9</span><span
-                                                    class="text-small">G95V8CPATPC5</span></td>
-                                            <td><span class="badge badge-instalado">INSTALADO</span></td>
-                                            <td class="text-bold">14/04/2026</td>
-                                        </tr>
-                                        <tr class="comment-row">
-                                            <td colspan="7">
-                                                <div class="comment-container">
-                                                    <span>Comentario: <strong>Operación normal, telemetría
-                                                            activa</strong></span>
-                                                    <span class="separator-pipe">|</span>
-                                                    <span>Serie anterior: <span class="mono-text">—</span></span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <div class="table-header-title">
+                                <h2>GO9 | ESTADO DE EQUIPOS POR UNIDAD</h2>
+                                <span class="print-date"></span>
+                            </div>
+                            <div class="unit-list">
+                                <article class="unit-card is-desinstalado">
+                                    <header class="unit-head">
+                                        <div class="unit-id">
+                                            <span class="unit-eco">DGP-052</span>
+                                            <span class="unit-vehicle">Hino 300 · 2012</span>
+                                        </div>
+                                        <dl class="unit-meta">
+                                            <div><dt>Placas</dt><dd>YR2476D</dd></div>
+                                            <div><dt>VIN</dt><dd class="mono">JHFUU10H7BK003283</dd></div>
+                                            <div><dt>Base / Sucursal</dt><dd>Mérida</dd></div>
+                                        </dl>
+                                        <span class="badge badge-desinstalado">DESINSTALADO</span>
+                                    </header>
+                                    <div class="unit-equipment">
+                                        <section class="equip-panel equip-in">
+                                            <h4>Equipo instalado</h4>
+                                            <dl>
+                                                <div><dt>Equipo</dt><dd>GO9</dd></div>
+                                                <div><dt>Serie</dt><dd class="mono">G95V8CPATPC2</dd></div>
+                                                <div><dt>Fecha</dt><dd>10/04/2026</dd></div>
+                                            </dl>
+                                        </section>
+                                        <section class="equip-panel equip-out">
+                                            <h4>Equipo desinstalado</h4>
+                                            <dl>
+                                                <div><dt>Equipo</dt><dd>Wialon</dd></div>
+                                                <div><dt>Serie</dt><dd class="mono">WY4302I00953</dd></div>
+                                                <div><dt>Fecha</dt><dd>14/04/2026</dd></div>
+                                            </dl>
+                                        </section>
+                                    </div>
+                                    <footer class="unit-comment">Comentario: <strong>Equipo retirado - pendiente reasignación</strong></footer>
+                                </article>
+
+                                <article class="unit-card is-reubicado">
+                                    <header class="unit-head">
+                                        <div class="unit-id">
+                                            <span class="unit-eco">DGP-053</span>
+                                            <span class="unit-vehicle">Hino 300 · 2013</span>
+                                        </div>
+                                        <dl class="unit-meta">
+                                            <div><dt>Placas</dt><dd>YR2475A</dd></div>
+                                            <div><dt>VIN</dt><dd class="mono">JHFUU10H7BK003248</dd></div>
+                                            <div><dt>Base / Sucursal</dt><dd>Campeche</dd></div>
+                                        </dl>
+                                        <span class="badge badge-reubicado">REUBICADO</span>
+                                    </header>
+                                    <div class="unit-equipment">
+                                        <section class="equip-panel equip-in">
+                                            <h4>Equipo instalado</h4>
+                                            <dl>
+                                                <div><dt>Equipo</dt><dd>GO9</dd></div>
+                                                <div><dt>Serie</dt><dd class="mono">G95V8CPATPC3</dd></div>
+                                                <div><dt>Fecha</dt><dd>14/04/2026</dd></div>
+                                            </dl>
+                                        </section>
+                                        <section class="equip-panel equip-out is-empty">
+                                            <h4>Equipo desinstalado</h4>
+                                            <p class="equip-empty">Sin equipo desinstalado</p>
+                                        </section>
+                                    </div>
+                                    <footer class="unit-comment">Comentario: <strong>Transferido a otra unidad</strong></footer>
+                                </article>
+
+                                <article class="unit-card is-instalado">
+                                    <header class="unit-head">
+                                        <div class="unit-id">
+                                            <span class="unit-eco">DGP-051</span>
+                                            <span class="unit-vehicle">Hino 300 · 2011</span>
+                                        </div>
+                                        <dl class="unit-meta">
+                                            <div><dt>Placas</dt><dd>YR2475D</dd></div>
+                                            <div><dt>VIN</dt><dd class="mono">JHFUU10H7BK003983</dd></div>
+                                            <div><dt>Base / Sucursal</dt><dd>Mérida</dd></div>
+                                        </dl>
+                                        <span class="badge badge-instalado">INSTALADO</span>
+                                    </header>
+                                    <div class="unit-equipment">
+                                        <section class="equip-panel equip-in">
+                                            <h4>Equipo instalado</h4>
+                                            <dl>
+                                                <div><dt>Equipo</dt><dd>GO9</dd></div>
+                                                <div><dt>Serie</dt><dd class="mono">G95V8CPATPC1</dd></div>
+                                                <div><dt>Fecha</dt><dd>14/04/2026</dd></div>
+                                            </dl>
+                                        </section>
+                                        <section class="equip-panel equip-out is-empty">
+                                            <h4>Equipo desinstalado</h4>
+                                            <p class="equip-empty">Sin equipo desinstalado</p>
+                                        </section>
+                                    </div>
+                                </article>
                             </div>
                         </div>
+                    </div>
                 </td>
             </tr>
         </tbody>
@@ -449,6 +299,46 @@
             elements.forEach(el => el.innerText = `Impresión: ${fechaStr}`);
         }
         actualizarFecha();
+
+        // Campo etiqueta/valor reutilizable
+        function field(label, value, mono) {
+            return `<div><dt>${label}</dt><dd${mono ? ' class="mono"' : ''}>${value || '—'}</dd></div>`;
+        }
+
+        // Panel de equipo (instalado / desinstalado): equipo, serie y fecha
+        function equipPanel(kind, title, equipo, serie, fecha, emptyText) {
+            if (!equipo && !serie && !fecha) {
+                return `<section class="equip-panel equip-${kind} is-empty"><h4>${title}</h4><p class="equip-empty">${emptyText}</p></section>`;
+            }
+            return `<section class="equip-panel equip-${kind}"><h4>${title}</h4><dl>${field('Equipo', equipo)}${field('Serie', serie, true)}${field('Fecha', fecha)}</dl></section>`;
+        }
+
+        // Tarjeta de una unidad: datos generales arriba, equipos separados abajo
+        function buildUnitCard(row, statusKey, rawStatus) {
+            const vehicle = [row.B, row.C].filter(Boolean).join(' ') || '—';
+            const card = document.createElement('article');
+            card.className = `unit-card is-${statusKey}`;
+            card.innerHTML = `
+                <header class="unit-head">
+                    <div class="unit-id">
+                        <span class="unit-eco">${row.A || '—'}</span>
+                        <span class="unit-vehicle">${vehicle}${row.D ? ' · ' + row.D : ''}</span>
+                    </div>
+                    <dl class="unit-meta">
+                        ${field('Placas', row.E)}
+                        ${field('VIN', row.F, true)}
+                        ${field('Base / Sucursal', row.J)}
+                    </dl>
+                    <span class="badge badge-${statusKey}">${rawStatus}</span>
+                </header>
+                <div class="unit-equipment">
+                    ${equipPanel('in', statusKey === 'pendiente' ? 'Equipo por instalar' : 'Equipo instalado', row.G, row.H, row.K, 'Sin equipo instalado')}
+                    ${equipPanel('out', 'Equipo desinstalado', row.L, row.M, row.N, 'Sin equipo desinstalado')}
+                </div>
+                ${row.O ? `<footer class="unit-comment">Comentario: <strong>${row.O}</strong></footer>` : ''}
+            `;
+            return card;
+        }
 
         // Lógica de carga de Excel
         function processExcel(file) {
@@ -504,12 +394,12 @@
                 const groups = {};
 
                 rawRows.forEach(row => {
-                    const s = (row.J || 'PENDIENTE').toUpperCase();
+                    const s = (row.I || 'PENDIENTE').toUpperCase();
                     const key = statusMap[s] || 'pendiente';
                     if (key === 'pendiente') {
                         pendingRows.push(row);
                     } else {
-                        const type = row.A || 'SIN TIPO';
+                        const type = row.G || 'SIN EQUIPO';
                         if (!groups[type]) groups[type] = [];
                         groups[type].push(row);
                     }
@@ -523,12 +413,12 @@
 
                     // Ordenar filas (por estado y luego por ECO)
                     rows.sort((a, b) => {
-                        const keyA = statusMap[(a.J || 'PENDIENTE').toUpperCase()] || 'pendiente';
-                        const keyB = statusMap[(b.J || 'PENDIENTE').toUpperCase()] || 'pendiente';
+                        const keyA = statusMap[(a.I || 'PENDIENTE').toUpperCase()] || 'pendiente';
+                        const keyB = statusMap[(b.I || 'PENDIENTE').toUpperCase()] || 'pendiente';
                         const pA = statusPriority[keyA] || 99;
                         const pB = statusPriority[keyB] || 99;
                         if (pA !== pB) return pA - pB;
-                        return String(a.B || '').localeCompare(String(b.B || ''), undefined, { numeric: true, sensitivity: 'base' });
+                        return String(a.A || '').localeCompare(String(b.A || ''), undefined, { numeric: true, sensitivity: 'base' });
                     });
 
                     const headerDiv = document.createElement('div');
@@ -536,49 +426,14 @@
                     headerDiv.innerHTML = `<h2>${title.toUpperCase()}</h2><span class="print-date">Impresión: ${getFormattedDate()}</span>`;
                     container.appendChild(headerDiv);
 
-                    const table = document.createElement('table');
-                    table.className = 'modern-table';
-                    table.innerHTML = `<thead><tr>
-                        <th></th>
-                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>ECO</div></th>
-                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>VEHÍCULO</div></th>
-                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 10h2"/><path d="M16 14h2"/><circle cx="8" cy="11" r="2"/><path d="M5 15a3 3 0 0 1 6 0"/></svg>PLACAS</div></th>
-                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14M8 5v14M11 5v14M13 5v14M16 5v14M21 5v14"/></svg>VIN</div></th>
-                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>EQUIPO / SERIE</div></th>
-                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>ESTADO</div></th>
-                        <th><div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>FECHA</div></th>
-                    </tr></thead>`;
-
+                    const list = document.createElement('div');
+                    list.className = 'unit-list';
                     rows.forEach(row => {
-                        const rawStatus = (row.J || 'PENDIENTE').toUpperCase();
+                        const rawStatus = (row.I || 'PENDIENTE').toUpperCase();
                         const statusKey = statusMap[rawStatus] || 'pendiente';
-                        const statusClass = statusKey;
-
-                        const tbody = document.createElement('tbody');
-                        tbody.innerHTML = `
-                            <tr class="main-row">
-                                <td class="status-bar status-${statusClass}" rowspan="2"></td>
-                                <td class="text-bold">${row.B || '—'}</td>
-                                <td><span class="text-bold">${row.C || ''} ${row.D || ''}</span><span class="text-small">${row.E || ''}</span></td>
-                                <td>${row.F || '—'}</td>
-                                <td>${row.G || '—'}</td>
-                                <td><span class="text-bold">${row.H || ''}</span><span class="text-small">${row.I || '—'}</span></td>
-                                <td><span class="badge badge-${statusClass}">${rawStatus}</span></td>
-                                <td class="text-bold">${row.N || '—'}</td>
-                            </tr>
-                            <tr class="comment-row">
-                                <td colspan="7">
-                                    <div class="comment-container">
-                                        <span>Comentario: <strong>${row.K || 'Sin observaciones'}</strong></span>
-                                        <span class="separator-pipe">|</span>
-                                        <span>Serie anterior: <span class="mono-text">${row.M || '—'}</span></span>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                        table.appendChild(tbody);
+                        list.appendChild(buildUnitCard(row, statusKey, rawStatus));
                     });
-                    container.appendChild(table);
+                    container.appendChild(list);
                 };
 
                 // 1. Renderizar sección de Pendientes si existen
