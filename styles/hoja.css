@@ -66,9 +66,18 @@ body {
 }
 
 .company-logo {
-    max-height: 65px;
+    /* La imagen trae margen transparente arriba/abajo; se compensa con margen negativo */
+    height: 75px;
     width: auto;
+    margin: -15px 0 -15px -6px;
     display: block;
+}
+
+@media print {
+    .company-logo {
+        height: 52px;
+        margin: -10px 0 -10px -4px;
+    }
 }
 
 .details-section {
@@ -172,123 +181,175 @@ body {
     border: 1px solid var(--border-color);
 }
 
-.modern-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 16px;
-    margin-top: -16px;
-}
-
-.modern-table thead th {
-    text-align: left;
-    padding: 12px 16px;
-    font-size: 11px;
-    font-weight: 700;
-    color: #718096;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.modern-table thead th div {
+/* ─── Tarjeta por unidad ─────────────────────────────────── */
+.unit-list {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    white-space: nowrap;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 36px;
 }
 
-.modern-table thead th svg {
-    flex-shrink: 0;
-    opacity: 0.8;
-}
-
-.modern-table thead th:first-child {
-    width: 6px;
-    padding: 12px 0;
-}
-
-.modern-table tbody {
-    background: white;
+.unit-card {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-left: 6px solid var(--border-color);
     border-radius: 12px;
+    overflow: hidden;
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.modern-table tbody:hover {
+.unit-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
 }
 
-/* Barra de color mediante celda rowspan */
-.status-bar {
-    width: 6px;
-    padding: 0 !important;
-    margin: 0;
-    border-radius: 12px 0 0 12px;
+.unit-card.is-instalado {
+    border-left-color: var(--status-instalado);
 }
 
-.status-instalado {
-    background-color: var(--status-instalado);
+.unit-card.is-pendiente {
+    border-left-color: var(--status-pendientes);
 }
 
-.status-pendiente {
-    background-color: var(--status-pendientes);
+.unit-card.is-desinstalado {
+    border-left-color: var(--status-desinstalados);
 }
 
-.status-desinstalado {
-    background-color: var(--status-desinstalados);
+.unit-card.is-reubicado {
+    border-left-color: var(--status-reubicados);
 }
 
-.status-reubicado {
-    background-color: var(--status-reubicados);
+/* Etiqueta / valor */
+.unit-card dt {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
 }
 
-/* Estilos de filas */
-.modern-table tr.main-row td {
-    padding: 24px 16px 8px 20px;
+.unit-card dd {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.unit-card dd.mono {
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 12px;
+}
+
+/* Datos generales de la unidad */
+.unit-head {
+    display: grid;
+    grid-template-columns: minmax(140px, auto) 1fr auto;
+    align-items: center;
+    gap: 24px;
+    padding: 14px 20px;
+}
+
+.unit-eco {
+    display: block;
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--primary-blue);
+    line-height: 1.2;
+}
+
+.unit-vehicle {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.unit-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 32px;
+}
+
+/* Equipos: instalado | desinstalado */
+.unit-equipment {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     border-top: 1px solid var(--border-color);
 }
 
-.modern-table td.status-bar {
-    border-top-left-radius: 12px;
-    border-bottom-left-radius: 12px;
+.equip-panel {
+    padding: 12px 20px 14px;
+}
+
+.equip-panel + .equip-panel {
     border-left: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-    min-width: 6px;
 }
 
-.modern-table tr.main-row td:last-child {
-    border-top-right-radius: 12px;
-    border-right: 1px solid var(--border-color);
+.equip-panel.equip-in {
+    background: #f4fbf6;
 }
 
-.modern-table tr.comment-row td {
-    padding: 0 16px 20px 20px;
-    border-bottom: 1px solid var(--border-color);
+.equip-panel.equip-out {
+    background: #fdf6f6;
 }
 
-.modern-table tr.comment-row td[colspan] {
-    border-left: none;
-    /* Quitamos el borde izquierdo que choca con la barra */
+.equip-panel.is-empty {
+    background: #fafbfc;
 }
 
-.modern-table tr.comment-row td:last-child {
-    border-bottom-right-radius: 12px;
-    border-right: 1px solid var(--border-color);
-}
-
-.comment-container {
+.equip-panel h4 {
     display: flex;
     align-items: center;
-    gap: 24px;
-    padding: 12px 16px;
-    background: #f8fafc;
-    border-radius: 8px;
-    font-size: 13px;
-    color: #718096;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
 }
 
-.comment-container strong {
-    color: #1a202c;
+.equip-panel h4::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.equip-in h4 {
+    color: var(--status-instalado);
+}
+
+.equip-out h4 {
+    color: var(--status-desinstalados);
+}
+
+.equip-panel.is-empty h4 {
+    color: #a0aec0;
+}
+
+.equip-panel dl {
+    display: grid;
+    grid-template-columns: 0.8fr 1.4fr 1fr;
+    gap: 12px;
+}
+
+.equip-empty {
+    font-size: 12px;
+    color: #a0aec0;
+    font-style: italic;
+}
+
+/* Comentario */
+.unit-comment {
+    padding: 10px 20px;
+    border-top: 1px solid var(--border-color);
+    background: #f8fafc;
+    font-size: 12.5px;
+    color: var(--text-muted);
+}
+
+.unit-comment strong {
+    color: var(--text-main);
     font-weight: 600;
 }
 
@@ -320,33 +381,6 @@ body {
 .badge-pendiente {
     background: #fffaf0;
     color: #b7791f;
-}
-
-.text-bold {
-    font-weight: 700;
-    color: #1f2d3d;
-}
-
-.text-small {
-    font-size: 11px;
-    color: #7c8b9c;
-    display: block;
-    margin-top: 4px;
-}
-
-.mono-text {
-    font-family: 'SF Mono', 'Consolas', monospace;
-    background: #f4f6f9;
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-size: 11px;
-    color: #c62828;
-}
-
-.separator-pipe {
-    color: #cbd5e1;
-    font-size: 14px;
-    font-weight: 300;
 }
 
 /* Barra superior de acciones */
@@ -500,14 +534,22 @@ body {
     .badge,
     .stat-card,
     .client-id,
-    .status-bar {
+    .unit-card,
+    .equip-panel,
+    .unit-comment {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
 
-    .modern-table tbody {
+    .unit-card {
         page-break-inside: avoid;
         break-inside: avoid;
+        border-radius: 8px;
+    }
+
+    .unit-list {
+        gap: 8px;
+        margin-bottom: 18px;
     }
 
     .equipment-stats {
@@ -532,18 +574,53 @@ body {
         padding: 0;
     }
 
-    .modern-table tr.main-row td {
-        padding: 10px 6px 4px 10px;
+    .unit-head {
+        padding: 8px 12px;
+        gap: 14px;
     }
 
-    .modern-table tr.comment-row td {
-        padding: 0 6px 10px 10px;
+    .unit-eco {
+        font-size: 13px;
     }
 
-    .comment-container {
-        padding: 6px 10px;
+    .unit-vehicle,
+    .unit-card dd {
         font-size: 10px;
-        gap: 12px;
+    }
+
+    .unit-card dd.mono {
+        font-size: 9.5px;
+    }
+
+    .unit-card dt {
+        font-size: 7.5px;
+    }
+
+    .unit-meta {
+        gap: 4px 18px;
+    }
+
+    .equip-panel {
+        padding: 6px 12px 8px;
+    }
+
+    .equip-panel h4 {
+        font-size: 8.5px;
+        margin-bottom: 4px;
+    }
+
+    .equip-empty {
+        font-size: 9.5px;
+    }
+
+    .unit-comment {
+        padding: 5px 12px;
+        font-size: 9.5px;
+    }
+
+    .table-header-title {
+        padding-bottom: 10px;
+        margin-bottom: 14px;
     }
 
     .table-header-title h2 {
@@ -604,11 +681,24 @@ body {
 
     .modern-table-container {
         padding: 0 20px 30px 20px;
-        overflow-x: auto;
     }
 
-    .modern-table {
-        min-width: 700px;
+    .unit-head {
+        grid-template-columns: 1fr auto;
+    }
+
+    .unit-meta {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+
+    .unit-equipment {
+        grid-template-columns: 1fr;
+    }
+
+    .equip-panel + .equip-panel {
+        border-left: none;
+        border-top: 1px solid var(--border-color);
     }
 
     .equipment-stats {
